@@ -1,0 +1,51 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-bg: #f1efe8;
+  --color-fg: #042c53;
+  --color-accent: #185fa5;
+  --color-success: #1d9e75;
+  --color-warning: #ba7517;
+  --color-critical: #a32d2d;
+  --color-muted: #5f5e5a;
+}
+
+html {
+  font-size: 16px;
+  /* Cumplimiento constitución II — tipografía base 16px, escalable hasta 22px sin romper layout */
+}
+
+body {
+  background-color: var(--color-bg);
+  color: var(--color-fg);
+  font-family: 'Inter', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Touch targets accesibles WCAG (constitución II) */
+button,
+a,
+input[type='button'],
+input[type='submit'] {
+  min-height: 2.75rem;
+  min-width: 2.75rem;
+}
+
+/* Focus visible reforzado para accesibilidad */
+:focus-visible {
+  outline: 3px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+/* Respetar preferencia de reducción de movimiento */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

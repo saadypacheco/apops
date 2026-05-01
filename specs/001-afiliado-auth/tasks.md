@@ -38,16 +38,16 @@ incrementos posteriores.
 
 **Purpose**: Inicialización del proyecto Next.js + Supabase + tooling de calidad. Sin esta fase, ninguna user story puede empezar.
 
-- [ ] T001 Crear estructura Next.js 14 App Router con TypeScript en repo root: `package.json`, `tsconfig.json`, `next.config.js`, `tailwind.config.ts`, `postcss.config.js` siguiendo Project Structure de plan.md
-- [ ] T002 Instalar dependencias del stack lockeado: `next@14`, `react@18`, `typescript@5.5`, `tailwindcss`, `@radix-ui/react-label`, `@radix-ui/react-slot`, `@supabase/ssr`, `@supabase/supabase-js`, `zod`, `react-hook-form`, `@hookform/resolvers`
-- [ ] T003 [P] Configurar ESLint con `eslint-config-next` + Prettier en `.eslintrc.json` y `.prettierrc`
-- [ ] T004 [P] Configurar Vitest con TypeScript en `vitest.config.ts` y `tests/setup.ts`
-- [ ] T005 [P] Configurar Playwright para e2e en `playwright.config.ts`
-- [ ] T006 [P] Crear scripts `package.json`: `dev`, `build`, `start`, `lint`, `typecheck`, `test`, `test:rls`, `test:e2e`
-- [ ] T007 Inicializar Supabase local en `supabase/config.toml` y verificar `supabase start` levanta el stack local
-- [ ] T008 [P] Configurar GitHub Actions workflow `.github/workflows/ci.yml` con jobs: lint + typecheck + test + Lighthouse threshold (PWA ≥ 90, Performance ≥ 85, A11y ≥ 90 según constitución §VII)
-- [ ] T009 [P] Crear `public/manifest.json` PWA (name, short_name, icons 192/512, display=standalone, start_url, theme_color)
-- [ ] T010 Crear `src/app/layout.tsx` root layout con metadata + import de Tailwind globals
+- [X] T001 Crear estructura Next.js 14 App Router con TypeScript en repo root: `package.json`, `tsconfig.json`, `next.config.js`, `tailwind.config.ts`, `postcss.config.js` siguiendo Project Structure de plan.md
+- [X] T002 Instalar dependencias del stack lockeado: `next@14`, `react@18`, `typescript@5.5`, `tailwindcss`, `@radix-ui/react-label`, `@radix-ui/react-slot`, `@supabase/ssr`, `@supabase/supabase-js`, `zod`, `react-hook-form`, `@hookform/resolvers`
+- [X] T003 [P] Configurar ESLint con `eslint-config-next` + Prettier en `.eslintrc.json` y `.prettierrc`
+- [X] T004 [P] Configurar Vitest con TypeScript en `vitest.config.ts` y `tests/setup.ts`
+- [X] T005 [P] Configurar Playwright para e2e en `playwright.config.ts`
+- [X] T006 [P] Crear scripts `package.json`: `dev`, `build`, `start`, `lint`, `typecheck`, `test`, `test:rls`, `test:e2e`
+- [X] T007 Inicializar Supabase local en `supabase/config.toml` y verificar `supabase start` levanta el stack local
+- [X] T008 [P] Configurar GitHub Actions workflow `.github/workflows/ci.yml` con jobs: lint + typecheck + test + Lighthouse threshold (PWA ≥ 90, Performance ≥ 85, A11y ≥ 90 según constitución §VII)
+- [X] T009 [P] Crear `public/manifest.json` PWA (name, short_name, icons 192/512, display=standalone, start_url, theme_color)
+- [X] T010 Crear `src/app/layout.tsx` root layout con metadata + import de Tailwind globals
 
 **Checkpoint Setup**: `npm run dev` debe levantar Next.js sin errores en `http://localhost:3000`.
 

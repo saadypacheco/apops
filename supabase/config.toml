@@ -1,0 +1,63 @@
+# Supabase local config — APOPS Siempre
+# Generated for local development. Sobreescribir secretos con .env.local.
+
+project_id = "apops-siempre"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "storage"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 54322
+shadow_port = 54320
+major_version = 15
+
+[studio]
+enabled = true
+port = 54323
+api_url = "http://localhost:54321"
+
+[inbucket]
+enabled = true
+port = 54324
+smtp_port = 54325
+pop3_port = 54326
+
+[storage]
+enabled = true
+file_size_limit = "50MiB"
+
+[auth]
+enabled = true
+site_url = "http://localhost:3000"
+additional_redirect_urls = ["http://localhost:3000/auth/callback"]
+jwt_expiry = 3600
+enable_signup = false
+enable_anonymous_sign_ins = false
+enable_manual_linking = false
+
+[auth.email]
+enable_signup = false
+enable_confirmations = false
+double_confirm_changes = true
+secure_password_change = false
+
+[auth.sms]
+enable_signup = false
+enable_confirmations = false
+
+[edge_runtime]
+enabled = true
+policy = "oneshot"
+inspector_port = 8083
+
+[analytics]
+enabled = false
+
+# Cumplimiento constitución V (privacidad por diseño Ley 25.326):
+# - signup deshabilitado: usuarios solo se crean vía Edge Function tras validar contra padrón
+# - anon sign-ins deshabilitados: no permitimos sesiones anónimas
+# - analytics deshabilitado: no enviamos datos a Supabase telemetry
