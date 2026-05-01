@@ -196,6 +196,27 @@ export type Database = {
         }
         Relationships: []
       }
+      roles_admin: {
+        Row: {
+          auth_user_id: string
+          granted_at: string
+          granted_by: string | null
+          notas: string | null
+        }
+        Insert: {
+          auth_user_id: string
+          granted_at?: string
+          granted_by?: string | null
+          notas?: string | null
+        }
+        Update: {
+          auth_user_id?: string
+          granted_at?: string
+          granted_by?: string | null
+          notas?: string | null
+        }
+        Relationships: []
+      }
       solicitudes_pendientes: {
         Row: {
           created_at: string

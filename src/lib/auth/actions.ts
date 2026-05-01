@@ -10,6 +10,7 @@ import {
   dniLegajoFormSchema,
   dniSinLegajoFormSchema,
   emailFormSchema,
+  nombreCompletoFormSchema,
   type FormState,
 } from '@/types/auth'
 import { setAuthContext, getAuthContext, clearAuthContext } from './auth-cookie'
@@ -127,9 +128,50 @@ export async function submitDniSinLegajo(
 
   // sin_papel: el padrón tiene el nombre, va directo a /email y la solicitud
   // queda pendiente al enviar email.
-  // dni_no_en_padron: corresponde a US3 — requerirá capturar nombre_completo
-  // antes de /email (T058 en Phase 5). Por ahora redirigimos a /email igual y
-  // la Edge Function devolverá nombre_completo_requerido si llegan a ese paso.
+  // dni_no_en_padron (US3): el padrón no tiene a la persona, capturamos
+  // nombre_completo antes de /email para que la solicitud_pendiente persista
+  // un nombre real (constraint chk_subflujo_data exige nombre_completo NOT NULL
+  // cuando sub_flujo='sin_legajo').
+  if (result.data.motivo === 'dni_no_en_padron') {
+    redirect('/nombre-completo')
+  }
+  redirect('/email')
+}
+
+// =====================================================================
+// Action: submitNombreCompleto (US3, sub-flujo sin_legajo + dni_no_en_padron)
+// =====================================================================
+
+export async function submitNombreCompleto(
+  _prev: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const ctx = getAuthContext()
+  if (!ctx) {
+    redirect('/login')
+  }
+  // Defensa: la página solo tiene sentido en el sub-flujo sin_legajo cuando
+  // el DNI NO está en padrón. Cualquier otro estado del flujo se reenruta.
+  if (
+    ctx.flujo !== 'sin_legajo' ||
+    ctx.match !== false ||
+    ctx.motivo !== 'dni_no_en_padron'
+  ) {
+    redirect('/login-sin-legajo')
+  }
+
+  const raw = {
+    nombreCompleto: (formData.get('nombreCompleto')?.toString() ?? '').trim(),
+  }
+  const parsed = nombreCompletoFormSchema.safeParse(raw)
+  if (!parsed.success) {
+    const issues = parsed.error.flatten().fieldErrors
+    return {
+      fieldErrors: { nombreCompleto: issues.nombreCompleto?.[0] },
+    }
+  }
+
+  setAuthContext({ ...ctx, nombreCompleto: parsed.data.nombreCompleto })
   redirect('/email')
 }
 

@@ -154,20 +154,20 @@ incrementos posteriores.
 
 ### Captura de nombre completo (sub-flujo sin_legajo)
 
-- [ ] T057 [US3] [P] Crear `src/components/auth/NombreCompletoForm.tsx` con validación Zod (mín 3 caracteres)
-- [ ] T058 [US3] Crear `src/app/(auth)/nombre-completo/page.tsx` que monta el form (solo accesible cuando flujo previo dio motivo `dni_no_en_padron` desde `login-sin-legajo`)
-- [ ] T059 [US3] Crear `src/app/(auth)/pendiente-validacion/page.tsx` con mensaje claro y CTA para volver a inicio
+- [X] T057 [US3] [P] Crear `src/components/auth/NombreCompletoForm.tsx` con validación Zod (mín 3 caracteres)
+- [X] T058 [US3] Crear `src/app/(auth)/nombre-completo/page.tsx` que monta el form (solo accesible cuando flujo previo dio motivo `dni_no_en_padron` desde `login-sin-legajo`)
+- [X] T059 [US3] Crear `src/app/(auth)/pendiente-validacion/page.tsx` con mensaje claro y CTA para volver a inicio
 
 ### Edge Function: resolver-pendiente (admin)
 
-- [ ] T060 [US3] Crear `supabase/functions/resolver-pendiente/index.ts` con sub-acciones `aprobar` y `rechazar`. Verifica rol admin (con stub temporal que documenta el `deferred_dependency` del contrato), re-valida contra padrón, crea afiliado, dispara magic link de aprobación, según contrato `edge-pendiente-actions.json`
-- [ ] T061 [US3] [Contract] Test: `tests/contract/resolver-pendiente.test.ts` cubre 200 aprobar (crea afiliado + dispara email FR-019), 200 rechazar (motivo persistido + email), 403 sin admin, 409 conflicto DNI/email
+- [X] T060 [US3] Crear `supabase/functions/resolver-pendiente/index.ts` con sub-acciones `aprobar` y `rechazar`. Verifica rol admin (con stub temporal que documenta el `deferred_dependency` del contrato), re-valida contra padrón, crea afiliado, dispara magic link de aprobación, según contrato `edge-pendiente-actions.json` *(stub `roles_admin` añadido en migración 0017)*
+- [X] T061 [US3] [Contract] Test: `tests/contract/resolver-pendiente.test.ts` cubre 200 aprobar (crea afiliado + dispara email FR-019), 200 rechazar (motivo persistido + email), 403 sin admin, 409 conflicto DNI/email
 
 ### Tests de integración
 
-- [ ] T062 [US3] [Integration] Test: `tests/integration/pendiente-activo.test.ts` (Escenario 3 — sub_flujo activo, persiste legajo+DNI+email)
-- [ ] T063 [US3] [Integration] Test: `tests/integration/pendiente-sin-legajo.test.ts` (Escenario 4 — sub_flujo sin_legajo, persiste DNI+nombre_completo+email)
-- [ ] T064 [US3] [Integration] Test: `tests/integration/pendiente-aprobacion.test.ts` (Escenario 7 — admin aprueba, email se envía con magic link, afiliado creado, login OK)
+- [X] T062 [US3] [Integration] Test: `tests/integration/pendiente-activo.test.ts` (Escenario 3 — sub_flujo activo, persiste legajo+DNI+email)
+- [X] T063 [US3] [Integration] Test: `tests/integration/pendiente-sin-legajo.test.ts` (Escenario 4 — sub_flujo sin_legajo, persiste DNI+nombre_completo+email)
+- [X] T064 [US3] [Integration] Test: `tests/integration/pendiente-aprobacion.test.ts` (Escenario 7 — admin aprueba, email se envía con magic link, afiliado creado, login OK)
 
 **Checkpoint US3**: Escenarios 3, 4 y 7 de quickstart.md ejecutables. US1 y US2 sin regresión. Solicitudes en estado `pendiente_validacion` correctamente discriminadas por sub-flujo.
 

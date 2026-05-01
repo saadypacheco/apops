@@ -1,17 +1,14 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 
-// Placeholder mínimo para el caso no_match (DNI no validado contra padrón).
-// La versión definitiva, con CTA y mensajes diferenciados por sub-flujo, vive
-// en US3 (T059). Para US1 alcanza con confirmar al usuario que su solicitud
-// quedó registrada.
-
 export const metadata: Metadata = {
   title: 'Verificando tu afiliación',
   description:
     'Recibimos tu solicitud y la estamos revisando. Te avisaremos por email.',
 }
 
+// Pantalla terminal del flujo cuando la solicitud queda en estado pendiente.
+// La cookie de auth-context se limpia en submitEmail antes del redirect aquí.
 export default function PendienteValidacionPage() {
   return (
     <main className="mx-auto flex min-h-screen max-w-md flex-col items-center gap-6 p-6 text-center">
