@@ -1,0 +1,135 @@
+# ============================================================
+# APOPS PWA — .gitignore
+# Diseñado para Next.js 14 + Supabase + Web Push (VAPID) + Claude API
+#
+# REGLA #1: ningún secreto en git, nunca. Si dudás, ignoralo.
+# ============================================================
+
+# ---------- Secretos y variables de entorno ----------
+# Lección de solucionesdentales/tienda/betamigos: .env nunca debe llegar a git.
+# Solo commiteamos .env.example (sin valores reales) como plantilla.
+.env
+.env.local
+.env.*.local
+.env.development
+.env.development.local
+.env.production
+.env.production.local
+.env.test.local
+
+# Claves Web Push VAPID (las generamos con npx web-push generate-vapid-keys)
+# Nunca deben estar en git. Solo en variables de entorno de Vercel y .env.local.
+vapid_*.json
+*.vapid.json
+*.pem
+*.key
+private-key.*
+
+# Lección de solucionesdentales: jamás archivos sueltos con secretos
+# (key.txt con encryption key real fue commiteado en ese proyecto)
+key.txt
+*key*.txt
+secrets.json
+credentials.json
+*.credentials.json
+
+# ---------- Node / npm / pnpm ----------
+node_modules/
+.pnp
+.pnp.js
+.yarn/install-state.gz
+package-lock.json.bak
+yarn-debug.log*
+yarn-error.log*
+npm-debug.log*
+pnpm-debug.log*
+
+# ---------- Next.js ----------
+.next/
+out/
+build/
+dist/
+*.tsbuildinfo
+next-env.d.ts.bak
+
+# Service Worker generado por next-pwa (si lo usamos)
+public/sw.js
+public/sw.js.map
+public/workbox-*.js
+public/workbox-*.js.map
+public/fallback-*.js
+
+# ---------- Supabase ----------
+# CLI local: estado, migraciones temp, branches locales
+.supabase/
+supabase/.temp/
+supabase/.branches/
+supabase/seed.local.sql
+
+# Tipos generados (los regeneramos con npx supabase gen types)
+# Decisión: SÍ los commiteamos (src/lib/supabase/types.ts) para que el equipo
+# tenga el contrato sin necesidad de pull cada vez. Pero NO el archivo de prefs local.
+supabase/.dotfile-protection
+
+# ---------- Vercel ----------
+.vercel/
+
+# ---------- Testing y cobertura ----------
+coverage/
+.nyc_output/
+*.lcov
+playwright-report/
+test-results/
+.lighthouseci/
+
+# ---------- Spec Kit / Claude Code ----------
+# Permisos locales del usuario para Claude Code (specific a cada máquina)
+.claude/settings.local.json
+.claude/.credentials.json
+.claude/sessions/
+.claude/projects/
+
+# Spec Kit cache de extensiones descargadas (si bajamos extensiones después)
+# El registro extensions.yml SÍ se commitea (define qué extensiones usa el proyecto)
+.specify/.cache/
+.specify/.tmp/
+
+# ---------- IDE ----------
+# VS Code: respetamos .vscode/extensions.json y settings compartidos del equipo
+# (configuración de ESLint, Prettier, etc.) pero no las prefs personales
+.vscode/launch.json
+.vscode/tasks.json
+.vscode/*.local.json
+.idea/
+*.swp
+*.swo
+*~
+
+# ---------- Sistema operativo ----------
+.DS_Store
+Thumbs.db
+desktop.ini
+$RECYCLE.BIN/
+
+# ---------- Logs y temporales ----------
+*.log
+logs/
+*.pid
+*.seed
+*.pid.lock
+.cache/
+tmp/
+temp/
+
+# ---------- Build artifacts varios ----------
+# Lección de proyectos previos: dist/, venv/, build caches mezclados.
+# Acá no aplica venv/ (no usamos Python en runtime), pero sí el resto.
+*.bundle.js
+*.bundle.js.map
+.turbo/
+
+# ---------- Documentos privados / borradores ----------
+# Para que puedas tener notas locales sin commitearlas por accidente
+NOTES.md
+TODO.private.md
+borradores/
