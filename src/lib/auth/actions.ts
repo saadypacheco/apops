@@ -8,6 +8,7 @@
 import { redirect } from 'next/navigation'
 import {
   dniLegajoFormSchema,
+  dniSinLegajoFormSchema,
   emailFormSchema,
   type FormState,
 } from '@/types/auth'
@@ -73,6 +74,62 @@ export async function submitDniLegajo(
 
   // Tanto match como no_match continúan a captura de email.
   // (El no_match desemboca en solicitud_pendiente cuando se envíe el email.)
+  redirect('/email')
+}
+
+// =====================================================================
+// Action: submitDniSinLegajo (sub-flujo sin_legajo — jubilados)
+// =====================================================================
+
+export async function submitDniSinLegajo(
+  _prev: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const raw = {
+    dni: (formData.get('dni')?.toString() ?? '').trim(),
+  }
+
+  const parsed = dniSinLegajoFormSchema.safeParse(raw)
+  if (!parsed.success) {
+    const issues = parsed.error.flatten().fieldErrors
+    return {
+      fieldErrors: {
+        dni: issues.dni?.[0],
+      },
+    }
+  }
+
+  const result = await validarPadron({
+    dni: parsed.data.dni,
+    flujo: 'sin_legajo',
+  })
+
+  if (!result.ok) {
+    return { error: result.error.message }
+  }
+
+  if (result.data.match) {
+    setAuthContext({
+      flujo: 'sin_legajo',
+      dni: parsed.data.dni,
+      match: true,
+      tipo: result.data.tipo,
+    })
+    redirect('/email')
+  }
+
+  setAuthContext({
+    flujo: 'sin_legajo',
+    dni: parsed.data.dni,
+    match: false,
+    motivo: result.data.motivo,
+  })
+
+  // sin_papel: el padrón tiene el nombre, va directo a /email y la solicitud
+  // queda pendiente al enviar email.
+  // dni_no_en_padron: corresponde a US3 — requerirá capturar nombre_completo
+  // antes de /email (T058 en Phase 5). Por ahora redirigimos a /email igual y
+  // la Edge Function devolverá nombre_completo_requerido si llegan a ese paso.
   redirect('/email')
 }
 

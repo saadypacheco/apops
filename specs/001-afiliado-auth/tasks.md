@@ -133,14 +133,14 @@ incrementos posteriores.
 
 **Independent Test**: con `padron_cotizantes` poblado con un jubilado (cotiza_papel=true), persona completa flujo desde `/login-sin-legajo` hasta autenticada, verificable según Escenario 2 de quickstart.md.
 
-- [ ] T049 [US2] Extender `supabase/functions/validar-padron/index.ts` con sub-flujo `sin_legajo`: valida DNI únicamente, chequea `cotiza_papel = true`, devuelve tipo=jubilado o motivo `sin_papel`
-- [ ] T050 [US2] [Contract] Test: `tests/contract/validar-padron-sin-legajo.test.ts` cubre 200_match_found (cotiza_papel=true), 200_no_match motivo `sin_papel`, validación de input rechaza si viene legajo
-- [ ] T051 [US2] Extender `supabase/functions/solicitar-magic-link/index.ts` con flujo `sin_legajo`: crea afiliado con `tipo='jubilado'` y `legajo=NULL`
-- [ ] T052 [US2] [Contract] Test: `tests/contract/solicitar-magic-link-sin-legajo.test.ts` (jubilado happy path + sin_papel pendiente)
-- [ ] T053 [US2] [P] Crear `src/components/auth/DniSinLegajoForm.tsx` con solo campo DNI
-- [ ] T054 [US2] Crear `src/app/(auth)/login-sin-legajo/page.tsx` que monta `DniSinLegajoForm`
-- [ ] T055 [US2] [Integration] Test: `tests/integration/flujo-sin-legajo-happy.test.ts` (Escenario 2 de quickstart)
-- [ ] T056 [US2] [Integration] Test: `tests/integration/flujo-sin-legajo-sin-papel.test.ts` (DNI en padrón sin cotiza_papel → pendiente)
+- [X] T049 [US2] Extender `supabase/functions/validar-padron/index.ts` con sub-flujo `sin_legajo`: valida DNI únicamente, chequea `cotiza_papel = true`, devuelve tipo=jubilado o motivo `sin_papel` *(implementado en Phase 3 junto con el sub-flujo activo)*
+- [X] T050 [US2] [Contract] Test: `tests/contract/validar-padron-sin-legajo.test.ts` cubre 200_match_found (cotiza_papel=true), 200_no_match motivo `sin_papel`, validación de input rechaza si viene legajo
+- [X] T051 [US2] Extender `supabase/functions/solicitar-magic-link/index.ts` con flujo `sin_legajo`: crea afiliado con `tipo='jubilado'` y `legajo=NULL` *(implementado en Phase 3 junto con el sub-flujo activo)*
+- [X] T052 [US2] [Contract] Test: `tests/contract/solicitar-magic-link-sin-legajo.test.ts` (jubilado happy path + sin_papel pendiente)
+- [X] T053 [US2] [P] Crear `src/components/auth/DniSinLegajoForm.tsx` con solo campo DNI
+- [X] T054 [US2] Crear `src/app/(auth)/login-sin-legajo/page.tsx` que monta `DniSinLegajoForm`
+- [X] T055 [US2] [Integration] Test: `tests/integration/flujo-sin-legajo-happy.test.ts` (Escenario 2 de quickstart)
+- [X] T056 [US2] [Integration] Test: `tests/integration/flujo-sin-legajo-sin-papel.test.ts` (DNI en padrón sin cotiza_papel → pendiente)
 
 **Checkpoint US2**: Escenario 2 de quickstart.md ejecutable end-to-end. US1 sigue funcionando (no regresión).
 
