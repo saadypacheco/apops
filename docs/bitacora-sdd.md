@@ -327,24 +327,99 @@ medibles.
 **Commit message sugerido por la skill:**
 `docs: ratify project constitution v1.0.0 (7 principles + stack constraints + governance)`
 
-### Paso 14 — Commit inicial 🟢
+### Paso 14 — Commit inicial estructurado y push 🟢
+
+**Fecha:** 2026-05-01 · **Commit:** `89af683` · **Branch:** `main`
+
+**Decisión metodológica:** se descartó el auto-commit del skill
+`/speckit-git-commit` para este caso específico porque:
+- Era el commit inicial real (32 archivos heterogéneos de Fase 0)
+- El mensaje genérico `[Spec Kit] Add project constitution` describiría
+  solo 1 de 32 archivos
+- Para los próximos comandos (`/speckit-specify`, `/speckit-plan`) sí
+  tiene sentido el auto-commit porque el cambio será homogéneo
+
+**Commit creado manualmente** con Conventional Commits siguiendo este formato:
 
 ```
-chore: inicializar Spec Kit y estructura del proyecto
+chore: close Phase 0 — Spec Kit setup + constitution v1.0.0 + project briefing
+
+(cuerpo descriptivo con cada componente del setup)
+
+Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
 ```
 
-Incluye: `.specify/`, `.claude/skills/`, `AGENTS.md`, `CLAUDE.md`, `.gitignore`,
-`.env.example`, `docs/metodologia.md`, `docs/bitacora-sdd.md`,
-`.specify/memory/constitution.md`.
+**Verificación de seguridad antes del commit:** `git diff --cached --name-only`
+filtrado por patrones de secretos (`\.env$|\.env\.local$|\.key$|\.pem$|...`).
+Resultado: sin secretos detectados.
 
-### Paso 15 — Push y arranque del ciclo de feature
+**Push:** `git push -u origin main` exitoso, branch trackea origin/main.
 
-```bash
-git push -u origin main
-```
+**Repo público:** https://github.com/saadypacheco/apops/commit/89af683
 
-Recién acá empieza F1: `/speckit-specify` con la primera feature
-(feed del afiliado).
+### Paso 14b — Refactor del modelo de datos por padrón real 🔵 *(decisión del proyecto, alto impacto)*
+
+**Fecha:** 2026-05-01 · **Disparado por:** revisión humana del data-model
+con padrón real del gremio en mano.
+
+**Trigger**: durante el GATE post-`/speckit-plan`, el dev compartió una
+imagen del padrón real (Excel "COTIZANTES DE JULIO 2016") con ~26 columnas.
+Esto reveló dos cosas que el modelo previo no contemplaba:
+
+1. **El padrón es de COTIZANTES** (todos los que cotizan a algún gremio),
+   no de afiliados APOPS. La columna `APOPS = x` diferencia. Personas con
+   `x` en otra columna (ATE/SEC/UPCN/SECASFPI) están en padrón pero NO son
+   afiliadas APOPS.
+2. **Los jubilados afiliados se identifican por la columna existente
+   `cotiza_papel`** (cotizan por transferencia), no por un padrón separado.
+
+**Decisiones tomadas:**
+- Una sola tabla `padron_cotizantes` (no dos padrones separados).
+- Solo dos tipos válidos de afiliado APOPS: `activo` y `jubilado`.
+  `ex_empleado` se elimina del modelo.
+- Personas en padrón sin flag APOPS ni cotiza_papel → `pendiente_validacion`
+  con `motivo_pendiente='sin_flag_apops_y_sin_papel'`.
+- El cliente NUNCA recibe a qué gremio cotiza la persona (privacidad — Ley
+  25.326).
+
+**Archivos afectados** (10 cambios coordinados):
+`AGENTS.md` (§2 tipos, §5 flujo 2) · `spec.md` (clarifications, US1, US2,
+FRs 002/004/007, Key Entities, Assumptions, Dependencies) · `data-model.md`
+(reescritura completa) · `contracts/edge-validar-padron.json` (lógica con
+motivos discriminados) · `contracts/edge-solicitar-magic-link.json`
+(eliminado ex_empleado) · `plan.md` (1 línea) · `quickstart.md` (datos
+de prueba + nuevo escenario 4b).
+
+**Lección metodológica capital**: el GATE post-plan funcionó exactamente
+como el PDF página 17 lo prescribe. Si hubiéramos saltado a
+`/speckit-tasks` con el modelo previo, habríamos generado código contra
+dos tablas inexistentes (`padron_activos` / `padron_no_activos`) y un tipo
+de usuario (`ex_empleado`) que el negocio explícitamente no permite. La
+revisión humana antes de implementar evitó **retrabajo significativo**.
+Tu pregunta "¿este padrón define la tabla?" fue exactamente la pregunta
+correcta en el momento correcto. **No saltearlo nunca.**
+
+**Constitution check post-refactor**: ✅ los 7 principios siguen cumplidos.
+Mejor cumplimiento del principio V (privacidad) porque el contrato ahora
+distingue explícitamente entre "no en padrón" y "sin afiliación APOPS" sin
+filtrar la afiliación real. Sin bump de versión de constitución.
+
+---
+
+### Paso 15 — Arranque del ciclo de feature
+
+Fase 0 cerrada. Empieza F1: `/speckit-specify` con la primera feature del MVP.
+
+**Decisión pendiente** antes de tipear `/speckit-specify`: ¿cuál es la primera
+feature? Opciones evaluables:
+
+| Candidata | Pro | Contra |
+|---|---|---|
+| Auth (registro + login) | Bloqueante para todo lo demás. Sin auth, ningún módulo funciona | No es el núcleo, no muestra valor visual rápido |
+| Consultas (núcleo) | Es el corazón del producto. Mostrar consultas funcionando "vende" el producto a la CD | Requiere auth funcionando como prerequisito |
+| Credencial digital con QR | Demo visual rápido y autocontenido | Tampoco es el núcleo |
+
+**Recomendación pendiente de discutir** con el usuario en la próxima sesión.
 
 ---
 

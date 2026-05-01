@@ -1,0 +1,110 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Edge Functions: resolver-pendiente (aprobar / rechazar)",
+  "description": "Endpoints administrativos para resolver solicitudes en estado pendiente_validacion. Solo accesibles por afiliados con rol admin (verificación de rol asume sistema de roles que se especifica en feature posterior; esta feature deja TODO documentado).",
+  "endpoint": {
+    "method": "POST",
+    "path": "/functions/v1/resolver-pendiente",
+    "auth": "Bearer JWT (sesión authenticated con rol admin)"
+  },
+  "request": {
+    "type": "object",
+    "required": ["solicitud_id", "accion"],
+    "properties": {
+      "solicitud_id": {
+        "type": "string",
+        "format": "uuid",
+        "description": "ID de la fila en solicitudes_pendientes."
+      },
+      "accion": {
+        "type": "string",
+        "enum": ["aprobar", "rechazar"]
+      },
+      "motivo_rechazo": {
+        "type": "string",
+        "minLength": 5,
+        "description": "Requerido cuando accion='rechazar'. Es el texto que verá el solicitante."
+      }
+    }
+  },
+  "behavior": {
+    "aprobar": [
+      "1. Verificar que el invocante tenga rol admin (rechazar 403 si no)",
+      "2. Verificar que la solicitud existe y estado='pendiente'",
+      "3. Re-validar contra padrón con los datos de la solicitud (defense in depth contra cambios de padrón posteriores)",
+      "4. Crear auth.users con el email de la solicitud",
+      "5. Crear afiliado con datos de la solicitud (DNI + legajo o DNI + nombre completo según sub_flujo)",
+      "6. Marcar la solicitud como aprobada (resolved_at, resolved_by, estado='aprobada')",
+      "7. Llamar supabase.auth.signInWithOtp con el email para enviar magic link",
+      "8. Enviar email adicional con confirmación del alta + pasos para ingresar (FR-019)",
+      "9. Registrar 'pendiente_approved' en audit_log",
+      "10. Devolver 200"
+    ],
+    "rechazar": [
+      "1. Verificar rol admin",
+      "2. Verificar solicitud existe y estado='pendiente'",
+      "3. Marcar la solicitud como rechazada con motivo_rechazo, resolved_at, resolved_by",
+      "4. Enviar email al solicitante con motivo (sin filtrar datos sensibles del padrón)",
+      "5. Registrar 'pendiente_rejected' en audit_log",
+      "6. Devolver 200"
+    ]
+  },
+  "responses": {
+    "200_ok": {
+      "body": {
+        "type": "object",
+        "required": ["status"],
+        "properties": {
+          "status": { "type": "string", "enum": ["aprobada", "rechazada"] },
+          "afiliado_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Solo presente cuando accion='aprobar'. ID del afiliado recién creado."
+          }
+        }
+      }
+    },
+    "400_validation_error": {
+      "body": {
+        "type": "object",
+        "properties": {
+          "error": { "type": "string" },
+          "code": {
+            "type": "string",
+            "enum": [
+              "solicitud_no_encontrada",
+              "solicitud_ya_resuelta",
+              "motivo_rechazo_requerido",
+              "accion_invalida"
+            ]
+          }
+        }
+      }
+    },
+    "403_forbidden": {
+      "body": {
+        "type": "object",
+        "properties": {
+          "error": { "type": "string", "const": "No tenés permisos para esta acción." }
+        }
+      }
+    },
+    "409_conflict": {
+      "description": "Al aprobar: el DNI o el email ya está usado por otro afiliado existente.",
+      "body": {
+        "type": "object",
+        "properties": {
+          "error": { "type": "string" },
+          "code": {
+            "type": "string",
+            "enum": ["dni_ya_existe", "email_ya_existe"]
+          }
+        }
+      }
+    }
+  },
+  "deferred_dependencies": {
+    "verificacion_rol_admin": "Esta Edge Function asume que existe un mecanismo de verificación de rol admin. En esta feature 001-afiliado-auth no se construye el sistema de roles completo (eso vive en otra feature posterior, ej. 002-roles-y-permisos). Por ahora, esta función verificará rol consultando una tabla `roles_admin` simple que la feature de roles definirá. Si esa tabla no existe al momento de ejecutar, la función falla con 503 service_unavailable indicando que el módulo de roles no está disponible.",
+    "panel_admin": "El UI desde donde el admin invoca esta Edge Function vive en otra feature (admin panel). Esta feature solo expone la API."
+  }
+}

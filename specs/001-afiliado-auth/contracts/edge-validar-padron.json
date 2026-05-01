@@ -1,0 +1,130 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Edge Function: validar-padron",
+  "description": "Valida la existencia de una persona en el padrón único de cotizantes y verifica afiliación APOPS según el flujo. No expone datos sensibles del padrón al cliente. Aplica rate limiting y registra el intento en audit_log.",
+  "endpoint": {
+    "method": "POST",
+    "path": "/functions/v1/validar-padron",
+    "auth": "anon (Authorization: Bearer <SUPABASE_ANON_KEY>)"
+  },
+  "request": {
+    "type": "object",
+    "required": ["dni", "flujo"],
+    "properties": {
+      "dni": {
+        "type": "string",
+        "pattern": "^[0-9]{7,8}$",
+        "description": "DNI argentino, 7-8 dígitos numéricos. El cliente debe normalizar (quitar puntos, espacios) antes de enviar."
+      },
+      "legajo": {
+        "type": "string",
+        "minLength": 1,
+        "description": "Requerido cuando flujo='activo'. Prohibido cuando flujo='sin_legajo'."
+      },
+      "flujo": {
+        "type": "string",
+        "enum": ["activo", "sin_legajo"],
+        "description": "Indica qué flag de afiliación validar contra el padrón único: 'activo' chequea afiliado_apops=true, 'sin_legajo' chequea cotiza_papel=true."
+      }
+    }
+  },
+  "validation_logic": {
+    "summary": "La Edge Function busca en `padron_cotizantes` y aplica la lógica según el flujo. NO devuelve datos del padrón al cliente — solo si hay match y de qué tipo.",
+    "flow_activo": [
+      "1. Buscar fila WHERE dni = ? AND legajo = ?",
+      "2. Si no existe: registrar `padron_validation_failure`, devolver match=false con motivo='dni_no_en_padron'",
+      "3. Si existe y `afiliado_apops = true`: registrar `padron_validation_success`, devolver match=true tipo='activo'",
+      "4. Si existe y `afiliado_apops = false`: registrar `padron_validation_no_afiliacion`, devolver match=false con motivo='sin_apops'"
+    ],
+    "flow_sin_legajo": [
+      "1. Buscar fila WHERE dni = ?",
+      "2. Si no existe: registrar `padron_validation_failure`, devolver match=false con motivo='dni_no_en_padron'",
+      "3. Si existe y `cotiza_papel = true`: registrar `padron_validation_success`, devolver match=true tipo='jubilado'",
+      "4. Si existe y `cotiza_papel = false`: registrar `padron_validation_no_afiliacion`, devolver match=false con motivo='sin_papel'"
+    ]
+  },
+  "responses": {
+    "200_match_found": {
+      "description": "La persona figura en el padrón con la afiliación APOPS correspondiente al flujo.",
+      "body": {
+        "type": "object",
+        "required": ["match", "tipo"],
+        "properties": {
+          "match": { "type": "boolean", "const": true },
+          "tipo": {
+            "type": "string",
+            "enum": ["activo", "jubilado"],
+            "description": "Único dato del padrón que llega al cliente. 'activo' si afiliado_apops=true y flujo=activo. 'jubilado' si cotiza_papel=true y flujo=sin_legajo."
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "200_no_match": {
+      "description": "La persona no califica como afiliada APOPS por la vía del flujo seleccionado. El cliente debe redirigir al sub-flujo `pendiente_validacion` correspondiente, capturando el motivo para que el admin pueda procesar mejor.",
+      "body": {
+        "type": "object",
+        "required": ["match", "motivo"],
+        "properties": {
+          "match": { "type": "boolean", "const": false },
+          "motivo": {
+            "type": "string",
+            "enum": ["dni_no_en_padron", "sin_apops", "sin_papel"],
+            "description": "dni_no_en_padron: la persona no figura en el padrón. sin_apops: figura en el padrón pero no tiene flag APOPS=x (probablemente cotiza a otro gremio o ninguno). sin_papel: figura en el padrón pero no tiene cotiza_papel=x (no es jubilado afiliado APOPS)."
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "400_validation_error": {
+      "description": "Input inválido (DNI mal formado, falta legajo en flujo activo, etc.).",
+      "body": {
+        "type": "object",
+        "required": ["error", "code"],
+        "properties": {
+          "error": { "type": "string", "description": "Mensaje user-friendly en español, sin tecnicismos." },
+          "code": {
+            "type": "string",
+            "enum": [
+              "dni_invalido",
+              "legajo_requerido",
+              "legajo_no_aplica",
+              "flujo_invalido"
+            ]
+          }
+        }
+      }
+    },
+    "429_rate_limited": {
+      "description": "Se excedió el límite de intentos por DNI o por IP en la ventana de 1 hora.",
+      "body": {
+        "type": "object",
+        "required": ["error", "code", "retry_after_seconds"],
+        "properties": {
+          "error": { "type": "string" },
+          "code": { "type": "string", "enum": ["rate_limit_dni", "rate_limit_ip"] },
+          "retry_after_seconds": { "type": "integer", "minimum": 1 }
+        }
+      }
+    },
+    "500_internal_error": {
+      "description": "Error inesperado. No expone detalles técnicos al cliente.",
+      "body": {
+        "type": "object",
+        "properties": {
+          "error": { "type": "string", "const": "Tuvimos un problema. Intentá de nuevo en un momento." }
+        }
+      }
+    }
+  },
+  "security": {
+    "data_exposure": "El response NUNCA incluye nombre, fecha de nacimiento, dirección, lugar de trabajo, gremio al que cotiza, ni ningún campo del padrón fuente más allá del flag de match y `tipo` cuando aplica. Esto cumple FR-015 y constitución V. Particularmente: cuando motivo='sin_apops' NO se revela a qué gremio cotiza la persona.",
+    "rate_limiting": "Por DNI: 5 intentos / hora. Por IP: 20 intentos / hora. Implementado con COUNT sobre audit_log con ventana móvil.",
+    "audit": "Cada invocación registra al menos un evento en audit_log: `padron_validation_attempt` siempre; uno de `padron_validation_success` / `padron_validation_failure` / `padron_validation_no_afiliacion` según resultado; y `rate_limit_exceeded` si aplica."
+  },
+  "performance": {
+    "target_p95_latency_ms": 500,
+    "rationale": "SC-005 exige feedback al usuario en <3s en 4G. La Edge Function debe consumir <500ms para que el round-trip total quede holgado.",
+    "indexes_required": "padron_cotizantes(dni), padron_cotizantes(legajo) WHERE legajo IS NOT NULL — ambos índices documentados en data-model.md."
+  }
+}

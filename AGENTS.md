@@ -35,11 +35,15 @@ El modelo separa dos conceptos distintos:
 
 ### Tipos de afiliado (uno por usuario, define situación laboral)
 
-| Tipo | Descripción | Mensaje central |
-|---|---|---|
-| `activo` | Trabajador de ANSES con legajo vigente | "Te enterás primero, con respaldo oficial" |
-| `jubilado` | Ex-trabajador retirado | "Seguís siendo parte, con la accesibilidad que necesitás" |
-| `ex_empleado` | Dejó ANSES sin jubilarse (retiro voluntario, renuncia) | "Te vas de ANSES pero seguís siendo APOPS" |
+| Tipo | Descripción | Cómo se identifica en padrón | Mensaje central |
+|---|---|---|---|
+| `activo` | Trabajador de ANSES afiliado APOPS, paga cuota por descuento de haberes | `APOPS = x` | "Te enterás primero, con respaldo oficial" |
+| `jubilado` | Jubilado afiliado APOPS, paga cuota por transferencia | `cotiza_papel = x` | "Seguís siendo parte, con la accesibilidad que necesitás" |
+
+> **Importante**: solo los activos (con descuento) y los jubilados (con cotización
+> por papel) son afiliados APOPS. Personas que renuncian sin jubilarse o que
+> cotizan a otro gremio (ATE, SEC, UPCN, SECASFPI) **no son afiliados APOPS** y
+> quedan en `pendiente_validacion` si intentan ingresar.
 
 ### Roles (combinables, definen capacidades en la app)
 
@@ -129,7 +133,7 @@ El sistema tiene **dos flujos diferenciados** según situación laboral del afil
 4. Login mediante magic link (sin contraseña)
 ```
 
-### Flujo 2 — Afiliado sin legajo (jubilado / ex_empleado)
+### Flujo 2 — Afiliado sin legajo (jubilado APOPS, cotiza por transferencia)
 
 UI ofrece opción visible: **"No tengo legajo"**.
 

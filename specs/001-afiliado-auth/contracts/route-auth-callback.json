@@ -1,0 +1,62 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Next.js Route Handler: /auth/callback",
+  "description": "Maneja el callback del magic link de Supabase Auth. El usuario aterriza acá tras hacer clic en el link de su email. Intercambia el código por una sesión, crea cookies y redirige a la app.",
+  "endpoint": {
+    "method": "GET",
+    "path": "/auth/callback",
+    "auth": "anon (la URL trae el token en query params)",
+    "implementation_file": "src/app/(auth)/callback/route.ts"
+  },
+  "request": {
+    "query_params": {
+      "code": {
+        "type": "string",
+        "required": true,
+        "description": "Token emitido por Supabase Auth."
+      },
+      "next": {
+        "type": "string",
+        "required": false,
+        "default": "/feed",
+        "description": "Path al que redirigir tras login exitoso. Validado server-side contra path-injection."
+      },
+      "error": {
+        "type": "string",
+        "required": false,
+        "description": "Si Supabase reporta error (link expirado, ya usado, etc.)."
+      }
+    }
+  },
+  "behavior": [
+    "1. Si query trae `error`: redirigir a /magic-link-expirado con el error",
+    "2. Si no trae `code`: redirigir a /login con error genérico",
+    "3. Llamar `supabase.auth.exchangeCodeForSession(code)` server-side",
+    "4. Si el intercambio falla: redirigir a /magic-link-expirado",
+    "5. Si exitoso: actualizar `last_login_at` en afiliados, registrar 'authentication_success' en audit_log, redirigir a `next` (validado) o /feed",
+    "6. Si exitoso pero el afiliado vinculado no existe: registrar 'authentication_failure', cerrar sesión y redirigir a /login con error de cuenta inválida"
+  ],
+  "responses": {
+    "302_redirect_success": {
+      "headers": {
+        "Location": "/feed (o el `next` validado)",
+        "Set-Cookie": "Cookies HTTP-only de sesión Supabase (sb-<project-ref>-auth-token)"
+      }
+    },
+    "302_redirect_expired": {
+      "headers": {
+        "Location": "/magic-link-expirado?reason=<expired|used|invalid>"
+      }
+    },
+    "302_redirect_login": {
+      "headers": {
+        "Location": "/login?error=<código>"
+      }
+    }
+  },
+  "security": {
+    "next_validation": "El parámetro `next` se valida contra una whitelist de paths internos (regex `^/[a-z0-9/-]*$`). Cualquier valor que no matchee se descarta y se redirige a /feed.",
+    "cookie_flags": "HTTP-only, Secure (producción), SameSite=Lax. Manejadas por @supabase/ssr.",
+    "audit": "Tanto éxito como fallo se registran en audit_log con IP y user-agent."
+  }
+}

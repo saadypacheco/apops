@@ -1,0 +1,133 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Edge Function: solicitar-magic-link",
+  "description": "Orquesta la creación del afiliado (si no existía) y emite un magic link al email proporcionado. Maneja también el caso de DNI no encontrado en padrón (US3) creando una solicitud_pendiente sin emitir magic link.",
+  "endpoint": {
+    "method": "POST",
+    "path": "/functions/v1/solicitar-magic-link",
+    "auth": "anon (Authorization: Bearer <SUPABASE_ANON_KEY>)"
+  },
+  "request": {
+    "type": "object",
+    "required": ["dni", "email", "flujo"],
+    "properties": {
+      "dni": {
+        "type": "string",
+        "pattern": "^[0-9]{7,8}$"
+      },
+      "legajo": {
+        "type": "string",
+        "minLength": 1,
+        "description": "Requerido cuando flujo='activo'."
+      },
+      "nombre_completo": {
+        "type": "string",
+        "minLength": 3,
+        "description": "Requerido cuando flujo='sin_legajo' y el DNI NO está en padrón (sub-flujo pendiente_validacion sin_legajo)."
+      },
+      "email": {
+        "type": "string",
+        "format": "email"
+      },
+      "flujo": {
+        "type": "string",
+        "enum": ["activo", "sin_legajo"]
+      }
+    }
+  },
+  "behavior": {
+    "summary": "El comportamiento depende del estado en el padrón verificado previamente por el cliente con `validar-padron`. La Edge Function re-verifica server-side y elige rama según resultado.",
+    "branches": [
+      {
+        "condition": "DNI existe en padrón con la afiliación APOPS correspondiente al flujo (afiliado_apops=true para flujo=activo, o cotiza_papel=true para flujo=sin_legajo)",
+        "actions": [
+          "1. Crear/upsertear `auth.users` con el email proporcionado",
+          "2. Crear/upsertear `afiliados` con DNI, legajo (si aplica), nombre (desde padrón), padron_id (snapshot), tipo (`activo` si afiliado_apops=true, `jubilado` si cotiza_papel=true)",
+          "3. Llamar `supabase.auth.signInWithOtp({ email, options: { emailRedirectTo: '/auth/callback' } })` para enviar magic link",
+          "4. Registrar `magic_link_sent` en audit_log",
+          "5. Devolver 200 con `{ status: 'magic_link_sent' }`"
+        ]
+      },
+      {
+        "condition": "DNI no existe en padrón, o existe pero sin afiliación APOPS por la vía del flujo (sin_apops o sin_papel)",
+        "actions": [
+          "1. Crear fila en `solicitudes_pendientes` con sub_flujo, datos condicionales, email, y motivo_pendiente derivado del response previo de validar-padron (`dni_no_en_padron` / `sin_flag_apops_y_sin_papel` mapeado desde `sin_apops`/`sin_papel`)",
+          "2. NO crear auth.users, NO emitir magic link",
+          "3. Notificar a admins (mecanismo definido en feature de admin panel)",
+          "4. Registrar `pendiente_created` en audit_log",
+          "5. Devolver 200 con `{ status: 'pendiente_validacion' }`"
+        ]
+      }
+    ]
+  },
+  "responses": {
+    "200_magic_link_sent": {
+      "body": {
+        "type": "object",
+        "required": ["status"],
+        "properties": {
+          "status": { "type": "string", "const": "magic_link_sent" },
+          "email_sent_to": {
+            "type": "string",
+            "description": "Email enmascarado para feedback al usuario, ej: 'j****@gmail.com'"
+          }
+        }
+      }
+    },
+    "200_pendiente": {
+      "body": {
+        "type": "object",
+        "required": ["status"],
+        "properties": {
+          "status": { "type": "string", "const": "pendiente_validacion" },
+          "mensaje": {
+            "type": "string",
+            "description": "Mensaje user-friendly explicando que la solicitud está en revisión."
+          }
+        }
+      }
+    },
+    "400_validation_error": {
+      "body": {
+        "type": "object",
+        "properties": {
+          "error": { "type": "string" },
+          "code": {
+            "type": "string",
+            "enum": [
+              "dni_invalido",
+              "email_invalido",
+              "legajo_requerido",
+              "nombre_completo_requerido",
+              "email_ya_usado_por_otro_dni"
+            ]
+          }
+        }
+      }
+    },
+    "409_email_conflict": {
+      "description": "El email ya está asociado a otro DNI distinto al recibido. No se filtra cuál afiliado lo posee.",
+      "body": {
+        "type": "object",
+        "properties": {
+          "error": { "type": "string", "const": "Este email ya está asociado a otro afiliado." },
+          "code": { "type": "string", "const": "email_ya_usado_por_otro_dni" }
+        }
+      }
+    },
+    "429_rate_limited": {
+      "body": {
+        "type": "object",
+        "properties": {
+          "error": { "type": "string" },
+          "retry_after_seconds": { "type": "integer" }
+        }
+      }
+    }
+  },
+  "security": {
+    "double_validation": "La Edge Function NO confía en que el cliente ya validó. Re-valida contra padrón con service_role_key antes de decidir la rama. Esto previene bypass por manipulación del cliente.",
+    "service_role_isolation": "service_role_key vive solo en variables de entorno de la Edge Function. Nunca llega al cliente ni al runtime de Next.js.",
+    "audit": "Toda invocación deja huella en audit_log con DNI, IP, user-agent y resultado."
+  }
+}
