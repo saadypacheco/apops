@@ -40,12 +40,24 @@ enabled = true
 site_url = "http://localhost:3000"
 additional_redirect_urls = ["http://localhost:3000/auth/callback"]
 jwt_expiry = 3600
-enable_signup = false
+# Signup habilitado a nivel auth.users porque la Edge Function
+# solicitar-magic-link necesita poder crear users vía signInWithOtp después
+# de validar contra padrón. La protección real (un user solo se crea si pasa
+# por la Edge Function que valida padrón APOPS) vive en el flujo de la app,
+# no en este flag. Si en el futuro queremos cerrar /auth/v1/otp al cliente,
+# podemos cambiar la estrategia a admin.generateLink + email custom.
+enable_signup = true
 enable_anonymous_sign_ins = false
 enable_manual_linking = false
 
 [auth.email]
-enable_signup = false
+# Permitimos magic-link login porque la Edge Function solicitar-magic-link
+# pre-valida contra padrón APOPS antes de generar el link. El email
+# transaccional NO lo manda gotrue (su template default genera URL rota en
+# local — bug del CLI v2.98 con el path /email/ del template server).
+# En su lugar, la Edge Function genera el hashed_token con admin.generateLink
+# y manda el email custom via SMTP a Mailpit.
+enable_signup = true
 enable_confirmations = false
 double_confirm_changes = true
 secure_password_change = false

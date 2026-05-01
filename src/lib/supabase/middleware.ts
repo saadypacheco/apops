@@ -51,9 +51,16 @@ export async function updateSession(request: NextRequest) {
   )
 
   // getUser() refresca el access token si está cerca de expirar.
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  // Si hay cookies de sesión inválidas/parciales (caso típico: cookies
+  // de otra app en localhost), tira refresh_token_not_found. Lo tratamos
+  // como "no hay sesión" en silencio.
+  let user: { id: string } | null = null
+  try {
+    const result = await supabase.auth.getUser()
+    user = result.data.user
+  } catch {
+    user = null
+  }
 
   if (!user && !isPublicPath(request.nextUrl.pathname)) {
     const url = request.nextUrl.clone()

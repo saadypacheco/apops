@@ -1,5 +1,15 @@
 import { z } from 'zod'
 
+// Estado compartido entre Server Actions y Client Components que usan
+// useFormState. Vive acá (no en actions.ts) porque archivos con 'use server'
+// solo pueden exportar async functions.
+export interface FormState {
+  // Banner global (rate limit, server error)
+  error?: string
+  // Errores por campo (validación local)
+  fieldErrors?: Record<string, string | undefined>
+}
+
 // Tipos de afiliado APOPS reconocidos por el modelo (data-model.md §afiliados)
 export type Tipo = 'activo' | 'jubilado'
 

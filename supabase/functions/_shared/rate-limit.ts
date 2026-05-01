@@ -6,13 +6,15 @@
 //   - Por IP address: máximo 20 intentos / hora
 //
 // Fuente de conteo: tabla audit_log, evento 'padron_validation_attempt'.
-// Por convención el caller debe registrar el evento ANTES de validar y
-// llamar a este helper INMEDIATAMENTE DESPUÉS, de modo que el intento
-// actual sí cuente para el límite.
 //
-// Si el límite se excede, el caller debe registrar un evento adicional
-// 'rate_limit_exceeded' y devolver HTTP 429 al cliente con mensaje claro
-// (constitución II — sin códigos técnicos visibles).
+// Orden de invocación que el caller debe seguir:
+//   1. checkRateLimit() — cuenta intentos ANTERIORES (sin incluir el actual)
+//   2. Si denied → registrar 'rate_limit_exceeded' y devolver HTTP 429
+//   3. Si allowed → registrar 'padron_validation_attempt' y proceder
+//
+// Esta secuencia hace que el 6to intento de DNI falle (5 anteriores = 5,
+// 5 >= 5 → deny). Si invirtiéramos el orden, el 5to legítimo fallaría
+// (off-by-one).
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.4'
 
@@ -28,6 +30,11 @@ export type RateLimitDecision =
       retry_after_seconds: number
     }
 
+// Eventos por defecto que cuentan como "intento de auth" para rate-limit.
+// validar-padron usa el default; solicitar-magic-link puede pasar una lista
+// más amplia para cubrir bypass de validar-padron.
+const DEFAULT_EVENTS = ['padron_validation_attempt']
+
 function getAdminClient() {
   return createClient(
     Deno.env.get('SUPABASE_URL')!,
@@ -39,15 +46,17 @@ function getAdminClient() {
 export async function checkRateLimit(params: {
   dni: string
   ip: string | null
+  events?: string[]
 }): Promise<RateLimitDecision> {
   const supabase = getAdminClient()
   const oneHourAgo = new Date(Date.now() - ONE_HOUR_MS).toISOString()
+  const events = params.events ?? DEFAULT_EVENTS
 
   // Conteo por DNI (idéntico DNI desde cualquier IP)
   const dniQuery = await supabase
     .from('audit_log')
     .select('*', { count: 'exact', head: true })
-    .eq('evento', 'padron_validation_attempt')
+    .in('evento', events)
     .eq('dni_intentado', params.dni)
     .gte('created_at', oneHourAgo)
 
@@ -71,7 +80,7 @@ export async function checkRateLimit(params: {
     const ipQuery = await supabase
       .from('audit_log')
       .select('*', { count: 'exact', head: true })
-      .eq('evento', 'padron_validation_attempt')
+      .in('evento', events)
       .eq('ip_address', params.ip)
       .gte('created_at', oneHourAgo)
 

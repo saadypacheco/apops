@@ -14,6 +14,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:rls": "vitest run tests/rls",
+    "test:contract": "vitest run tests/contract",
+    "test:integration": "vitest run tests/integration",
     "test:e2e": "playwright test",
     "supabase:types": "npx supabase gen types typescript --local > src/lib/supabase/types.ts"
   },
