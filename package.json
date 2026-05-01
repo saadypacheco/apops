@@ -15,7 +15,7 @@
     "test:watch": "vitest",
     "test:rls": "vitest run tests/rls",
     "test:e2e": "playwright test",
-    "supabase:types": "supabase gen types typescript --local > src/lib/supabase/types.ts"
+    "supabase:types": "npx supabase gen types typescript --local > src/lib/supabase/types.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.0",

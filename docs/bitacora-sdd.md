@@ -423,6 +423,51 @@ feature? Opciones evaluables:
 
 ---
 
+### Paso 16 — Incidente Storage en Phase 2 (Foundational) 🔵 *(decisión del proyecto, workaround)*
+
+**Fecha:** 2026-05-01 · **Contexto:** primera ejecución de `npx supabase start`
+en el proyecto APOPS, durante Phase 2 de la feature `001-afiliado-auth`.
+
+**Síntoma observado:**
+- Las 8 migraciones (0009-0016) y `seed.sql` aplicaron limpio (logs lo confirman).
+- Al final del arranque, el healthcheck de `supabase_storage_apops-siempre`
+  falló con `container is not ready: unhealthy`.
+- El CLI hizo rollback automático de TODOS los containers (comportamiento
+  estándar de `supabase start`: si un componente falla, no deja el stack
+  parcialmente arriba).
+
+**Diagnóstico:** problema conocido del módulo Storage de Supabase corriendo
+en Docker Desktop en Windows. Causas típicas: permisos del volumen,
+antivirus interfiriendo con I/O, o conflictos de red. No es bug de las
+migraciones ni del schema.
+
+**Decisión:** deshabilitar `[storage] enabled = false` en
+`supabase/config.toml` por ahora.
+
+**Por qué es aceptable:**
+- La feature `001-afiliado-auth` no usa Storage en absoluto. Auth, validación
+  de padrón, audit log y RLS son todos a nivel DB + GoTrue + Edge Functions.
+- Mantener Storage habilitado pero roto bloquea TODO el desarrollo local.
+  Apagarlo desbloquea sin afectar funcionalidad de esta feature.
+- Es un cambio reversible y aislado a un módulo.
+
+**Alternativa rechazada:** debugar el container Storage ahora (revisar logs,
+permisos del volumen, listas blancas del antivirus). Tomaba 15-30 min sin
+desbloquear nada de Phase 2.
+
+**Follow-up obligatorio:** cuando entre la feature de **credencial digital
+con QR** (o cualquier otra que suba archivos), reactivar Storage y debugar
+el healthcheck en ese momento. El comentario inline en `config.toml` deja
+el recordatorio.
+
+**Lección metodológica:** los workarounds locales son aceptables si
+(a) están aislados y reversibles, (b) están documentados con su trigger de
+re-evaluación, y (c) no afectan producción ni el contrato del feature
+actual. SDD no prescribe esto explícitamente — es buena práctica
+operacional de cualquier proyecto.
+
+---
+
 ## Decisiones tomadas que no están en el PDF (revisar al final)
 
 Lista para validar al cierre del proyecto contra documentación oficial de Spec

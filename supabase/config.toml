@@ -27,7 +27,12 @@ smtp_port = 54325
 pop3_port = 54326
 
 [storage]
-enabled = true
+# Deshabilitado el 2026-05-01 (Phase 2 de feature 001-afiliado-auth).
+# Motivo: container supabase_storage falla healthcheck en Windows local
+# (ver docs/bitacora-sdd.md Paso 16). La feature de auth no usa storage.
+# Reactivar cuando ingrese la feature de credencial digital con QR
+# o cualquier otra que requiera subir archivos.
+enabled = false
 file_size_limit = "50MiB"
 
 [auth]
