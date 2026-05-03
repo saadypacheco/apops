@@ -179,14 +179,14 @@ incrementos posteriores.
 
 ### Logout y sesión
 
-- [ ] T065 [P] Crear `src/components/auth/LogoutButton.tsx` con confirmación
-- [ ] T066 Crear `src/app/(app)/perfil/page.tsx` con `LogoutButton` accesible en máximo 2 taps (FR-014)
-- [ ] T067 Crear `src/app/(app)/layout.tsx` que verifica sesión server-side y redirige a `/login` si no hay sesión
+- [X] T065 [P] Crear `src/components/auth/LogoutButton.tsx` con confirmación
+- [X] T066 Crear `src/app/(app)/perfil/page.tsx` con `LogoutButton` accesible en máximo 2 taps (FR-014)
+- [X] T067 Crear `src/app/(app)/layout.tsx` que verifica sesión server-side y redirige a `/login` si no hay sesión
 
 ### Magic link expirado y reenvío
 
-- [ ] T068 Crear `src/app/(auth)/magic-link-expirado/page.tsx` con CTA "Pedir uno nuevo" y soporte de query param `reason`
-- [ ] T069 Implementar lógica de reenvío en `solicitar-magic-link` que respeta FR-017 (no requerir reingresar DNI/legajo si recientemente validado en este device — vía cookie corta)
+- [X] T068 Crear `src/app/(auth)/magic-link-expirado/page.tsx` con CTA "Pedir uno nuevo" y soporte de query param `reason`
+- [X] T069 Implementar lógica de reenvío en `solicitar-magic-link` que respeta FR-017 (no requerir reingresar DNI/legajo si recientemente validado en este device — vía cookie corta)
 
 ### Rate limiting y audit consolidados
 

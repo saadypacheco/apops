@@ -13,6 +13,13 @@ import type { SubFlujo, Tipo } from '@/types/auth'
 const COOKIE_NAME = 'apops-auth-ctx'
 const TTL_SECONDS = 10 * 60
 
+// Cookie de "validación reciente" (FR-017). Persiste dni+legajo+nombre+email+
+// flujo durante 4h después de un magic_link_sent exitoso, para permitir
+// reenvío del enlace sin reingresar datos. Separada de la auth-context para
+// que no se borre al terminar el flujo.
+const RECENT_COOKIE_NAME = 'apops-recent-validation'
+const RECENT_TTL_SECONDS = 4 * 60 * 60
+
 export interface AuthContext {
   flujo: SubFlujo
   dni: string
@@ -51,4 +58,38 @@ export function getAuthContext(): AuthContext | null {
 
 export function clearAuthContext(): void {
   cookies().delete(COOKIE_NAME)
+}
+
+export interface RecentValidation {
+  flujo: SubFlujo
+  dni: string
+  legajo?: string
+  nombreCompleto?: string
+  email: string
+}
+
+export function setRecentValidation(rv: RecentValidation): void {
+  cookies().set({
+    name: RECENT_COOKIE_NAME,
+    value: JSON.stringify(rv),
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    path: '/',
+    maxAge: RECENT_TTL_SECONDS,
+  })
+}
+
+export function getRecentValidation(): RecentValidation | null {
+  const raw = cookies().get(RECENT_COOKIE_NAME)
+  if (!raw) return null
+  try {
+    return JSON.parse(raw.value) as RecentValidation
+  } catch {
+    return null
+  }
+}
+
+export function clearRecentValidation(): void {
+  cookies().delete(RECENT_COOKIE_NAME)
 }
