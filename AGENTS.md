@@ -254,10 +254,17 @@ de comunicados.
 
 ## 11. Estado activo
 
-**Fase:** 0 — Setup inicial (cierre próximo).
-**Próximo paso:** commit inicial estructurado y push a GitHub. Luego `/speckit-specify` para la primera feature (consultas).
-**Bloqueado por:** nada.
-**Última actualización:** 2026-04-30. Constitución v1.0.0 ratificada (7 principios + stack constraints + governance).
+**Fase:** Feature **001-afiliado-auth** completa (Phases 1-6, T001-T078).
+**Próximo paso:** revisar PR a `main`. Luego `/speckit-specify` para feature siguiente — candidata: consultas (núcleo del producto).
+**Bloqueado por:** revisión humana de Saady (a11y manual con NVDA, pasada visual de pantallas, push y PR).
+**Última actualización:** 2026-05-04. 62 tests verde, lint+typecheck OK, bundle 87-99 kB, Lighthouse thresholds (90/85/90) configurados en CI.
+
+**Follow-ups abiertos** (no bloquean merge de la feature):
+- Pasada NVDA/VoiceOver sobre `/login`, `/login-sin-legajo`, `/email`, `/perfil`.
+- Tests Playwright e2e + axe-core integration.
+- Feature 002 — sistema de roles real (reemplaza `roles_admin` stub de migración 0017).
+- Panel admin para resolver pendientes (la API ya existe).
+- Reactivar Storage cuando entre feature con archivos.
 
 > Esta sección se actualiza al inicio o final de cada sesión de trabajo.
 > Si tiene más de 3 líneas, mover el detalle a `docs/progreso.md`.

@@ -468,6 +468,66 @@ operacional de cualquier proyecto.
 
 ---
 
+### Paso 17 — Cierre de feature 001-afiliado-auth (Phases 3-6) 🟢🔵
+
+**Fecha:** 2026-05-01 → 2026-05-04
+**Branch:** `001-afiliado-auth`
+**Commits del ciclo:** Phases 2-6 (5 commits, sin contar Phase 1 que fue setup).
+
+**Lo que se construyó (resumen):**
+
+| Phase | User Story | Tareas | Estado |
+|---|---|---|---|
+| 3 (P1 — MVP) | US1: afiliado activo (DNI + legajo) | T033-T048 | ✅ |
+| 4 (P1) | US2: jubilado sin legajo (solo DNI) | T049-T056 | ✅ |
+| 5 (P2) | US3: pendiente_validacion + admin resolver | T057-T064 | ✅ |
+| 6 (Polish) | logout, magic-link reenvío, tests, lighthouse, a11y, docs | T065-T078 | ✅ |
+
+Resultado verificable: 4 Edge Functions (`validar-padron`, `solicitar-magic-link`, `resolver-pendiente`, `auth/callback`), 9 migraciones (0009-0017), 19 archivos de test, ~62 casos de test verdes, 12 páginas Next.js + middleware.
+
+**Decisiones tomadas durante implementación que no están en PDF/spec:**
+
+1. **Cookie HTTP-only `apops-auth-ctx`** (TTL 10 min) para mantener contexto entre pantallas del wizard de auth (DNI → email → magic link). Evita estado en URL (que filtraría datos al referrer) y evita Redux/Zustand para algo que es server-side. SDD sugiere "form steps" pero no prescribe el mecanismo de persistencia.
+
+2. **Cookie `apops-recent-validation`** (TTL 4h, separada) para FR-017 (reenvío sin reingresar DNI/legajo). Trade-off documentado: incluye email para UX 1-tap; aceptado por ser HTTP-only + same-site + secure en prod.
+
+3. **Migración stub `0017_roles_admin_stub.sql`** para destrabar tests del Edge Function `resolver-pendiente`. Tabla mínima documentada como reemplazable por la futura feature de roles. SDD no contempla "deferred dependencies" formalmente — usé el patrón ya empleado en `0009_padron_cotizantes_stub.sql`.
+
+4. **Email custom vía SMTP/Mailpit** en lugar de `signInWithOtp` con template default de gotrue, por bug del CLI v2.98 con la URL del template (apunta a `/verify` sin `/auth/v1/`). Decisión inline en `solicitar-magic-link/index.ts`. En producción se sustituye por Resend/Sendgrid.
+
+5. **Defense-in-depth en /(app)/layout.tsx**: gate de sesión server-side aunque el middleware ya redirige. Costo: una llamada extra a `auth.getUser()` por render. Beneficio: si el middleware no corriera, no se renderiza contenido autenticado.
+
+6. **T072 (logout test) pragmático**: logoutAction es Server Action de Next.js → no testable directo en vitest sin mocking pesado. Se replicaron los efectos verificables (audit insert + signOut). El UI flow (redirect, cookie removida) queda para Playwright e2e en una iteración futura. SDD no prescribe esta línea de corte; la tomé documentándola en el comentario del archivo.
+
+7. **Auditoría de a11y T074 dividida**: estática (manual sobre JSX) ✓ y dinámica (NVDA/VoiceOver + axe-core automático) deferida. Documentada en `docs/a11y-audit.md`. Justificación: la pasada con lector de pantalla la tiene que hacer Saady; axe-core requiere tests Playwright que no están todavía.
+
+**Lecciones metodológicas:**
+
+- **Spec viva** ≠ spec congelada. Vimos varias veces cómo durante implementación aparecen detalles que el spec no anticipó (ej. el bug del template de gotrue, el edge runtime que cachea funciones al arrancar). El patrón que funcionó: documentar la decisión inline en el código + referenciar acá. No re-abrir el spec por cada uno.
+
+- **Tests serializados** (`fileParallelism: false` en vitest.config.ts) costaron ~2× tiempo pero eliminaron flakiness por compartir DNIs del seed. Vale el costo.
+
+- **Stub-first para deferred dependencies** (padron_cotizantes en 0009, roles_admin en 0017) destraba el desarrollo sin esperar features upstream. SDD no lo nombra explícitamente; merece una sección en metodología propia.
+
+- **Reusar pattern entre Edge Functions** (mismo SMTP, mismo audit helper, misma cabecera CORS) ahorró trabajo y bugs. El comentario en `_shared/audit.ts` lo formaliza.
+
+**Lo que queda fuera de esta feature** (follow-ups documentados):
+
+- Feature de roles real (reemplaza `0017_roles_admin_stub.sql`).
+- Panel admin para resolver pendientes (la API está; falta la UI).
+- Tests Playwright e2e de los flujos completos + axe-core integration.
+- Pasada NVDA/VoiceOver real.
+- Reactivar Storage cuando entre feature con archivos.
+
+**Métricas finales:**
+
+- Bundle First Load JS: 87-99 kB (debajo del benchmark Next.js ~120 kB).
+- Tests: 62 verde, 0 rojo.
+- Lighthouse: thresholds 90/85/90 verificables en CI (treosh action).
+- Cobertura de eventos audit_log: 12 eventos del CHECK constraint cubiertos por al menos un test.
+
+---
+
 ## Decisiones tomadas que no están en el PDF (revisar al final)
 
 Lista para validar al cierre del proyecto contra documentación oficial de Spec

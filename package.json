@@ -17,6 +17,8 @@
     "test:contract": "vitest run tests/contract",
     "test:integration": "vitest run tests/integration",
     "test:e2e": "playwright test",
+    "lighthouse": "npx --yes -p @lhci/cli@0.14.0 lhci autorun --config=./.lighthouserc.json",
+    "analyze": "ANALYZE=true next build",
     "supabase:types": "npx supabase gen types typescript --local > src/lib/supabase/types.ts"
   },
   "dependencies": {
@@ -32,6 +34,7 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
+    "@next/bundle-analyzer": "^14.2.35",
     "@playwright/test": "^1.48.0",
     "@types/node": "^20.16.10",
     "@types/react": "^18.3.11",
