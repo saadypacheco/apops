@@ -3,9 +3,9 @@
 @tailwind utilities;
 
 :root {
-  --color-bg: #f1efe8;
+  --color-bg: #f8faf6;
   --color-fg: #042c53;
-  --color-accent: #185fa5;
+  --color-accent: #2e9f8c;
   --color-success: #1d9e75;
   --color-warning: #ba7517;
   --color-critical: #a32d2d;
@@ -31,7 +31,6 @@ a,
 input[type='button'],
 input[type='submit'] {
   min-height: 2.75rem;
-  min-width: 2.75rem;
 }
 
 /* Focus visible reforzado para accesibilidad */
@@ -48,4 +47,13 @@ input[type='submit'] {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/* Scroll horizontal de noticias — oculta scrollbar pero mantiene swipe */
+.snap-x-noscrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.snap-x-noscrollbar::-webkit-scrollbar {
+  display: none;
 }

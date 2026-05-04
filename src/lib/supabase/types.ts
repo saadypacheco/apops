@@ -20,6 +20,7 @@ export type Database = {
           legajo: string | null
           nombre: string
           padron_id: string | null
+          rol: string
           tipo: string
         }
         Insert: {
@@ -32,6 +33,7 @@ export type Database = {
           legajo?: string | null
           nombre: string
           padron_id?: string | null
+          rol?: string
           tipo: string
         }
         Update: {
@@ -44,6 +46,7 @@ export type Database = {
           legajo?: string | null
           nombre?: string
           padron_id?: string | null
+          rol?: string
           tipo?: string
         }
         Relationships: [
@@ -96,6 +99,48 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      noticias: {
+        Row: {
+          autor: string | null
+          contenido: string | null
+          created_at: string
+          destacada: boolean
+          id: string
+          imagen_url: string | null
+          publicada: boolean
+          publicada_at: string
+          resumen: string
+          titulo: string
+          updated_at: string
+        }
+        Insert: {
+          autor?: string | null
+          contenido?: string | null
+          created_at?: string
+          destacada?: boolean
+          id?: string
+          imagen_url?: string | null
+          publicada?: boolean
+          publicada_at?: string
+          resumen: string
+          titulo: string
+          updated_at?: string
+        }
+        Update: {
+          autor?: string | null
+          contenido?: string | null
+          created_at?: string
+          destacada?: boolean
+          id?: string
+          imagen_url?: string | null
+          publicada?: boolean
+          publicada_at?: string
+          resumen?: string
+          titulo?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       padron_cotizantes: {
         Row: {

@@ -79,7 +79,7 @@ export async function GET(request: NextRequest) {
   const admin = createAdminClient()
   const { data: afiliado } = await admin
     .from('afiliados')
-    .select('id')
+    .select('id, rol')
     .eq('auth_user_id', userId)
     .maybeSingle()
 
@@ -108,8 +108,19 @@ export async function GET(request: NextRequest) {
     afiliado_id: afiliado.id,
     ip_address: ip,
     user_agent: userAgent,
-    metadata: { next },
+    metadata: { next, rol: afiliado.rol },
   })
 
-  return NextResponse.redirect(new URL(next, url))
+  // Routing por rol. Si vino un `next` explícito desde el magic link,
+  // lo respetamos (caso uso normal). Si no, mandamos al home según rol.
+  const target =
+    next !== DEFAULT_NEXT
+      ? next
+      : afiliado.rol === 'admin'
+        ? '/admin'
+        : afiliado.rol === 'delegado'
+          ? '/delegados'
+          : '/feed'
+
+  return NextResponse.redirect(new URL(target, url))
 }
