@@ -262,6 +262,140 @@ export type Database = {
         }
         Relationships: []
       }
+      solicitudes_afiliacion: {
+        Row: {
+          acepta_descuento: boolean
+          apellido_nombre: string
+          area_udai: string | null
+          cargo_funcion: string | null
+          categoria: string | null
+          cbu: string | null
+          celular: string
+          conyuge: Json | null
+          created_at: string
+          domicilio_calle: string | null
+          domicilio_cp: string | null
+          domicilio_depto: string | null
+          domicilio_localidad: string | null
+          domicilio_numero: string | null
+          domicilio_piso: string | null
+          domicilio_provincia: string | null
+          edificio_udai: string | null
+          email: string
+          estado: string
+          estado_civil: string | null
+          familiares: Json | null
+          fecha_nacimiento: string
+          firma_png: string
+          gerencia: string | null
+          id: string
+          ip_address: unknown
+          motivo_rechazo: string | null
+          numero_documento: string
+          numero_legajo: string
+          procesado_at: string | null
+          procesado_por: string | null
+          telefono: string
+          tipo_documento: string
+          tipo_planta: string
+          trabajo_domicilio: string | null
+          trabajo_email: string | null
+          trabajo_localidad: string | null
+          trabajo_telefono: string | null
+          user_agent: string | null
+        }
+        Insert: {
+          acepta_descuento?: boolean
+          apellido_nombre: string
+          area_udai?: string | null
+          cargo_funcion?: string | null
+          categoria?: string | null
+          cbu?: string | null
+          celular: string
+          conyuge?: Json | null
+          created_at?: string
+          domicilio_calle?: string | null
+          domicilio_cp?: string | null
+          domicilio_depto?: string | null
+          domicilio_localidad?: string | null
+          domicilio_numero?: string | null
+          domicilio_piso?: string | null
+          domicilio_provincia?: string | null
+          edificio_udai?: string | null
+          email: string
+          estado?: string
+          estado_civil?: string | null
+          familiares?: Json | null
+          fecha_nacimiento: string
+          firma_png: string
+          gerencia?: string | null
+          id?: string
+          ip_address?: unknown
+          motivo_rechazo?: string | null
+          numero_documento: string
+          numero_legajo: string
+          procesado_at?: string | null
+          procesado_por?: string | null
+          telefono: string
+          tipo_documento: string
+          tipo_planta: string
+          trabajo_domicilio?: string | null
+          trabajo_email?: string | null
+          trabajo_localidad?: string | null
+          trabajo_telefono?: string | null
+          user_agent?: string | null
+        }
+        Update: {
+          acepta_descuento?: boolean
+          apellido_nombre?: string
+          area_udai?: string | null
+          cargo_funcion?: string | null
+          categoria?: string | null
+          cbu?: string | null
+          celular?: string
+          conyuge?: Json | null
+          created_at?: string
+          domicilio_calle?: string | null
+          domicilio_cp?: string | null
+          domicilio_depto?: string | null
+          domicilio_localidad?: string | null
+          domicilio_numero?: string | null
+          domicilio_piso?: string | null
+          domicilio_provincia?: string | null
+          edificio_udai?: string | null
+          email?: string
+          estado?: string
+          estado_civil?: string | null
+          familiares?: Json | null
+          fecha_nacimiento?: string
+          firma_png?: string
+          gerencia?: string | null
+          id?: string
+          ip_address?: unknown
+          motivo_rechazo?: string | null
+          numero_documento?: string
+          numero_legajo?: string
+          procesado_at?: string | null
+          procesado_por?: string | null
+          telefono?: string
+          tipo_documento?: string
+          tipo_planta?: string
+          trabajo_domicilio?: string | null
+          trabajo_email?: string | null
+          trabajo_localidad?: string | null
+          trabajo_telefono?: string | null
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "solicitudes_afiliacion_procesado_por_fkey"
+            columns: ["procesado_por"]
+            isOneToOne: false
+            referencedRelation: "afiliados"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       solicitudes_pendientes: {
         Row: {
           created_at: string

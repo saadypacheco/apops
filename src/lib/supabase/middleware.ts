@@ -15,6 +15,8 @@ const PUBLIC_PATHS = new Set<string>([
   '/magic-link-enviado',
   '/magic-link-expirado',
   '/pendiente-validacion',
+  '/afiliarse',
+  '/afiliarse/exito',
 ])
 
 const PUBLIC_PREFIXES = ['/auth/callback']

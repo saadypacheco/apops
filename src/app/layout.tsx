@@ -25,10 +25,15 @@ export const metadata: Metadata = {
   formatDetection: {
     telephone: false,
   },
+  // Modern equivalent of apple-mobile-web-app-capable (que está deprecated
+  // en navegadores nuevos). Mantenemos ambos por compatibilidad iOS antigua.
+  other: {
+    'mobile-web-app-capable': 'yes',
+  },
 };
 
 export const viewport: Viewport = {
-  themeColor: '#2E9F8C',
+  themeColor: '#0F2A47',
   width: 'device-width',
   initialScale: 1,
   maximumScale: 5,
