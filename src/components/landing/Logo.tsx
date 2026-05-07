@@ -1,30 +1,107 @@
 import Image from 'next/image'
 
-// Logo oficial APOPS. Archivo en public/logo-apops.png.
-//
-// El PNG oficial viene con fondo cyan cuadrado. Para que se integre con
-// el gradient navy del fondo, lo recortamos a círculo (rounded-full +
-// overflow-hidden) — los corners cyan del cuadrado desaparecen y queda
-// la circunferencia natural del logo.
-//
-// `unoptimized` evita el 400 del optimizador de Next mientras la imagen
-// no es servida desde un host externo.
-
-export function Logo({ size = 160 }: { size?: number }) {
+// Sol/girasol APOPS — SVG inline cyan claro. Aproximación del logo oficial.
+function SunMark({ className }: { className?: string }) {
+  const rays = Array.from({ length: 12 })
   return (
-    <div
-      className="relative overflow-hidden rounded-full ring-2 ring-white/15 drop-shadow-[0_10px_28px_rgba(0,0,0,0.4)]"
-      style={{ width: size, height: size }}
+    <svg
+      viewBox="0 0 100 100"
+      fill="#7FCFE5"
+      aria-hidden
+      className={className}
     >
-      <Image
-        src="/logo-apops.png"
-        alt="APOPS — Asociación del Personal de los Organismos de Previsión Social"
-        width={size}
-        height={size}
-        priority
-        unoptimized
-        className="h-full w-full object-cover"
-      />
-    </div>
+      {rays.map((_, i) => (
+        <rect
+          key={i}
+          x="46.5"
+          y="6"
+          width="7"
+          height="22"
+          rx="1.5"
+          transform={`rotate(${(i * 360) / 12} 50 50)`}
+        />
+      ))}
+      <circle cx="50" cy="50" r="9" />
+    </svg>
+  )
+}
+
+// Logo APOPS oficial. La imagen es rectangular y trae el descriptor
+// "Asociación del Personal de los Organismos de Previsión Social" abajo del
+// nombre. El png viene con fondo navy oscuro propio.
+//
+// Modos:
+//   - <Logo /> default 280x140, para páginas internas con fondo claro/card.
+//   - <Logo as="banner" /> ocupa el ancho del contenedor padre.
+//   - <Logo as="onBlue" /> aplica mix-blend-mode: screen para que el navy
+//     del png se funda con un fondo azul medio (caso landing). Solo los
+//     elementos blancos/cyan del logo permanecen visibles.
+
+type LogoProps = {
+  width?: number
+  height?: number
+  as?: 'inline' | 'banner' | 'onBlue'
+  priority?: boolean
+}
+
+export function Logo({
+  width = 280,
+  height = 140,
+  as = 'inline',
+  priority = false,
+}: LogoProps) {
+  if (as === 'banner') {
+    return (
+      <div className="relative w-full">
+        <Image
+          src="/logo-apops.png"
+          alt="APOPS — Asociación del Personal de los Organismos de Previsión Social"
+          width={1200}
+          height={600}
+          priority={priority}
+          unoptimized
+          className="h-auto w-full object-contain"
+        />
+      </div>
+    )
+  }
+
+  if (as === 'onBlue') {
+    // Aproximación SVG del logo APOPS oficial. Reemplaza al PNG (que viene
+    // con fondo navy y no se funde bien con el azul medio del header).
+    // El "girasol" son 12 rayos rectangulares cyan más un círculo central.
+    // APOPS y descriptor son texto HTML blanco.
+    return (
+      <div
+        className="flex items-center gap-2.5"
+        role="img"
+        aria-label="APOPS — Asociación del Personal de los Organismos de Previsión Social"
+      >
+        <SunMark className="h-12 w-12 shrink-0" />
+        <div className="flex flex-col leading-none">
+          <span className="text-[2rem] font-extrabold tracking-wide text-white">
+            APOPS
+          </span>
+          <span className="mt-1 text-[8px] font-semibold uppercase leading-tight tracking-[0.08em] text-white/90">
+            Asociación del Personal
+            <br />
+            de Organismos de Previsión Social
+          </span>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <Image
+      src="/logo-apops.png"
+      alt="APOPS — Asociación del Personal de los Organismos de Previsión Social"
+      width={width}
+      height={height}
+      priority={priority}
+      unoptimized
+      className="h-auto w-auto"
+      style={{ maxWidth: width, height: 'auto' }}
+    />
   )
 }

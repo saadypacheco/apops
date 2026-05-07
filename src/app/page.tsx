@@ -1,12 +1,14 @@
 import { redirect } from 'next/navigation'
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { homeForRol } from '@/lib/auth/role'
 import { Logo } from '@/components/landing/Logo'
 import {
   NoticiasCarousel,
   type Noticia,
 } from '@/components/landing/NoticiasCarousel'
-import { LandingForm } from '@/components/landing/LandingForm'
+import { LoginForm } from '@/components/auth/LoginForm'
 import { HelpButton } from '@/components/landing/HelpButton'
 
 export const metadata = {
@@ -22,14 +24,14 @@ async function getRoleHomeFor(userId: string): Promise<string> {
     .select('rol')
     .eq('auth_user_id', userId)
     .maybeSingle()
-  const rol = data?.rol ?? 'afiliado'
-  if (rol === 'admin') return '/admin'
-  if (rol === 'delegado') return '/delegados'
-  return '/feed'
+  return homeForRol(data?.rol ?? 'afiliado')
 }
 
-export default async function LandingPage() {
-  // 1. Si ya tiene sesión → home según rol
+export default async function LandingPage({
+  searchParams,
+}: {
+  searchParams?: { registrado?: string }
+}) {
   const supabase = createClient()
   const {
     data: { user },
@@ -38,7 +40,8 @@ export default async function LandingPage() {
     redirect(await getRoleHomeFor(user.id))
   }
 
-  // 2. Anon: fetch noticias publicadas (RLS permite anon SELECT)
+  const registrado = searchParams?.registrado === '1'
+
   const { data: noticiasRaw } = (await supabase
     .from('noticias')
     .select('id, titulo, resumen, publicada_at, autor, destacada')
@@ -49,72 +52,125 @@ export default async function LandingPage() {
   const noticias: Noticia[] = noticiasRaw ?? []
 
   return (
-    <main className="relative flex min-h-[100dvh] w-full flex-col overflow-hidden bg-brand-gradient">
-      {/* Capa de profundidad — radiales suaves para textura */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_25%_18%,rgba(255,255,255,0.22),transparent_55%),radial-gradient(ellipse_at_85%_70%,rgba(0,0,0,0.18),transparent_60%)]"
-      />
-      {/* Patrón de siluetas (crowd) en oscuro al pie del gradient — el bottom
-          ahora es azul medio, así que las siluetas oscuras dan textura "asamblea". */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-x-0 bottom-0 h-1/2 opacity-25"
-        style={{
-          backgroundImage:
-            "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 600 200'><g fill='%23031024'><path d='M30 200 L30 130 L40 110 L50 130 L50 200 Z'/><path d='M70 200 L70 145 L82 122 L94 145 L94 200 Z'/><path d='M110 200 L110 138 L122 118 L134 138 L134 200 Z'/><path d='M150 200 L150 152 L160 132 L170 152 L170 200 Z'/><path d='M188 200 L188 130 L200 110 L212 130 L212 200 Z'/><path d='M230 200 L230 142 L242 120 L254 142 L254 200 Z'/><path d='M270 200 L270 148 L280 128 L290 148 L290 200 Z'/><path d='M310 200 L310 134 L322 112 L334 134 L334 200 Z'/><path d='M350 200 L350 144 L360 124 L370 144 L370 200 Z'/><path d='M390 200 L390 138 L400 118 L410 138 L410 200 Z'/><path d='M430 200 L430 130 L440 108 L450 130 L450 200 Z'/><path d='M470 200 L470 146 L482 124 L494 146 L494 200 Z'/><path d='M510 200 L510 140 L522 120 L534 140 L534 200 Z'/><path d='M550 200 L550 134 L562 112 L572 134 L572 200 Z'/></g></svg>\")",
-          backgroundRepeat: 'repeat-x',
-          backgroundSize: '600px 200px',
-          backgroundPosition: 'bottom',
-        }}
-      />
+    <main className="relative min-h-[100dvh] w-full overflow-x-hidden bg-brand-gradient">
+      {/* Container mobile-first centrado en cualquier viewport. El fondo
+          azul ocupa toda la pantalla; el contenido vive en una columna
+          fija de ancho mobile (~480px) centrada — fiel al mockup. */}
+      <div className="relative mx-auto flex min-h-[100dvh] w-full max-w-[480px] flex-col">
+        {/* Decoración: círculo translúcido grande arriba derecha */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -right-20 -top-20 h-[260px] w-[260px] rounded-full bg-white/10 blur-md"
+        />
 
-      <div className="relative mx-auto flex w-full max-w-md flex-1 flex-col">
-        {/* Hero con logo */}
-        <section className="flex flex-col items-center gap-3 pt-10 pb-6">
-          <Logo size={160} />
-          <p className="mt-2 max-w-[280px] px-4 text-center text-sm font-medium leading-snug text-white/90">
-            Asociación del Personal de los Organismos de Previsión Social
-          </p>
+        {/* Header: logo a la izquierda + campana a la derecha */}
+        <header className="relative z-10 flex w-full items-center justify-between gap-3 px-5 pb-1 pt-3">
+          <Logo as="onBlue" priority />
+          <BellButton />
+        </header>
+
+        {/* Hero saludo */}
+        <section className="relative z-10 px-5 pb-2 pt-1">
+          <h1 className="text-2xl font-bold leading-tight text-white">¡Hola! 👋</h1>
+          <p className="text-sm text-white/90">Bienvenido a tu portal</p>
         </section>
 
         {/* Carousel de noticias */}
         {noticias.length > 0 && (
-          <div className="pb-5">
+          <div className="relative z-10 pb-3">
             <NoticiasCarousel noticias={noticias} />
           </div>
         )}
 
-        {/* Form de login + link sin legajo */}
-        <section
-          aria-label="Ingreso"
-          className="mt-auto flex flex-col gap-3 px-6 pt-2"
-        >
-          <LandingForm />
+        {/* Form ACCESO */}
+        <section aria-label="Ingreso" className="relative z-10 px-5">
+          <LoginForm registrado={registrado} />
         </section>
 
-        {/* CTA: afiliarse (para no-afiliados) */}
-        <div className="mt-6 px-6">
-          <div className="rounded-2xl border border-white/25 bg-white/10 p-4 text-center backdrop-blur-md">
-            <p className="text-sm text-white/85">¿Todavía no sos afiliado/a?</p>
-            <a
-              href="/afiliarse"
-              className="mt-2 inline-flex min-h-touch items-center justify-center rounded-full border-2 border-white/80 px-5 text-sm font-bold uppercase tracking-wider text-white transition hover:bg-white hover:text-brand-deep focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+        {/* CTA: afiliarse */}
+        <div className="relative z-10 px-5 pt-2">
+          <div className="flex items-center gap-3 rounded-2xl bg-white p-2.5 shadow-card">
+            <span
+              aria-hidden
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-blue/10 text-brand-blue"
             >
-              Afiliate ahora
-            </a>
+              <PeopleIcon />
+            </span>
+            <p className="flex-1 text-sm text-brand-muted">
+              ¿Todavía no sos afiliado/a?
+            </p>
+            <Link
+              href="/afiliarse"
+              className="inline-flex shrink-0 items-center justify-center rounded-xl border-2 border-brand-blue px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-brand-blue transition hover:bg-brand-blue hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:ring-offset-2"
+            >
+              Afiliate
+            </Link>
           </div>
         </div>
 
-        {/* Footer minimalista con contacto */}
-        <footer className="mt-6 flex flex-col items-center gap-1 px-6 pb-6 text-center text-[11px] text-white/60">
-          <p>Viamonte 1654, CABA · (011) 5544-8300</p>
-          <p>apops@apops.org.ar</p>
+        {/* Footer */}
+        <footer className="relative z-10 mt-3 px-5 pb-3">
+          <div className="flex flex-col items-center gap-0.5 rounded-2xl bg-white/85 px-4 py-2 text-center text-[11px] text-brand-ink shadow-card backdrop-blur-sm">
+            <p className="font-medium">
+              Viamonte 1654, CABA · (011) 5544-8300
+            </p>
+            <a
+              href="mailto:apops@apops.org.ar"
+              className="text-brand-blue hover:underline"
+            >
+              apops@apops.org.ar
+            </a>
+          </div>
         </footer>
       </div>
 
-      {/* Botón flotante de ayuda */}
       <HelpButton />
     </main>
+  )
+}
+
+function BellButton() {
+  return (
+    <button
+      type="button"
+      aria-label="Notificaciones"
+      className="relative inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-white transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+    >
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={2}
+        className="h-6 w-6"
+      >
+        <path
+          d="M18 16v-5a6 6 0 10-12 0v5l-2 2h16l-2-2zM10 21a2 2 0 004 0"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+      <span
+        aria-hidden
+        className="absolute right-2 top-2 h-2 w-2 rounded-full bg-white ring-2 ring-brand-blue"
+      />
+    </button>
+  )
+}
+
+function PeopleIcon() {
+  return (
+    <svg
+      aria-hidden
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      className="h-5 w-5"
+    >
+      <circle cx="9" cy="8" r="3" />
+      <path d="M2 20c0-3 3-5 7-5s7 2 7 5" strokeLinecap="round" />
+      <circle cx="17" cy="9" r="2.5" />
+      <path d="M14 14c2 0 8 1 8 5" strokeLinecap="round" />
+    </svg>
   )
 }

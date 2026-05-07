@@ -37,14 +37,17 @@ const config: Config = {
         },
       },
       backgroundImage: {
-        // Gradient top → bottom: navy oscuro → azul medio. Predominantemente
-        // oscuro arriba (logo y noticias se leen blanco con alta contraste),
-        // se aclara hacia el bottom donde está el form (sigue siendo azul
-        // medio, AA para blanco bold).
+        // Gradient azul medio uniforme. Top más saturado (~#3B7BC2), bottom
+        // más claro (~#9CC5E8). El logo APOPS y la campana van en blanco
+        // arriba; las cards (login, noticias, afiliate) son blancas con
+        // shadow y destacan sobre el azul.
         'brand-gradient':
-          'linear-gradient(180deg, #0A1F38 0%, #0F2A47 25%, #143963 55%, #1E5BA8 100%)',
+          'linear-gradient(180deg, #3B7BC2 0%, #5A93D0 35%, #7DAEDF 70%, #A2C5E8 100%)',
         'brand-gradient-soft':
           'linear-gradient(180deg, #DCEEFB 0%, #B5DBF3 100%)',
+        // Azul fuerte para el botón Ingresar (estilo mockup)
+        'btn-primary':
+          'linear-gradient(180deg, #2E78D6 0%, #1E5BA8 100%)',
       },
       minHeight: {
         // Touch targets WCAG ≥ 44px (constitución II)
