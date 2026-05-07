@@ -9,7 +9,7 @@ type Props = {
   nombre: string
   rol: Rol
   /** ruta activa (para resaltar el item del nav) */
-  current: 'home' | 'perfil' | 'admin' | 'delegados'
+  current: 'home' | 'novedades' | 'perfil' | 'admin' | 'delegados'
 }
 
 const roleLabel: Record<Rol, string> = {
@@ -32,13 +32,27 @@ export function AppShell({ children, nombre, rol, current }: Props) {
             </span>
             <h1 className="text-2xl font-semibold">¡Hola, {firstName(nombre)}!</h1>
           </div>
-          <Link
-            href="/perfil"
-            aria-label="Ir a mi perfil"
-            className="flex h-11 w-11 items-center justify-center rounded-full bg-white/20 text-lg font-semibold text-white hover:bg-white/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
-          >
-            {initials(nombre)}
-          </Link>
+          <div className="flex items-center gap-2">
+            <span
+              role="button"
+              aria-label="Alertas (próximamente)"
+              aria-disabled
+              title="Alertas (próximamente)"
+              className="flex h-11 w-11 cursor-not-allowed items-center justify-center rounded-full bg-white/15 text-white opacity-80"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-5 w-5" aria-hidden>
+                <path d="M15 17h5l-1.4-1.4A2 2 0 0118 14.2V11a6 6 0 10-12 0v3.2c0 .53-.21 1.04-.59 1.41L4 17h5" strokeLinecap="round" strokeLinejoin="round" />
+                <path d="M9 17a3 3 0 006 0" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </span>
+            <Link
+              href="/perfil"
+              aria-label="Ir a mi perfil"
+              className="flex h-11 w-11 items-center justify-center rounded-full bg-white/20 text-lg font-semibold text-white hover:bg-white/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+            >
+              {initials(nombre)}
+            </Link>
+          </div>
         </div>
       </header>
 
@@ -63,8 +77,20 @@ export function AppShell({ children, nombre, rol, current }: Props) {
             active={current === 'home' || current === 'admin' || current === 'delegados'}
           />
           <NavItem
+            href="/novedades"
+            label="Novedades"
+            icon={
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-6 w-6">
+                <path d="M11 5L6 9H3v6h3l5 4V5z" strokeLinecap="round" strokeLinejoin="round" />
+                <path d="M15.54 8.46a5 5 0 010 7.07" strokeLinecap="round" />
+                <path d="M19.07 4.93a10 10 0 010 14.14" strokeLinecap="round" />
+              </svg>
+            }
+            active={current === 'novedades'}
+          />
+          <NavItem
             href="/perfil"
-            label="Perfil"
+            label="Mi perfil"
             icon={
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-6 w-6">
                 <circle cx="12" cy="8" r="4" />
@@ -72,6 +98,18 @@ export function AppShell({ children, nombre, rol, current }: Props) {
               </svg>
             }
             active={current === 'perfil'}
+          />
+          <NavItem
+            href="#"
+            label="Consultas"
+            icon={
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-6 w-6">
+                <path d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                <path d="M9.5 9.5a2.5 2.5 0 015 0c0 1.5-2.5 2-2.5 4M12 18h.01" strokeLinecap="round" />
+              </svg>
+            }
+            active={false}
+            disabled
           />
         </div>
       </nav>
@@ -84,12 +122,26 @@ function NavItem({
   label,
   icon,
   active,
+  disabled = false,
 }: {
   href: string
   label: string
   icon: React.ReactNode
   active: boolean
+  disabled?: boolean
 }) {
+  if (disabled) {
+    return (
+      <span
+        aria-disabled
+        title={`${label} (próximamente)`}
+        className="flex flex-1 cursor-not-allowed flex-col items-center justify-center gap-0.5 py-2 text-xs font-medium text-brand-muted opacity-60"
+      >
+        {icon}
+        <span>{label}</span>
+      </span>
+    )
+  }
   return (
     <Link
       href={href}
