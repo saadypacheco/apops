@@ -103,6 +103,7 @@ async function setupAdmin(): Promise<AdminFixture> {
       legajo: adminLegajo,
       nombre: `Admin Test ${RUN_ID}`,
       tipo: 'activo',
+      email,
     })
     .select('id')
     .single()
@@ -434,6 +435,7 @@ describe('Contract: resolver-pendiente', () => {
       legajo: LEGAJO_PADRON_ACTIVO,
       nombre: 'Pérez, María',
       tipo: 'activo',
+      email: otherEmail,
     })
 
     // Ahora seedeamos solicitud_pendiente con ese DNI (caso patológico:

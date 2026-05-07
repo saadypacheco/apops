@@ -12,41 +12,56 @@ export type Database = {
       afiliados: {
         Row: {
           auth_user_id: string
+          bloqueado_hasta: string | null
+          bloqueado_motivo: string | null
           created_at: string
           dni: string
+          email: string
           estado: string
           id: string
           last_login_at: string | null
           legajo: string | null
           nombre: string
+          origen: string
           padron_id: string | null
           rol: string
+          tiene_password: boolean
           tipo: string
         }
         Insert: {
           auth_user_id: string
+          bloqueado_hasta?: string | null
+          bloqueado_motivo?: string | null
           created_at?: string
           dni: string
+          email: string
           estado?: string
           id?: string
           last_login_at?: string | null
           legajo?: string | null
           nombre: string
+          origen?: string
           padron_id?: string | null
           rol?: string
+          tiene_password?: boolean
           tipo: string
         }
         Update: {
           auth_user_id?: string
+          bloqueado_hasta?: string | null
+          bloqueado_motivo?: string | null
           created_at?: string
           dni?: string
+          email?: string
           estado?: string
           id?: string
           last_login_at?: string | null
           legajo?: string | null
           nombre?: string
+          origen?: string
           padron_id?: string | null
           rol?: string
+          tiene_password?: boolean
           tipo?: string
         }
         Relationships: [
@@ -100,6 +115,81 @@ export type Database = {
           },
         ]
       }
+      auth_attempts: {
+        Row: {
+          exitoso: boolean
+          id: string
+          identifier: string
+          intentado_at: string
+          ip_address: unknown
+          metodo: string
+        }
+        Insert: {
+          exitoso: boolean
+          id?: string
+          identifier: string
+          intentado_at?: string
+          ip_address?: unknown
+          metodo: string
+        }
+        Update: {
+          exitoso?: boolean
+          id?: string
+          identifier?: string
+          intentado_at?: string
+          ip_address?: unknown
+          metodo?: string
+        }
+        Relationships: []
+      }
+      mensajes_delegado: {
+        Row: {
+          asunto: string
+          created_at: string
+          delegado_id: string
+          id: string
+          leido: boolean
+          leido_at: string | null
+          leido_por: string | null
+          mensaje: string
+        }
+        Insert: {
+          asunto: string
+          created_at?: string
+          delegado_id: string
+          id?: string
+          leido?: boolean
+          leido_at?: string | null
+          leido_por?: string | null
+          mensaje: string
+        }
+        Update: {
+          asunto?: string
+          created_at?: string
+          delegado_id?: string
+          id?: string
+          leido?: boolean
+          leido_at?: string | null
+          leido_por?: string | null
+          mensaje?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mensajes_delegado_delegado_id_fkey"
+            columns: ["delegado_id"]
+            isOneToOne: false
+            referencedRelation: "afiliados"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mensajes_delegado_leido_por_fkey"
+            columns: ["leido_por"]
+            isOneToOne: false
+            referencedRelation: "afiliados"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       noticias: {
         Row: {
           autor: string | null
@@ -139,6 +229,51 @@ export type Database = {
           resumen?: string
           titulo?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      padron_adherentes: {
+        Row: {
+          dni: string | null
+          email: string | null
+          fecha_nacimiento: string | null
+          id: string
+          ingestado_at: string
+          nombre: string
+          numero_afiliado: string | null
+          source_batch: string
+          telefono: string | null
+          titular_dni: string | null
+          titular_legajo: string | null
+          vinculo: string
+        }
+        Insert: {
+          dni?: string | null
+          email?: string | null
+          fecha_nacimiento?: string | null
+          id?: string
+          ingestado_at?: string
+          nombre: string
+          numero_afiliado?: string | null
+          source_batch: string
+          telefono?: string | null
+          titular_dni?: string | null
+          titular_legajo?: string | null
+          vinculo: string
+        }
+        Update: {
+          dni?: string | null
+          email?: string | null
+          fecha_nacimiento?: string | null
+          id?: string
+          ingestado_at?: string
+          nombre?: string
+          numero_afiliado?: string | null
+          source_batch?: string
+          telefono?: string | null
+          titular_dni?: string | null
+          titular_legajo?: string | null
+          vinculo?: string
         }
         Relationships: []
       }
@@ -711,4 +846,3 @@ export const Constants = {
     Enums: {},
   },
 } as const
-

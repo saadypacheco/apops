@@ -53,6 +53,7 @@ async function makeAuthenticatedAfiliado(params: {
       legajo: params.legajo,
       nombre: padron.nombre,
       tipo: 'activo',
+      email: `${params.dni}@test.local`,
       padron_id: padron.id,
     })
     .select('id')

@@ -11,6 +11,14 @@ import { createAdminClient } from '@/lib/supabase/admin'
 
 export type Rol = 'afiliado' | 'delegado' | 'admin'
 
+// Home según rol — usado tanto por el redirect post-login como por la
+// landing cuando detecta sesión activa al entrar.
+export function homeForRol(rol: string | Rol): string {
+  if (rol === 'admin') return '/admin'
+  if (rol === 'delegado') return '/delegados'
+  return '/feed'
+}
+
 export interface AfiliadoSession {
   authUserId: string
   email: string | null

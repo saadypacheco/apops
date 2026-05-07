@@ -7,8 +7,9 @@ export const metadata: Metadata = {
     'Recibimos tu solicitud y la estamos revisando. Te avisaremos por email.',
 }
 
-// Pantalla terminal del flujo cuando la solicitud queda en estado pendiente.
-// La cookie de auth-context se limpia en submitEmail antes del redirect aquí.
+// Pantalla terminal del flujo cuando la solicitud queda en estado pendiente
+// de aprobación (admin debe revisar). El flujo v1 limpia la cookie de
+// auth-context antes de redirigir aquí.
 export default function PendienteValidacionPage() {
   return (
     <main className="mx-auto flex min-h-screen max-w-md flex-col items-center gap-6 p-6 text-center">

@@ -9,17 +9,29 @@ type CookieToSet = { name: string; value: string; options: CookieOptions }
 const PUBLIC_PATHS = new Set<string>([
   '/',
   '/login',
-  '/login-sin-legajo',
-  '/email',
-  '/nombre-completo',
+  // Auth v2 (auth-v2.md)
+  '/registrarse',
+  '/login-magic-link',
+  '/recuperar-clave',
+  '/no-en-padron',
+  '/solicitud-enviada',
+  // Auth v1 — vigentes hasta que F3 las absorba
   '/magic-link-enviado',
   '/magic-link-expirado',
   '/pendiente-validacion',
+  // Afiliación pública
   '/afiliarse',
   '/afiliarse/exito',
+  // Listado público de noticias
+  '/noticias',
 ])
 
-const PUBLIC_PREFIXES = ['/auth/callback']
+const PUBLIC_PREFIXES = [
+  '/auth/callback',
+  // Vista pública de credencial de adherente (feature 004).
+  // El UUID actúa como secret — no requiere auth.
+  '/credencial-publica',
+]
 
 function isPublicPath(pathname: string): boolean {
   if (PUBLIC_PATHS.has(pathname)) return true

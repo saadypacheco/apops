@@ -391,6 +391,7 @@ Deno.serve(async (req: Request) => {
       legajo: tipo === 'activo' ? solicitud.legajo : null,
       nombre,
       tipo,
+      email: solicitud.email,
     })
     .select('id')
     .single()

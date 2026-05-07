@@ -288,6 +288,7 @@ Deno.serve(async (req: Request) => {
         legajo: outcome.tipo === 'activo' ? legajo : null,
         nombre: outcome.nombre,
         tipo: outcome.tipo,
+        email,
         padron_id: outcome.padronId,
       })
       if (insertAfiliado.error) {

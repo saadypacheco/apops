@@ -39,6 +39,7 @@ async function setupAdmin(): Promise<AdminFixture> {
       legajo: `ADM-${RUN_ID.slice(0, 6)}`,
       nombre: `Admin Aprobacion ${RUN_ID}`,
       tipo: 'activo',
+      email: ADMIN_EMAIL,
     })
     .select('id')
     .single()

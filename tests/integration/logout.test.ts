@@ -40,6 +40,7 @@ async function setupAuthenticatedAfiliado() {
       legajo: `LO-${RUN_ID.slice(0, 6)}`,
       nombre: `Logout Test ${RUN_ID}`,
       tipo: 'activo',
+      email: EMAIL,
     })
     .select('id')
     .single()

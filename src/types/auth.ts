@@ -13,7 +13,9 @@ export interface FormState {
 // Tipos de afiliado APOPS reconocidos por el modelo (data-model.md §afiliados)
 export type Tipo = 'activo' | 'jubilado'
 
-// Sub-flujos de registro (data-model.md §solicitudes_pendientes)
+// Sub-flujos de registro v1 (data-model.md §solicitudes_pendientes).
+// Lo siguen usando solicitar-magic-link y resolver-pendiente Edge Functions
+// hasta que F3/F4 los reemplace.
 export type SubFlujo = 'activo' | 'sin_legajo'
 
 // Motivos por los que una solicitud queda pendiente
@@ -23,9 +25,8 @@ export type MotivoPendiente =
   | 'otros'
 
 // =====================================================================
-// Zod schemas — validación compartida entre forms (cliente) y Edge
-// Functions (server). Mantener alineados con los CHECK constraints de
-// las migraciones SQL.
+// Zod schemas — validación compartida entre forms (cliente) y server.
+// Mantener alineados con los CHECK constraints de las migraciones SQL.
 // =====================================================================
 
 // DNI argentino: 7 u 8 dígitos numéricos. Coincide con
@@ -44,44 +45,125 @@ export const legajoSchema = z
   .max(20, 'El legajo no puede superar los 20 caracteres.')
   .regex(/^[A-Za-z0-9-]+$/, 'El legajo solo admite letras, números y guiones.')
 
-// Email: validación estándar. Coincide con el CHECK regex de
-// solicitudes_pendientes y con el formato que valida Supabase Auth.
+// Email: validación estándar.
 export const emailSchema = z
   .string()
   .trim()
   .toLowerCase()
   .email('El email no parece válido.')
 
-// Nombre completo (sub-flujo sin_legajo cuando DNI no está en padrón).
-// Mínimo 3 caracteres para evitar entradas triviales.
-export const nombreCompletoSchema = z
+// =====================================================================
+// AUTH v2 — login con clave + magic link unificado
+// Schemas y tipos del flujo nuevo (specs/001-afiliado-auth/auth-v2.md)
+// =====================================================================
+
+// Estados ampliados de afiliados (migration 0022)
+export type EstadoAfiliado = 'activo' | 'bloqueado' | 'baja'
+
+// Trazabilidad: cómo llegó la persona a tener cuenta
+export type OrigenAfiliado =
+  | 'padron'
+  | 'solicitud_acceso'
+  | 'solicitud_afiliacion'
+
+// Método de auth registrado en auth_attempts
+export type MetodoAuth = 'password' | 'magic_link'
+
+// Identifier: DNI (7-8 dígitos) o legajo. La discriminación entre los dos
+// la hace el server (parseIdentifier) — el form solo valida que algo no
+// vacío fue ingresado y respeta los límites máximos de ambos.
+export const identifierSchema = z
   .string()
   .trim()
-  .min(3, 'Ingresá tu nombre completo.')
-  .max(120, 'El nombre es demasiado largo.')
+  .min(3, 'Ingresá tu DNI o legajo.')
+  .max(20, 'Demasiado largo para ser un DNI o legajo.')
+  .regex(
+    /^[A-Za-z0-9-]+$/,
+    'Solo letras, números y guiones (sin puntos ni espacios).',
+  )
 
-// =====================================================================
-// Schemas compuestos por flujo
-// =====================================================================
+// Password: 8 chars min, sin requisitos de complejidad (UX moderna).
+export const passwordSchema = z
+  .string()
+  .min(8, 'La clave debe tener al menos 8 caracteres.')
+  .max(72, 'La clave no puede superar los 72 caracteres.')
 
-export const dniLegajoFormSchema = z.object({
-  dni: dniSchema,
-  legajo: legajoSchema,
+// Form de login con clave (F1)
+export const loginConClaveFormSchema = z.object({
+  identifier: identifierSchema,
+  password: z
+    .string()
+    .min(1, 'Ingresá tu clave.')
+    .max(72, 'Clave demasiado larga.'),
 })
 
-export const dniSinLegajoFormSchema = z.object({
-  dni: dniSchema,
+// Form de login con magic link (F2)
+export const loginMagicLinkFormSchema = z.object({
+  identifier: identifierSchema,
 })
 
-export const emailFormSchema = z.object({
-  email: emailSchema,
-})
+// Form de registro (F3) — clave es opcional, email se confirma con doble input.
+// Decisión D10 (auth-v2.md): doble input contra typos, sin link de confirmación.
+export const registroFormSchema = z
+  .object({
+    identifier: identifierSchema,
+    email: emailSchema,
+    emailConfirm: emailSchema,
+    password: passwordSchema.optional().or(z.literal('')),
+  })
+  .refine((data) => data.email === data.emailConfirm, {
+    message: 'Los emails no coinciden.',
+    path: ['emailConfirm'],
+  })
+  .transform((data) => ({
+    identifier: data.identifier,
+    email: data.email,
+    password: data.password === '' ? undefined : data.password,
+  }))
 
-export const nombreCompletoFormSchema = z.object({
-  nombreCompleto: nombreCompletoSchema,
-})
+// Form de "Solicitar acceso a la app" (F4) — para personas que llegan a
+// /no-en-padron y no quieren afiliarse aún. Inserta en solicitudes_pendientes.
+// El legajo es opcional: si viene, sub_flujo='activo'; si no, sub_flujo='sin_legajo'
+// (constraint chk_subflujo_data de migration 0011).
+export const solicitarAccesoFormSchema = z
+  .object({
+    dni: dniSchema,
+    legajo: z.string().trim().optional().or(z.literal('')),
+    nombre: z
+      .string()
+      .trim()
+      .min(2, 'Ingresá tu nombre completo.')
+      .max(100, 'Demasiado largo.'),
+    email: emailSchema,
+    emailConfirm: emailSchema,
+    motivo: z.string().trim().max(500).optional().or(z.literal('')),
+  })
+  .refine((d) => d.email === d.emailConfirm, {
+    message: 'Los emails no coinciden.',
+    path: ['emailConfirm'],
+  })
+  .transform((d) => ({
+    dni: d.dni,
+    legajo: d.legajo && d.legajo.length > 0 ? d.legajo.toUpperCase() : undefined,
+    nombre: d.nombre,
+    email: d.email,
+    motivo: d.motivo && d.motivo.length > 0 ? d.motivo : undefined,
+  }))
 
-export type DniLegajoForm = z.infer<typeof dniLegajoFormSchema>
-export type DniSinLegajoForm = z.infer<typeof dniSinLegajoFormSchema>
-export type EmailForm = z.infer<typeof emailFormSchema>
-export type NombreCompletoForm = z.infer<typeof nombreCompletoFormSchema>
+// Form de cambio de clave desde /perfil/clave (F5)
+export const cambioClaveFormSchema = z
+  .object({
+    actual: z.string().min(1, 'Ingresá tu clave actual.'),
+    nueva: passwordSchema,
+    confirmar: z.string(),
+  })
+  .refine((data) => data.nueva === data.confirmar, {
+    message: 'La confirmación no coincide.',
+    path: ['confirmar'],
+  })
+
+export type LoginConClaveForm = z.infer<typeof loginConClaveFormSchema>
+export type LoginMagicLinkForm = z.infer<typeof loginMagicLinkFormSchema>
+export type RegistroForm = z.infer<typeof registroFormSchema>
+export type SolicitarAccesoForm = z.infer<typeof solicitarAccesoFormSchema>
+export type CambioClaveForm = z.infer<typeof cambioClaveFormSchema>
