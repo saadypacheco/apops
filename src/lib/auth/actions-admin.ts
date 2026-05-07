@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { getCurrentAfiliado } from './role'
 
 // Server Actions usadas desde el panel admin para invocar la Edge Function
@@ -113,4 +114,107 @@ export async function rechazarSolicitud(
 
 export async function navegarPanelAdmin(): Promise<void> {
   redirect('/admin')
+}
+
+// =====================================================================
+// Solicitudes de afiliación online — flujo separado de solicitudes_pendientes.
+// Aprobar/rechazar acá NO crea afiliado todavía (eso requiere coordinar con
+// ANSES por el descuento del 3%). Solo cambia estado + registra quién y cuándo.
+// El envío de email automático al solicitante queda pendiente (feature C).
+// =====================================================================
+
+async function resolverAfiliacion(
+  solicitudId: string,
+  body: { accion: 'aprobar' } | { accion: 'rechazar'; motivo: string },
+): Promise<{ ok: true } | { ok: false; message: string }> {
+  const session = await getCurrentAfiliado()
+  if (!session || session.rol !== 'admin') {
+    return { ok: false, message: 'No tenés permisos.' }
+  }
+
+  const admin = createAdminClient()
+
+  // 1. Verificar que existe y está pendiente o en_revision
+  const { data: solic } = await admin
+    .from('solicitudes_afiliacion')
+    .select('id, estado')
+    .eq('id', solicitudId)
+    .maybeSingle()
+  if (!solic) {
+    return { ok: false, message: 'No encontramos la solicitud.' }
+  }
+  if (solic.estado !== 'pendiente' && solic.estado !== 'en_revision') {
+    return { ok: false, message: 'La solicitud ya fue resuelta.' }
+  }
+
+  // 2. Update con estado nuevo + audit
+  const update =
+    body.accion === 'aprobar'
+      ? {
+          estado: 'aprobada' as const,
+          procesado_at: new Date().toISOString(),
+          procesado_por: session.afiliadoId,
+          motivo_rechazo: null,
+        }
+      : {
+          estado: 'rechazada' as const,
+          motivo_rechazo: body.motivo,
+          procesado_at: new Date().toISOString(),
+          procesado_por: session.afiliadoId,
+        }
+
+  const { error } = await admin
+    .from('solicitudes_afiliacion')
+    .update(update)
+    .eq('id', solicitudId)
+  if (error) {
+    return { ok: false, message: 'No pudimos actualizar la solicitud.' }
+  }
+
+  // 3. Audit log
+  await admin.from('audit_log').insert({
+    evento:
+      body.accion === 'aprobar'
+        ? 'afiliacion_aprobada'
+        : 'afiliacion_rechazada',
+    afiliado_id: session.afiliadoId,
+    metadata: {
+      solicitud_id: solicitudId,
+      motivo: body.accion === 'rechazar' ? body.motivo : null,
+    },
+  })
+
+  return { ok: true }
+}
+
+export async function aprobarAfiliacion(
+  _prev: unknown,
+  formData: FormData,
+): Promise<{ error?: string; success?: string }> {
+  const id = formData.get('solicitud_id')?.toString() ?? ''
+  if (!id) return { error: 'Solicitud inválida.' }
+
+  const result = await resolverAfiliacion(id, { accion: 'aprobar' })
+  if (!result.ok) return { error: result.message }
+
+  revalidatePath('/admin')
+  return { success: 'Afiliación aprobada. Recordá coordinar el alta en ANSES.' }
+}
+
+export async function rechazarAfiliacion(
+  _prev: unknown,
+  formData: FormData,
+): Promise<{ error?: string; success?: string }> {
+  const id = formData.get('solicitud_id')?.toString() ?? ''
+  const motivo = formData.get('motivo_rechazo')?.toString().trim() ?? ''
+  if (!id) return { error: 'Solicitud inválida.' }
+  if (motivo.length < 5) {
+    return { error: 'Tenés que indicar un motivo de rechazo.' }
+  }
+
+  const result = await resolverAfiliacion(id, { accion: 'rechazar', motivo })
+  if (!result.ok) return { error: result.message }
+
+  revalidatePath('/admin')
+  return { success: 'Afiliación rechazada.' }
 }
