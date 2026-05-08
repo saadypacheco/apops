@@ -25,6 +25,8 @@ const PUBLIC_PATHS = new Set<string>([
   // Listado público de noticias (la vista individual /noticias/[id]
   // entra por PUBLIC_PREFIXES abajo)
   '/noticias',
+  // Landing demostrativa pública (qué ofrece la app)
+  '/software',
 ])
 
 const PUBLIC_PREFIXES = [

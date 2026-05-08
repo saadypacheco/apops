@@ -6,7 +6,7 @@ function SunMark({ className }: { className?: string }) {
   return (
     <svg
       viewBox="0 0 100 100"
-      fill="#7FCFE5"
+      fill="currentColor"
       aria-hidden
       className={className}
     >
@@ -40,7 +40,7 @@ function SunMark({ className }: { className?: string }) {
 type LogoProps = {
   width?: number
   height?: number
-  as?: 'inline' | 'banner' | 'onBlue'
+  as?: 'inline' | 'banner' | 'onBlue' | 'onWhite'
   priority?: boolean
 }
 
@@ -66,6 +66,30 @@ export function Logo({
     )
   }
 
+  if (as === 'onWhite') {
+    // Variante para fondos blancos (nav top, footer claro). Mismo SVG que
+    // onBlue pero con texto en brand-deep y rayos del sol en brand-blue.
+    return (
+      <div
+        className="flex items-center gap-2"
+        role="img"
+        aria-label="APOPS — Asociación del Personal de los Organismos de Previsión Social"
+      >
+        <SunMark className="h-9 w-9 shrink-0 text-brand-blue" />
+        <div className="flex flex-col leading-none">
+          <span className="text-xl font-extrabold tracking-wide text-brand-deep">
+            APOPS
+          </span>
+          <span className="mt-0.5 text-[7px] font-semibold uppercase leading-tight tracking-[0.08em] text-brand-muted">
+            Asociación del Personal
+            <br />
+            de Organismos de Previsión Social
+          </span>
+        </div>
+      </div>
+    )
+  }
+
   if (as === 'onBlue') {
     // Aproximación SVG del logo APOPS oficial. Reemplaza al PNG (que viene
     // con fondo navy y no se funde bien con el azul medio del header).
@@ -77,7 +101,7 @@ export function Logo({
         role="img"
         aria-label="APOPS — Asociación del Personal de los Organismos de Previsión Social"
       >
-        <SunMark className="h-12 w-12 shrink-0" />
+        <SunMark className="h-12 w-12 shrink-0 text-[#7FCFE5]" />
         <div className="flex flex-col leading-none">
           <span className="text-[2rem] font-extrabold tracking-wide text-white">
             APOPS
