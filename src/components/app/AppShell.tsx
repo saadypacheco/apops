@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import type { Rol } from '@/lib/auth/role'
 import { RoleSwitcherSlot } from './RoleSwitcherSlot'
+import { WhatsAppFab } from './WhatsAppFab'
 
 // Layout común para las pantallas autenticadas: header con saludo + nav
 // inferior con accesos rápidos. Mobile-first.
@@ -115,6 +116,8 @@ export function AppShell({ children, nombre, rol, current }: Props) {
           />
         </div>
       </nav>
+
+      <WhatsAppFab nombre={nombre} rol={rol} />
     </div>
   )
 }
