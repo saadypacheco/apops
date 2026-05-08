@@ -15,13 +15,20 @@ import { createAdminClient } from '@/lib/supabase/admin'
 
 export const dynamic = 'force-dynamic'
 
-type Check = { ok: boolean; count?: number; error?: string }
+type Check = { ok: boolean; count?: number; error?: unknown; status?: number }
 
-function shape(value: unknown): Check {
-  if (typeof value === 'object' && value !== null) {
-    return value as Check
+function safeError(e: unknown): unknown {
+  if (e === null || e === undefined) return null
+  if (typeof e === 'string') return e
+  if (e instanceof Error) {
+    return { name: e.name, message: e.message, stack: e.stack?.split('\n').slice(0, 3) }
   }
-  return { ok: false, error: 'unknown' }
+  // PostgrestError u objetos similares: serializar todas las props enumerables
+  try {
+    return JSON.parse(JSON.stringify(e))
+  } catch {
+    return String(e)
+  }
 }
 
 export async function GET() {
@@ -59,48 +66,61 @@ export async function GET() {
   // 2. Anon client puede leer noticias publicadas (RLS open a anon)
   try {
     const supabase = createClient()
-    const { count, error } = await supabase
+    const { data, count, error, status, statusText } = await supabase
       .from('noticias')
-      .select('id', { count: 'exact', head: true })
+      .select('id', { count: 'exact', head: false })
       .eq('publicada', true)
-    result.anonReadNoticias = shape({
+      .limit(1)
+    const check: Check = {
       ok: !error,
       count: count ?? 0,
-      error: error?.message,
-    })
+      error: safeError(error),
+      status,
+    }
+    ;(check as Record<string, unknown>).statusText = statusText
+    ;(check as Record<string, unknown>).gotData = !!data
+    result.anonReadNoticias = check
   } catch (e) {
-    result.anonReadNoticias = { ok: false, error: (e as Error).message }
+    result.anonReadNoticias = { ok: false, error: safeError(e) }
   }
 
   // 3. Admin (service_role) puede leer padrón_cotizantes (RLS deny por
   // default, solo service_role accede)
   try {
     const admin = createAdminClient()
-    const { count, error } = await admin
+    const { data, count, error, status, statusText } = await admin
       .from('padron_cotizantes')
-      .select('id', { count: 'exact', head: true })
-    result.adminReadPadron = shape({
+      .select('id', { count: 'exact', head: false })
+      .limit(1)
+    const check: Check = {
       ok: !error,
       count: count ?? 0,
-      error: error?.message,
-    })
+      error: safeError(error),
+      status,
+    }
+    ;(check as Record<string, unknown>).statusText = statusText
+    ;(check as Record<string, unknown>).gotData = !!data
+    result.adminReadPadron = check
   } catch (e) {
-    result.adminReadPadron = { ok: false, error: (e as Error).message }
+    result.adminReadPadron = { ok: false, error: safeError(e) }
   }
 
   // 4. Admin puede leer afiliados (debería estar vacía en cloud nuevo)
   try {
     const admin = createAdminClient()
-    const { count, error } = await admin
+    const { count, error, status, statusText } = await admin
       .from('afiliados')
       .select('id', { count: 'exact', head: true })
-    result.adminReadAfiliados = shape({
+    const check: Check = {
       ok: !error,
       count: count ?? 0,
-      error: error?.message,
-    })
+      error: safeError(error),
+      status,
+    }
+    ;(check as Record<string, unknown>).statusText = statusText
+    result.adminReadAfiliados = check
   } catch (e) {
-    result.adminReadAfiliados = { ok: false, error: (e as Error).message }
+    result.adminReadAfiliados = { ok: false, error: safeError(e) }
   }
 
   return NextResponse.json(result, { status: 200 })
