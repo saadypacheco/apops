@@ -25,7 +25,6 @@ export default function SoftwarePage() {
       <Funcionalidades />
       <ComoFunciona />
       <Capturas />
-      <Testimonios />
       <CTAFinal />
       <Faq />
       <FooterSec />
@@ -300,31 +299,11 @@ function ComoFunciona() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────
-// Capturas (placeholders por ahora)
+// Capturas — mocks visuales detallados de cada pantalla. No son screenshots
+// reales pero replican el contenido y estilo de la app para dar vida real
+// a la sección sin tener que tomar fotos.
 // ─────────────────────────────────────────────────────────────────────────
 function Capturas() {
-  const items = [
-    {
-      label: 'Pantalla principal',
-      desc: 'El afiliado ve su credencial digital al instante.',
-      mockHeader: '🪪 Mi credencial',
-    },
-    {
-      label: 'Compartir credencial',
-      desc: 'Un toque y se manda por WhatsApp con saludo pre-cargado.',
-      mockHeader: '💬 Compartir',
-    },
-    {
-      label: 'Panel administración',
-      desc: 'Solicitudes de afiliación con firma digital, todo en un lugar.',
-      mockHeader: '🛡️ Admin',
-    },
-    {
-      label: 'Panel delegados',
-      desc: 'Cotizantes a tu cargo + mensajería con CD.',
-      mockHeader: '🤝 Delegado',
-    },
-  ]
   return (
     <section className="bg-brand-gradient px-5 py-20 text-white">
       <div className="mx-auto w-full max-w-6xl">
@@ -339,33 +318,35 @@ function Capturas() {
             Diseño mobile-first, optimizado para el celular del afiliado.
           </p>
         </header>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {items.map((it) => (
-            <div
-              key={it.label}
-              className="flex flex-col gap-2 rounded-2xl bg-white/10 p-4 ring-1 ring-white/20 backdrop-blur-sm"
-            >
-              {/* Mock visual placeholder con aspect ratio mobile */}
-              <div className="flex aspect-[9/16] items-start justify-center rounded-xl bg-white/95 p-3 text-brand-ink">
-                <div className="flex w-full flex-col gap-2">
-                  <div className="rounded-lg bg-brand-gradient px-2 py-1.5 text-[11px] font-bold uppercase tracking-wider text-white">
-                    {it.mockHeader}
-                  </div>
-                  <div className="space-y-1.5">
-                    <div className="h-2 w-3/4 rounded bg-neutral-200" />
-                    <div className="h-2 w-full rounded bg-neutral-200" />
-                    <div className="h-2 w-1/2 rounded bg-neutral-200" />
-                  </div>
-                  <div className="mt-2 h-20 rounded-lg bg-brand-blue/10" />
-                  <div className="mt-1 h-7 rounded-lg bg-brand-blue" />
-                </div>
-              </div>
-              <h4 className="text-sm font-semibold">{it.label}</h4>
-              <p className="text-xs text-white/80">{it.desc}</p>
-            </div>
-          ))}
+
+        <div className="grid gap-6 lg:grid-cols-4 md:grid-cols-2">
+          <MockCard
+            label="Credencial digital"
+            desc="El afiliado ve su credencial al instante. Tabs por miembro de la familia."
+          >
+            <MockFeed />
+          </MockCard>
+          <MockCard
+            label="Compartir por WhatsApp"
+            desc="Un toque, mensaje pre-cargado, link público al destinatario."
+          >
+            <MockCompartir />
+          </MockCard>
+          <MockCard
+            label="Panel de administración"
+            desc="Solicitudes de afiliación con firma digital. Aprobar/rechazar auditado."
+          >
+            <MockAdmin />
+          </MockCard>
+          <MockCard
+            label="Panel de delegados"
+            desc="Cotizantes a tu cargo y mensajería directa con la Comisión Directiva."
+          >
+            <MockDelegados />
+          </MockCard>
         </div>
-        <p className="mt-8 text-center text-sm text-white/80">
+
+        <p className="mt-10 text-center text-sm text-white/80">
           ¿Querés ver las pantallas reales con datos vivos?{' '}
           <Link
             href="/"
@@ -379,61 +360,286 @@ function Capturas() {
   )
 }
 
-// ─────────────────────────────────────────────────────────────────────────
-// Testimonios (placeholders)
-// ─────────────────────────────────────────────────────────────────────────
-function Testimonios() {
-  const items = [
-    {
-      role: 'Afiliada activa',
-      name: 'María P.',
-      quote:
-        '«Antes tenía que ir a la sede a buscar la credencial. Ahora la tengo en el celular y puedo mandársela a mis hijos en un toque.»',
-    },
-    {
-      role: 'Delegado regional',
-      name: 'Roberto S.',
-      quote:
-        '«Veo a todos los compañeros que represento, mando mensajes a la CD desde la app. Todo queda registrado.»',
-    },
-    {
-      role: 'Comisión Directiva',
-      name: 'Lucía G.',
-      quote:
-        '«Pasamos de mandar comunicados por WhatsApp a publicar una vez en la app y que llegue a todos. Y las solicitudes de afiliación las gestionamos sin papeles.»',
-    },
-  ]
+// Wrapper de cada card de mock
+function MockCard({
+  label,
+  desc,
+  children,
+}: {
+  label: string
+  desc: string
+  children: React.ReactNode
+}) {
   return (
-    <section id="testimonios" className="bg-white px-5 py-20">
-      <div className="mx-auto w-full max-w-5xl">
-        <header className="mx-auto mb-12 max-w-2xl text-center">
-          <span className="text-xs font-bold uppercase tracking-widest text-brand-blue">
-            Testimonios
-          </span>
-          <h2 className="mt-3 text-3xl font-bold leading-tight text-brand-ink md:text-4xl">
-            Lo que dicen los que ya la usan.
-          </h2>
-        </header>
-        <div className="grid gap-5 md:grid-cols-3">
-          {items.map((t) => (
-            <article
-              key={t.name}
-              className="flex flex-col gap-3 rounded-2xl bg-neutral-50 p-6 ring-1 ring-neutral-100"
-            >
-              <p className="text-sm leading-relaxed text-brand-ink">
-                {t.quote}
-              </p>
-              <footer className="mt-auto border-t border-neutral-200 pt-3">
-                <p className="text-sm font-semibold text-brand-ink">
-                  {t.name}
-                </p>
-                <p className="text-xs text-brand-muted">{t.role}</p>
-              </footer>
-            </article>
-          ))}
+    <div className="flex flex-col gap-3 rounded-2xl bg-white/10 p-4 ring-1 ring-white/20 backdrop-blur-sm">
+      <div className="overflow-hidden rounded-xl bg-[#f8faf6] p-3 shadow-cardHover">
+        <div className="aspect-[9/16] overflow-hidden">{children}</div>
+      </div>
+      <div>
+        <h4 className="text-sm font-semibold">{label}</h4>
+        <p className="mt-0.5 text-xs leading-snug text-white/80">{desc}</p>
+      </div>
+    </div>
+  )
+}
+
+// Mock 1 — Pantalla principal con credencial digital
+function MockFeed() {
+  return (
+    <div className="flex h-full flex-col gap-2 text-[10px] text-brand-ink">
+      {/* Header */}
+      <div className="-mx-3 -mt-3 bg-brand-gradient px-3 pb-3 pt-3 text-white">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-[8px] uppercase tracking-widest text-white/80">
+              APOPS · Afiliado
+            </p>
+            <p className="text-sm font-bold leading-tight">¡Hola, María!</p>
+          </div>
+          <div className="flex h-7 w-7 items-center justify-center rounded-full bg-white/20 text-[9px] font-bold">
+            MP
+          </div>
         </div>
       </div>
-    </section>
+
+      {/* Tabs de credenciales */}
+      <div className="flex gap-1.5 px-0.5">
+        <span className="rounded-full bg-brand-blue px-2 py-0.5 text-[8px] font-bold text-white">
+          Yo
+        </span>
+        <span className="rounded-full bg-white px-2 py-0.5 text-[8px] font-medium text-brand-ink ring-1 ring-neutral-200">
+          Carlos
+        </span>
+        <span className="rounded-full bg-white px-2 py-0.5 text-[8px] font-medium text-brand-ink ring-1 ring-neutral-200">
+          Juan
+        </span>
+        <span className="rounded-full bg-white px-2 py-0.5 text-[8px] font-medium text-brand-ink ring-1 ring-neutral-200">
+          Laura
+        </span>
+      </div>
+
+      {/* Card credencial titular */}
+      <div className="relative flex flex-col gap-1.5 rounded-xl bg-gradient-to-br from-brand-blue via-brand-deep to-brand-navy p-2.5 text-white shadow-card">
+        <div className="flex items-start justify-between">
+          <div>
+            <p className="text-[7px] font-bold uppercase tracking-widest text-white/70">
+              APOPS · Credencial
+            </p>
+            <p className="text-[8px] font-bold uppercase tracking-wider">
+              Afiliado Titular
+            </p>
+          </div>
+          <div className="h-5 w-5 rounded-full bg-[#7FCFE5]/30" />
+        </div>
+        <div className="mt-1">
+          <p className="text-[7px] uppercase text-white/60">Nombre</p>
+          <p className="text-sm font-bold leading-tight">Pérez, María</p>
+        </div>
+        <div>
+          <p className="text-[7px] uppercase text-white/60">Nº afiliado</p>
+          <p className="font-mono text-[10px] font-semibold">L-0001</p>
+        </div>
+        <div>
+          <p className="text-[7px] uppercase text-white/60">DNI</p>
+          <p className="font-mono text-[10px] font-semibold">30.000.001</p>
+        </div>
+      </div>
+
+      {/* Bottom nav */}
+      <div className="mt-auto flex justify-around border-t border-neutral-200 pt-1.5">
+        <div className="flex flex-col items-center text-brand-blue">
+          <div className="h-3 w-3 rounded-sm bg-current" />
+          <span className="text-[7px] font-bold">Inicio</span>
+        </div>
+        <div className="flex flex-col items-center text-brand-muted">
+          <div className="h-3 w-3 rounded-full bg-current opacity-60" />
+          <span className="text-[7px]">Novedades</span>
+        </div>
+        <div className="flex flex-col items-center text-brand-muted">
+          <div className="h-3 w-3 rounded-full bg-current opacity-60" />
+          <span className="text-[7px]">Perfil</span>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// Mock 2 — Compartir credencial
+function MockCompartir() {
+  return (
+    <div className="flex h-full flex-col gap-2 text-[10px] text-brand-ink">
+      <div className="-mx-3 -mt-3 bg-brand-gradient px-3 pb-3 pt-3 text-white">
+        <p className="text-sm font-bold">Compartir credencial</p>
+        <p className="text-[8px] text-white/80">Carlos · Cónyuge</p>
+      </div>
+
+      {/* Mini credencial preview */}
+      <div className="flex flex-col gap-1 rounded-lg bg-gradient-to-br from-brand-blue to-brand-navy p-2 text-white">
+        <p className="text-[7px] font-bold uppercase tracking-wider">
+          Adherente
+        </p>
+        <p className="text-[10px] font-bold">Pérez, Carlos</p>
+        <p className="font-mono text-[8px]">DNI 32.000.001</p>
+      </div>
+
+      {/* Mensaje pre-cargado */}
+      <div className="rounded-lg bg-white p-2 ring-1 ring-neutral-200">
+        <p className="text-[7px] uppercase text-brand-muted">Mensaje</p>
+        <p className="mt-0.5 text-[9px] leading-relaxed text-brand-ink">
+          Hola Carlos, te comparto tu credencial APOPS:
+          apops.vercel.app/credencial-publica/...
+        </p>
+      </div>
+
+      {/* Botones de compartir */}
+      <button className="flex items-center justify-center gap-1.5 rounded-lg bg-[#25D366] py-2 text-[10px] font-bold text-white">
+        <span aria-hidden>📱</span> WhatsApp
+      </button>
+      <div className="grid grid-cols-2 gap-1.5">
+        <button className="flex items-center justify-center gap-1 rounded-lg border-2 border-brand-blue py-1.5 text-[9px] font-bold text-brand-blue">
+          <span aria-hidden>✉</span> Email
+        </button>
+        <button className="flex items-center justify-center gap-1 rounded-lg border-2 border-brand-blue py-1.5 text-[9px] font-bold text-brand-blue">
+          <span aria-hidden>📞</span> Llamar
+        </button>
+      </div>
+
+      <p className="mt-1 text-center text-[8px] text-brand-muted">
+        Vas a poder elegir el contacto en WhatsApp.
+      </p>
+    </div>
+  )
+}
+
+// Mock 3 — Panel admin
+function MockAdmin() {
+  return (
+    <div className="flex h-full flex-col gap-1.5 text-[10px] text-brand-ink">
+      <div className="-mx-3 -mt-3 bg-brand-gradient px-3 pb-3 pt-3 text-white">
+        <p className="text-[8px] uppercase tracking-widest text-white/80">
+          APOPS · Admin
+        </p>
+        <p className="text-sm font-bold">¡Hola, Lucía!</p>
+      </div>
+
+      {/* Atajos */}
+      <div className="flex items-center justify-between rounded-lg bg-white p-1.5 ring-1 ring-neutral-200">
+        <div className="flex items-center gap-1.5">
+          <div className="h-5 w-5 rounded-full bg-brand-blue/20" />
+          <span className="text-[9px] font-bold">Novedades</span>
+        </div>
+        <span className="text-brand-blue">→</span>
+      </div>
+      <div className="flex items-center justify-between rounded-lg bg-white p-1.5 ring-1 ring-neutral-200">
+        <div className="flex items-center gap-1.5">
+          <div className="h-5 w-5 rounded-full bg-brand-blue/20" />
+          <span className="text-[9px] font-bold">Mensajes delegados</span>
+        </div>
+        <span className="rounded-full bg-amber-100 px-1.5 py-0.5 text-[8px] font-bold text-amber-900">
+          2
+        </span>
+      </div>
+
+      {/* Listado solicitudes */}
+      <p className="mt-1 text-[8px] font-bold uppercase tracking-wider text-brand-muted">
+        Solicitudes de afiliación · 3
+      </p>
+      <div className="flex flex-col gap-1 rounded-lg bg-white p-1.5 ring-1 ring-neutral-200">
+        <div className="flex items-center justify-between">
+          <span className="text-[9px] font-bold">Fernández, Mariana</span>
+          <span className="rounded-full bg-brand-blue/10 px-1.5 py-0 text-[7px] font-bold text-brand-blue">
+            Permanente
+          </span>
+        </div>
+        <span className="text-[8px] text-brand-muted">DNI 32.500.100 · L-2025-001</span>
+        <div className="mt-1 flex gap-1">
+          <button className="flex-1 rounded bg-brand-blue py-1 text-[8px] font-bold text-white">
+            Aprobar
+          </button>
+          <button className="rounded border border-brand-blue/30 px-2 py-1 text-[8px] font-bold text-brand-blue">
+            Rechazar
+          </button>
+        </div>
+      </div>
+      <div className="flex flex-col gap-0.5 rounded-lg bg-white p-1.5 ring-1 ring-neutral-200 opacity-70">
+        <span className="text-[9px] font-bold">Rojas, Esteban</span>
+        <span className="text-[8px] text-brand-muted">DNI 38.900.250 · L-2025-007</span>
+      </div>
+    </div>
+  )
+}
+
+// Mock 4 — Panel delegados
+function MockDelegados() {
+  return (
+    <div className="flex h-full flex-col gap-1.5 text-[10px] text-brand-ink">
+      <div className="-mx-3 -mt-3 bg-brand-gradient px-3 pb-3 pt-3 text-white">
+        <p className="text-[8px] uppercase tracking-widest text-white/80">
+          APOPS · Delegado
+        </p>
+        <p className="text-sm font-bold">¡Hola, Lucía!</p>
+      </div>
+
+      {/* Stats */}
+      <div className="grid grid-cols-2 gap-1">
+        <div className="rounded-lg bg-white p-1.5 text-center ring-1 ring-neutral-200">
+          <p className="text-base font-bold leading-none text-brand-ink">12</p>
+          <p className="mt-0.5 text-[7px] font-medium uppercase tracking-wider text-brand-muted">
+            Cotizantes
+          </p>
+        </div>
+        <div className="rounded-lg bg-white p-1.5 text-center ring-1 ring-neutral-200">
+          <p className="text-base font-bold leading-none text-emerald-700">9</p>
+          <p className="mt-0.5 text-[7px] font-medium uppercase tracking-wider text-brand-muted">
+            APOPS
+          </p>
+        </div>
+        <div className="rounded-lg bg-white p-1.5 text-center ring-1 ring-neutral-200">
+          <p className="text-base font-bold leading-none text-amber-700">3</p>
+          <p className="mt-0.5 text-[7px] font-medium uppercase tracking-wider text-brand-muted">
+            No afiliados
+          </p>
+        </div>
+        <div className="rounded-lg bg-white p-1.5 text-center ring-1 ring-neutral-200">
+          <p className="text-base font-bold leading-none text-cyan-700">2</p>
+          <p className="mt-0.5 text-[7px] font-medium uppercase tracking-wider text-brand-muted">
+            Papel
+          </p>
+        </div>
+      </div>
+
+      {/* Lista de cotizantes */}
+      <p className="mt-1 text-[8px] font-bold uppercase tracking-wider text-brand-muted">
+        Mis cotizantes
+      </p>
+      <div className="flex items-center justify-between rounded-lg bg-white p-1.5 ring-1 ring-neutral-200">
+        <div className="flex flex-col">
+          <span className="text-[9px] font-bold">Pérez, María</span>
+          <span className="text-[8px] text-brand-muted">L-0001</span>
+        </div>
+        <span className="rounded-full bg-emerald-100 px-1.5 py-0 text-[7px] font-bold text-emerald-800">
+          APOPS
+        </span>
+      </div>
+      <div className="flex items-center justify-between rounded-lg bg-white p-1.5 ring-1 ring-neutral-200">
+        <div className="flex flex-col">
+          <span className="text-[9px] font-bold">Rodríguez, Ana</span>
+          <span className="text-[8px] text-brand-muted">Jubilada</span>
+        </div>
+        <span className="rounded-full bg-cyan-100 px-1.5 py-0 text-[7px] font-bold text-cyan-800">
+          Papel
+        </span>
+      </div>
+
+      {/* Form mensaje a CD */}
+      <div className="mt-1 rounded-lg bg-white p-1.5 ring-1 ring-neutral-200">
+        <p className="text-[8px] font-bold">Escribirle a la CD</p>
+        <div className="mt-1 h-3 rounded bg-neutral-100" />
+        <button className="mt-1 w-full rounded bg-brand-blue py-1 text-[8px] font-bold text-white">
+          Enviar
+        </button>
+      </div>
+    </div>
   )
 }
 
