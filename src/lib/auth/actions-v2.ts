@@ -183,6 +183,12 @@ export async function registrar(
   _prev: FormState,
   formData: FormData,
 ): Promise<FormState> {
+  // Trace ID corto para correlacionar todos los logs de esta request en
+  // Vercel Function Logs. Útil cuando varios usuarios intentan a la vez.
+  const traceId = Math.random().toString(36).slice(2, 8)
+  const log = (step: string, data: Record<string, unknown> = {}) =>
+    console.log(`[REGISTRO ${traceId}] ${step}`, data)
+
   const raw = {
     identifier: (formData.get('identifier')?.toString() ?? '').trim(),
     email: (formData.get('email')?.toString() ?? '').trim(),
@@ -190,9 +196,23 @@ export async function registrar(
     password: formData.get('password')?.toString() ?? '',
   }
 
+  log('inicio', {
+    identifier: raw.identifier,
+    emailLen: raw.email.length,
+    hasPassword: !!raw.password,
+  })
+
   const parsed = registroFormSchema.safeParse(raw)
   if (!parsed.success) {
     const fe = parsed.error.flatten().fieldErrors
+    log('zod_failed', {
+      fieldErrors: {
+        identifier: fe.identifier?.[0],
+        email: fe.email?.[0],
+        emailConfirm: fe.emailConfirm?.[0],
+        password: fe.password?.[0],
+      },
+    })
     return {
       fieldErrors: {
         identifier: fe.identifier?.[0],
@@ -211,6 +231,7 @@ export async function registrar(
     admin,
   )
   if (existente) {
+    log('ya_existe_afiliado', { afiliadoId: existente.id })
     return {
       fieldErrors: {
         identifier: 'Ya existe una cuenta con esos datos. Iniciá sesión.',
@@ -219,12 +240,16 @@ export async function registrar(
   }
 
   // 2. ¿Email ya usado por otro afiliado?
-  const { data: emailExists } = await admin
+  const { data: emailExists, error: emailLookupError } = await admin
     .from('afiliados')
     .select('id')
     .eq('email', parsed.data.email)
     .maybeSingle()
+  if (emailLookupError) {
+    log('email_lookup_error', { msg: emailLookupError.message })
+  }
   if (emailExists) {
+    log('email_ya_usado')
     return {
       fieldErrors: {
         email: 'Ese email ya está registrado.',
@@ -235,7 +260,9 @@ export async function registrar(
   // 3. Validar contra padrón
   const parsedId = parseIdentifier(parsed.data.identifier)
   const padronColumn = parsedId.tipo === 'dni' ? 'dni' : 'legajo'
-  const { data: padron } = await admin
+  log('padron_query', { tipo: parsedId.tipo, valor: parsedId.valor, columna: padronColumn })
+
+  const { data: padron, error: padronError } = await admin
     .from('padron_cotizantes')
     .select(
       'id, dni, legajo, nombre, afiliado_apops, cotiza_papel',
@@ -243,16 +270,28 @@ export async function registrar(
     .eq(padronColumn, parsedId.valor)
     .maybeSingle()
 
+  if (padronError) {
+    log('padron_error', { msg: padronError.message, hint: padronError.hint })
+  }
+  log('padron_resultado', {
+    found: !!padron,
+    afiliado_apops: padron?.afiliado_apops,
+    cotiza_papel: padron?.cotiza_papel,
+  })
+
   if (!padron) {
+    log('redirect_no_en_padron', { motivo: 'no_encontrado' })
     redirect(
       `/no-en-padron?identifier=${encodeURIComponent(parsed.data.identifier)}`,
     )
   }
   if (!padron.afiliado_apops && !padron.cotiza_papel) {
+    log('redirect_no_en_padron', { motivo: 'sin_flags_apops' })
     redirect(
       `/no-en-padron?identifier=${encodeURIComponent(parsed.data.identifier)}`,
     )
   }
+  log('padron_validado_ok')
 
   // 4. Crear auth.users con email_confirm=true (D10: doble input ya validó)
   const created = await admin.auth.admin.createUser({
@@ -261,11 +300,13 @@ export async function registrar(
     email_confirm: true,
   })
   if (created.error || !created.data.user) {
+    log('create_user_error', { msg: created.error?.message })
     return {
       error: 'No pudimos crear la cuenta. Intentá de nuevo.',
     }
   }
   const authUserId = created.data.user.id
+  log('auth_user_creado', { userId: authUserId.slice(0, 8) })
 
   // 5. Crear afiliado vinculado
   const tipo: 'activo' | 'jubilado' = padron.legajo ? 'activo' : 'jubilado'
@@ -281,12 +322,14 @@ export async function registrar(
     padron_id: padron.id,
   })
   if (insertResult.error) {
+    log('insert_afiliado_error', { msg: insertResult.error.message })
     // Rollback de auth.users para no dejar huérfano
     await admin.auth.admin.deleteUser(authUserId)
     return {
       error: 'No pudimos crear la cuenta. Intentá de nuevo.',
     }
   }
+  log('afiliado_creado', { tipo, conPassword: !!parsed.data.password })
 
   // 6. Audit
   const ip = extractIp()

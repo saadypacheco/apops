@@ -31,6 +31,8 @@ const PUBLIC_PREFIXES = [
   // Vista pública de credencial de adherente (feature 004).
   // El UUID actúa como secret — no requiere auth.
   '/credencial-publica',
+  // Endpoint de diagnóstico: verifica conexión a Supabase desde el server.
+  '/api/health',
 ]
 
 function isPublicPath(pathname: string): boolean {
