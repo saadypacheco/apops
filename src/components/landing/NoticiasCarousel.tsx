@@ -106,25 +106,50 @@ export function NoticiasCarousel({ noticias }: { noticias: Noticia[] }) {
         </Link>
       </header>
 
-      <div
-        ref={scrollerRef}
-        className="snap-x-noscrollbar flex gap-3 overflow-x-auto scroll-smooth px-5 pb-1 snap-x snap-mandatory"
-      >
-        {noticias.map((n) => (
-          <NoticiaCard
-            key={n.id}
-            titulo={n.titulo}
-            resumen={n.resumen}
-            publicada_at={n.publicada_at}
-            autor={n.autor}
-            destacada={n.destacada}
-          />
-        ))}
+      <div className="relative">
+        <div
+          ref={scrollerRef}
+          className="snap-x-noscrollbar flex gap-3 overflow-x-auto scroll-smooth px-5 pb-1 snap-x snap-mandatory"
+        >
+          {noticias.map((n) => (
+            <NoticiaCard
+              key={n.id}
+              id={n.id}
+              titulo={n.titulo}
+              resumen={n.resumen}
+              publicada_at={n.publicada_at}
+              autor={n.autor}
+              destacada={n.destacada}
+            />
+          ))}
+        </div>
+
+        {/* Flechas de navegación (solo si hay más de 1 noticia) */}
+        {noticias.length > 1 && (
+          <>
+            <button
+              type="button"
+              onClick={() => goTo((active - 1 + noticias.length) % noticias.length)}
+              aria-label="Noticia anterior"
+              className="absolute left-1 top-1/2 z-10 inline-flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-brand-blue shadow-card backdrop-blur transition hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+            >
+              <ChevronIcon dir="left" />
+            </button>
+            <button
+              type="button"
+              onClick={() => goTo((active + 1) % noticias.length)}
+              aria-label="Noticia siguiente"
+              className="absolute right-1 top-1/2 z-10 inline-flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-brand-blue shadow-card backdrop-blur transition hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+            >
+              <ChevronIcon dir="right" />
+            </button>
+          </>
+        )}
       </div>
 
       {noticias.length > 1 && (
         <div
-          className="flex items-center justify-center gap-1 px-5 pt-1"
+          className="flex items-center justify-center gap-1 px-5"
           role="tablist"
           aria-label="Indicador de noticia"
         >
@@ -155,5 +180,24 @@ export function NoticiasCarousel({ noticias }: { noticias: Noticia[] }) {
         </div>
       )}
     </section>
+  )
+}
+
+function ChevronIcon({ dir }: { dir: 'left' | 'right' }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2.5}
+      className="h-5 w-5"
+      aria-hidden
+    >
+      {dir === 'left' ? (
+        <path d="M15 6l-6 6 6 6" strokeLinecap="round" strokeLinejoin="round" />
+      ) : (
+        <path d="M9 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round" />
+      )}
+    </svg>
   )
 }

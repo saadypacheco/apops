@@ -22,7 +22,8 @@ const PUBLIC_PATHS = new Set<string>([
   // Afiliación pública
   '/afiliarse',
   '/afiliarse/exito',
-  // Listado público de noticias
+  // Listado público de noticias (la vista individual /noticias/[id]
+  // entra por PUBLIC_PREFIXES abajo)
   '/noticias',
 ])
 
@@ -33,6 +34,8 @@ const PUBLIC_PREFIXES = [
   '/credencial-publica',
   // Endpoint de diagnóstico: verifica conexión a Supabase desde el server.
   '/api/health',
+  // Vista individual pública de noticia: /noticias/<uuid>
+  '/noticias',
 ]
 
 function isPublicPath(pathname: string): boolean {

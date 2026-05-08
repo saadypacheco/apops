@@ -76,27 +76,20 @@ export function LoginForm({ registrado = false }: { registrado?: boolean }) {
 
       <div className="flex flex-col items-center gap-1.5 text-center">
         <Link
-          href="/login-magic-link"
-          className="inline-flex items-center gap-1.5 text-sm font-semibold text-brand-blue hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:ring-offset-2"
+          href="/recuperar-clave"
+          className="text-sm font-semibold text-brand-blue hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:ring-offset-2"
         >
-          <EnvelopeIcon className="h-4 w-4" />
-          Ingresar con magic link
+          ¿Olvidaste tu clave?
         </Link>
-        <div className="flex items-center gap-3 text-xs">
-          <Link
-            href="/recuperar-clave"
-            className="text-brand-muted hover:text-brand-blue hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:ring-offset-2"
-          >
-            ¿Olvidaste tu clave?
-          </Link>
-          <span aria-hidden className="text-brand-muted/40">·</span>
+        <p className="text-xs text-brand-muted">
+          ¿Primera vez?{' '}
           <Link
             href="/registrarse"
             className="font-semibold text-brand-blue hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:ring-offset-2"
           >
             Registrate
           </Link>
-        </div>
+        </p>
       </div>
     </form>
   )
@@ -258,22 +251,6 @@ function PersonIcon() {
     >
       <circle cx="12" cy="8" r="4" />
       <path d="M4 21c0-4 4-7 8-7s8 3 8 7" strokeLinecap="round" />
-    </svg>
-  )
-}
-
-function EnvelopeIcon({ className }: { className?: string }) {
-  return (
-    <svg
-      aria-hidden
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      className={className}
-    >
-      <rect x="3" y="6" width="18" height="12" rx="2" />
-      <path d="M3 8l9 6 9-6" strokeLinecap="round" />
     </svg>
   )
 }

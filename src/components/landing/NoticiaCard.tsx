@@ -1,4 +1,7 @@
+import Link from 'next/link'
+
 type NoticiaCardProps = {
+  id: string
   titulo: string
   resumen: string
   publicada_at: string
@@ -17,8 +20,10 @@ function formatRelative(iso: string): string {
   return date.toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })
 }
 
-// Card blanca con shadow + ícono circular azul a la izquierda. Estilo mockup.
+// Card blanca con shadow. Estilo mockup: badge prominente arriba ("DESTACADA"
+// o "NUEVA NOTICIA"), título, resumen, footer con autor + tiempo + CTA.
 export function NoticiaCard({
+  id,
   titulo,
   resumen,
   publicada_at,
@@ -28,13 +33,24 @@ export function NoticiaCard({
   return (
     <article
       className={
-        'flex shrink-0 snap-center flex-col gap-2.5 rounded-2xl bg-white p-4 shadow-card ' +
+        'flex shrink-0 snap-center flex-col gap-3 rounded-2xl bg-white p-4 shadow-card ' +
         // Mismo ancho que el form ACCESO: viewport - 40px (px-5*2 del
         // contenedor padre), limitado al max del container (480 - 40 = 440).
         'w-[calc(100vw-2.5rem)] max-w-[440px] ' +
         (destacada ? 'ring-2 ring-brand-blue/40' : '')
       }
     >
+      <span
+        className={
+          'inline-flex w-fit items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ' +
+          (destacada
+            ? 'bg-brand-blue text-white'
+            : 'bg-brand-blue/10 text-brand-blue')
+        }
+      >
+        {destacada ? '★ Destacada' : 'Nueva noticia'}
+      </span>
+
       <header className="flex items-start gap-3">
         <span
           aria-hidden
@@ -42,28 +58,27 @@ export function NoticiaCard({
         >
           <MegaphoneIcon />
         </span>
-        <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-          <div className="flex items-center justify-between gap-2">
-            <time
-              dateTime={publicada_at}
-              className="rounded-md bg-brand-deep/5 px-2 py-0.5 text-[10px] font-medium text-brand-muted"
-            >
-              {formatRelative(publicada_at)}
-            </time>
-            {destacada && (
-              <span className="text-[10px] font-bold uppercase tracking-wider text-brand-blue">
-                ★ Destacada
-              </span>
-            )}
-          </div>
-          <h3 className="text-base font-bold leading-snug text-brand-ink line-clamp-2">
-            {titulo}
-          </h3>
-        </div>
+        <h3 className="flex-1 text-base font-bold leading-snug text-brand-ink line-clamp-2">
+          {titulo}
+        </h3>
       </header>
+
       <p className="text-sm text-brand-muted line-clamp-3">{resumen}</p>
-      <footer className="text-sm font-semibold text-brand-blue">
-        {autor ?? 'APOPS'}
+
+      <footer className="flex items-center justify-between gap-2 border-t border-neutral-100 pt-2.5 text-xs">
+        <div className="flex flex-col leading-tight">
+          <span className="font-semibold text-brand-blue">{autor ?? 'APOPS'}</span>
+          <time dateTime={publicada_at} className="text-brand-muted">
+            {formatRelative(publicada_at)}
+          </time>
+        </div>
+        <Link
+          href={`/noticias/${id}`}
+          className="inline-flex items-center gap-1 rounded-full bg-brand-blue/10 px-3 py-1.5 text-xs font-bold text-brand-blue transition hover:bg-brand-blue hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue"
+        >
+          Ver noticia
+          <span aria-hidden>→</span>
+        </Link>
       </footer>
     </article>
   )
