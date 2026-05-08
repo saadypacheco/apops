@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import type { Rol } from '@/lib/auth/role'
+import { RoleSwitcherSlot } from './RoleSwitcherSlot'
 
 // Layout común para las pantallas autenticadas: header con saludo + nav
 // inferior con accesos rápidos. Mobile-first.
@@ -33,6 +34,7 @@ export function AppShell({ children, nombre, rol, current }: Props) {
             <h1 className="text-2xl font-semibold">¡Hola, {firstName(nombre)}!</h1>
           </div>
           <div className="flex items-center gap-2">
+            <RoleSwitcherSlot />
             <span
               role="button"
               aria-label="Alertas (próximamente)"

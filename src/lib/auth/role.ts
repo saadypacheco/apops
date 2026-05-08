@@ -28,6 +28,8 @@ export interface AfiliadoSession {
   nombre: string
   tipo: 'activo' | 'jubilado'
   rol: Rol
+  /** Si true, el usuario puede cambiar su rol desde la UI (modo demo). */
+  permiteRoleSwitch: boolean
 }
 
 // Resuelve la sesión + datos del afiliado vinculado.
@@ -42,7 +44,7 @@ export async function getCurrentAfiliado(): Promise<AfiliadoSession | null> {
   const admin = createAdminClient()
   const { data } = await admin
     .from('afiliados')
-    .select('id, dni, legajo, nombre, tipo, rol')
+    .select('id, dni, legajo, nombre, tipo, rol, permite_role_switch')
     .eq('auth_user_id', user.id)
     .maybeSingle()
   if (!data) return null
@@ -56,6 +58,7 @@ export async function getCurrentAfiliado(): Promise<AfiliadoSession | null> {
     nombre: data.nombre,
     tipo: data.tipo as 'activo' | 'jubilado',
     rol: (data.rol as Rol) ?? 'afiliado',
+    permiteRoleSwitch: data.permite_role_switch ?? false,
   }
 }
 
