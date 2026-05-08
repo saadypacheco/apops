@@ -222,3 +222,47 @@ export async function toggleDestacada(
 ): Promise<ToggleResult> {
   return toggleFlag(formData, 'destacada')
 }
+
+// =====================================================================
+// eliminarNoticia — borrado real (DELETE) desde /admin/novedades/[id]
+// =====================================================================
+//
+// Considerar: por ahora hacemos DELETE real (no soft-delete). Si en el
+// futuro se quiere recuperar noticias borradas, agregar columna deleted_at
+// y filtrar en SELECT. Hoy con "despublicar" se cubre el 90% de casos
+// (oculta del público pero la noticia sigue existiendo).
+
+export async function eliminarNoticia(
+  _prev: ToggleResult,
+  formData: FormData,
+): Promise<ToggleResult> {
+  const auth = await requireAdmin()
+  if (!auth.ok) return { error: auth.error }
+
+  const id = formData.get('id')?.toString() ?? ''
+  if (!id) return { error: 'Noticia inválida.' }
+
+  const admin = createAdminClient()
+
+  // Capturar título antes de borrar para audit
+  const { data: noticia } = await admin
+    .from('noticias')
+    .select('titulo')
+    .eq('id', id)
+    .maybeSingle()
+
+  const { error } = await admin.from('noticias').delete().eq('id', id)
+  if (error) return { error: 'No pudimos eliminar la noticia.' }
+
+  await admin.from('audit_log').insert({
+    evento: 'noticia_eliminada',
+    afiliado_id: auth.afiliadoId,
+    metadata: { noticia_id: id, titulo: noticia?.titulo ?? null },
+  })
+
+  revalidatePath('/admin/novedades')
+  revalidatePath('/novedades')
+  revalidatePath('/noticias')
+  revalidatePath('/')
+  redirect('/admin/novedades?eliminada=1')
+}

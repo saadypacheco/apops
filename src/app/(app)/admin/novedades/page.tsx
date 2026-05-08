@@ -33,7 +33,7 @@ function formatDateTime(iso: string): string {
 export default async function GestionarNovedadesPage({
   searchParams,
 }: {
-  searchParams?: { creada?: string; editada?: string }
+  searchParams?: { creada?: string; editada?: string; eliminada?: string }
 }) {
   const session = await requireRole('admin')
 
@@ -56,7 +56,9 @@ export default async function GestionarNovedadesPage({
       ? 'Noticia creada y publicada.'
       : searchParams?.editada === '1'
         ? 'Cambios guardados.'
-        : null
+        : searchParams?.eliminada === '1'
+          ? 'Noticia eliminada.'
+          : null
 
   return (
     <AppShell nombre={session.nombre} rol={session.rol} current="admin">

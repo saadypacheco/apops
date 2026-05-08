@@ -151,9 +151,14 @@ export const solicitarAccesoFormSchema = z
   }))
 
 // Form de cambio de clave desde /perfil/clave (F5)
+//
+// `actual` es OPCIONAL: si el usuario entró por magic link y no recuerda
+// la clave anterior, puede dejar el campo vacío. Cuando viene completo,
+// el server lo valida con signInWithPassword. La sesión activa ya
+// autentica al usuario; pedir la clave actual es defense in depth.
 export const cambioClaveFormSchema = z
   .object({
-    actual: z.string().min(1, 'Ingresá tu clave actual.'),
+    actual: z.string(), // opcional — server valida solo si viene con valor
     nueva: passwordSchema,
     confirmar: z.string(),
   })

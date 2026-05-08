@@ -601,13 +601,14 @@ export async function cambiarClave(
     return { error: 'No encontramos tu cuenta.' }
   }
 
-  // 2. Si ya tenía clave, verificarla. Si no la tenía (post magic-link),
-  // saltamos esta verificación — la sesión activa por magic link ya nos
-  // garantiza que es el dueño del email.
-  if (row.tiene_password) {
+  // 2. Si ya tenía clave Y la usuario completó el campo, verificarla.
+  // Si el campo está vacío (caso "olvidé mi clave + entré por magic link")
+  // o si nunca tuvo clave, saltamos: la sesión activa ya autentica.
+  const claveActual = parsed.data.actual.trim()
+  if (row.tiene_password && claveActual.length > 0) {
     const { error: signInError } = await supabase.auth.signInWithPassword({
       email: row.email,
-      password: parsed.data.actual,
+      password: claveActual,
     })
     if (signInError) {
       return {

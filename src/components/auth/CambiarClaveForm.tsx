@@ -52,17 +52,11 @@ export function CambiarClaveForm({ yaTieneClave }: Props) {
           name="actual"
           label="Clave actual"
           autoComplete="current-password"
-          required
           error={state.fieldErrors?.['actual']}
+          hint="Si entraste por magic link y no la recordás, podés dejar este campo vacío."
         />
       )}
-      {/* Si no tiene clave todavía, mandamos un placeholder vacío para que
-          el server reciba el campo (el schema lo valida con .min(1) que
-          fallaría — pero la action salta esa validación si tiene_password=false).
-          Mejor: el schema requiere actual.min(1), entonces le mandamos un
-          espacio. La action chequea row.tiene_password antes de validar la
-          clave. El spacing pasa el min(1) y la action lo ignora. */}
-      {!yaTieneClave && <input type="hidden" name="actual" value="-" />}
+      {!yaTieneClave && <input type="hidden" name="actual" value="" />}
 
       <PasswordField
         id="nueva"
