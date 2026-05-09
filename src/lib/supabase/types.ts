@@ -150,6 +150,54 @@ export type Database = {
         }
         Relationships: []
       }
+      hilos_notificacion: {
+        Row: {
+          asunto: string
+          autor_id: string
+          created_at: string
+          destinatario_id: string
+          id: string
+          leido_autor: boolean
+          leido_destinatario: boolean
+          ultimo_mensaje_at: string
+        }
+        Insert: {
+          asunto: string
+          autor_id: string
+          created_at?: string
+          destinatario_id: string
+          id?: string
+          leido_autor?: boolean
+          leido_destinatario?: boolean
+          ultimo_mensaje_at?: string
+        }
+        Update: {
+          asunto?: string
+          autor_id?: string
+          created_at?: string
+          destinatario_id?: string
+          id?: string
+          leido_autor?: boolean
+          leido_destinatario?: boolean
+          ultimo_mensaje_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hilos_notificacion_autor_id_fkey"
+            columns: ["autor_id"]
+            isOneToOne: false
+            referencedRelation: "afiliados"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hilos_notificacion_destinatario_id_fkey"
+            columns: ["destinatario_id"]
+            isOneToOne: false
+            referencedRelation: "afiliados"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       mensajes_delegado: {
         Row: {
           asunto: string
@@ -194,6 +242,45 @@ export type Database = {
             columns: ["leido_por"]
             isOneToOne: false
             referencedRelation: "afiliados"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mensajes_notificacion: {
+        Row: {
+          autor_id: string
+          created_at: string
+          hilo_id: string
+          id: string
+          mensaje: string
+        }
+        Insert: {
+          autor_id: string
+          created_at?: string
+          hilo_id: string
+          id?: string
+          mensaje: string
+        }
+        Update: {
+          autor_id?: string
+          created_at?: string
+          hilo_id?: string
+          id?: string
+          mensaje?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mensajes_notificacion_autor_id_fkey"
+            columns: ["autor_id"]
+            isOneToOne: false
+            referencedRelation: "afiliados"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mensajes_notificacion_hilo_id_fkey"
+            columns: ["hilo_id"]
+            isOneToOne: false
+            referencedRelation: "hilos_notificacion"
             referencedColumns: ["id"]
           },
         ]
