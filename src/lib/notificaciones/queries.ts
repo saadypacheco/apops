@@ -43,10 +43,26 @@ export async function getDestinatariosDisponibles(
     return filas.map(toDestinatario)
   }
 
-  // afiliado ve solo a delegados + admins
+  // afiliado ve a admins + SU delegado (el que figura como `representante`
+  // en su fila de padron_cotizantes). Si no tiene representante asignado,
+  // solo ve a admins.
   if (session.rol === 'afiliado') {
+    const { data: miPadron } = await admin
+      .from('padron_cotizantes')
+      .select('representante')
+      .or(`dni.eq.${session.dni}${session.legajo ? `,legajo.eq.${session.legajo}` : ''}`)
+      .maybeSingle()
+    const miRepresentanteNombre = (miPadron as { representante: string | null } | null)
+      ?.representante?.trim().toLowerCase() ?? null
+
     return filas
-      .filter((f) => f.rol === 'delegado' || f.rol === 'admin')
+      .filter((f) => {
+        if (f.rol === 'admin') return true
+        if (f.rol === 'delegado' && miRepresentanteNombre) {
+          return f.nombre.trim().toLowerCase() === miRepresentanteNombre
+        }
+        return false
+      })
       .map(toDestinatario)
   }
 
