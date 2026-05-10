@@ -6,6 +6,7 @@ import { AppShell } from '@/components/app/AppShell'
 import { PendienteActions } from '@/components/admin/PendienteActions'
 import { AfiliacionActions } from '@/components/admin/AfiliacionActions'
 import { AfiliacionDetail } from '@/components/admin/AfiliacionDetail'
+import { contarNoLeidos } from '@/lib/notificaciones/queries'
 
 export const metadata: Metadata = {
   title: 'Panel admin',
@@ -106,6 +107,9 @@ export default async function AdminPage() {
     .select('id', { count: 'exact', head: true })
     .eq('leido', false)
 
+  // Contador de notificaciones sin leer del admin (sistema nuevo de hilos)
+  const notifNoLeidas = await contarNoLeidos(session.afiliadoId)
+
   // Solicitudes de afiliación online (wizard de 3 pasos con firma).
   // Cast por mismatch entre supabase-js 2.45 y types.ts generado por CLI más nueva.
   const { data: afiliaciones } = (await admin
@@ -175,6 +179,38 @@ export default async function AdminPage() {
               {(mensajesNoLeidos ?? 0) > 0 && (
                 <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-bold text-amber-900">
                   {mensajesNoLeidos}
+                </span>
+              )}
+              <span aria-hidden className="text-brand-blue">→</span>
+            </div>
+          </Link>
+
+          <Link
+            href="/notificaciones"
+            className="flex items-center justify-between rounded-xl bg-white p-4 shadow-card transition hover:shadow-cardHover"
+          >
+            <div className="flex items-center gap-3">
+              <span
+                aria-hidden
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand-blue/10 text-brand-blue"
+              >
+                <BellIcon />
+              </span>
+              <div className="flex flex-col leading-tight">
+                <span className="text-base font-semibold text-brand-ink">
+                  Notificaciones
+                </span>
+                <span className="text-xs text-brand-muted">
+                  {notifNoLeidas === 0
+                    ? 'Sin nuevas'
+                    : `${notifNoLeidas} sin leer`}
+                </span>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              {notifNoLeidas > 0 && (
+                <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-bold text-red-700">
+                  {notifNoLeidas}
                 </span>
               )}
               <span aria-hidden className="text-brand-blue">→</span>
@@ -379,6 +415,26 @@ function ChatIcon() {
         strokeLinecap="round"
         strokeLinejoin="round"
       />
+    </svg>
+  )
+}
+
+function BellIcon() {
+  return (
+    <svg
+      aria-hidden
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      className="h-5 w-5"
+    >
+      <path
+        d="M15 17h5l-1.4-1.4A2 2 0 0118 14.2V11a6 6 0 10-12 0v3.2c0 .53-.21 1.04-.59 1.41L4 17h5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path d="M9 17a3 3 0 006 0" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   )
 }

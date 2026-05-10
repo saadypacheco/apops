@@ -66,13 +66,7 @@ export default async function HiloPage({
     <AppShell
       nombre={session.nombre}
       rol={session.rol}
-      current={
-        session.rol === 'admin'
-          ? 'admin'
-          : session.rol === 'delegado'
-            ? 'delegados'
-            : 'home'
-      }
+      current="notificaciones"
     >
       <div className="flex flex-col gap-4">
         <Link

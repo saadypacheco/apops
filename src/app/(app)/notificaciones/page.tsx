@@ -58,13 +58,7 @@ export default async function NotificacionesInboxPage({
     <AppShell
       nombre={session.nombre}
       rol={session.rol}
-      current={
-        session.rol === 'admin'
-          ? 'admin'
-          : session.rol === 'delegado'
-            ? 'delegados'
-            : 'home'
-      }
+      current="notificaciones"
     >
       <div className="flex flex-col gap-4">
         <header className="flex items-start justify-between gap-3">

@@ -2,6 +2,8 @@ import Link from 'next/link'
 import type { Rol } from '@/lib/auth/role'
 import { RoleSwitcherSlot } from './RoleSwitcherSlot'
 import { WhatsAppFab } from './WhatsAppFab'
+import { CampanaSlot } from './CampanaSlot'
+import { NavBadgeNotif } from './NavBadgeNotif'
 
 // Layout común para las pantallas autenticadas: header con saludo + nav
 // inferior con accesos rápidos. Mobile-first.
@@ -11,7 +13,13 @@ type Props = {
   nombre: string
   rol: Rol
   /** ruta activa (para resaltar el item del nav) */
-  current: 'home' | 'novedades' | 'perfil' | 'admin' | 'delegados'
+  current:
+    | 'home'
+    | 'novedades'
+    | 'notificaciones'
+    | 'perfil'
+    | 'admin'
+    | 'delegados'
 }
 
 const roleLabel: Record<Rol, string> = {
@@ -36,18 +44,7 @@ export function AppShell({ children, nombre, rol, current }: Props) {
           </div>
           <div className="flex items-center gap-2">
             <RoleSwitcherSlot />
-            <span
-              role="button"
-              aria-label="Alertas (próximamente)"
-              aria-disabled
-              title="Alertas (próximamente)"
-              className="flex h-11 w-11 cursor-not-allowed items-center justify-center rounded-full bg-white/15 text-white opacity-80"
-            >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-5 w-5" aria-hidden>
-                <path d="M15 17h5l-1.4-1.4A2 2 0 0118 14.2V11a6 6 0 10-12 0v3.2c0 .53-.21 1.04-.59 1.41L4 17h5" strokeLinecap="round" strokeLinejoin="round" />
-                <path d="M9 17a3 3 0 006 0" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </span>
+            <CampanaSlot />
             <Link
               href="/perfil"
               aria-label="Ir a mi perfil"
@@ -103,16 +100,18 @@ export function AppShell({ children, nombre, rol, current }: Props) {
             active={current === 'perfil'}
           />
           <NavItem
-            href="#"
-            label="Consultas"
+            href="/notificaciones"
+            label="Notificaciones"
             icon={
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-6 w-6">
-                <path d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                <path d="M9.5 9.5a2.5 2.5 0 015 0c0 1.5-2.5 2-2.5 4M12 18h.01" strokeLinecap="round" />
-              </svg>
+              <span className="relative inline-flex">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-6 w-6">
+                  <path d="M15 17h5l-1.4-1.4A2 2 0 0118 14.2V11a6 6 0 10-12 0v3.2c0 .53-.21 1.04-.59 1.41L4 17h5" strokeLinecap="round" strokeLinejoin="round" />
+                  <path d="M9 17a3 3 0 006 0" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+                <NavBadgeNotif />
+              </span>
             }
-            active={false}
-            disabled
+            active={current === 'notificaciones'}
           />
         </div>
       </nav>
