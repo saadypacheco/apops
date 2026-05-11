@@ -105,24 +105,17 @@
 - Actualizar AGENTS.md con el estado real del producto (no "tickets" sino "credencial + comunicación").
 - Resolver duplicados de noticias / solicitudes de afiliación en cloud (correr SQL de limpieza si molesta).
 
-## Cómo arrancar la próxima sesión
+## Bootstrap automático del agente
 
-```bash
-# 1. Posicionarse
-cd c:/repos/proyectosClaude/apops
+El protocolo de bootstrap está documentado en [CLAUDE.md](CLAUDE.md). Cuando
+el user diga "retomá", el agente debe:
 
-# 2. Sincronizar
-git pull origin main
+1. Leer este RESUME.md
+2. `git pull origin main`
+3. `npx tsc --noEmit`
+4. Reportar status + preguntar antes de codear
 
-# 3. Verificar Supabase local (probablemente esté corriendo)
-"/c/Users/User/AppData/Local/npm-cache/_npx/aa8e5c70f9d8d161/node_modules/supabase/bin/supabase.exe" status
-
-# 4. Tests del estado actual (probablemente algunos rotos)
-npm run test
-
-# 5. Levantar dev server
-npm run dev
-```
+**El usuario no debería tener que escribir comandos manuales.**
 
 ## URLs útiles
 
@@ -162,9 +155,12 @@ e33cb9e         feat: afiliación online (wizard 3 pasos + firma) + UX landing
 
 Ya está todo mergeado a `main`. PR #1 cerrado como MERGED el 2026-05-07.
 
-## Para la próxima sesión — checklist de bienvenida
+## Para el agente de la próxima sesión — checklist
 
-1. Leer **este archivo** (RESUME.md) y `presentacion-cliente.md` para contexto.
-2. Verificar que `npm run test` corre (aunque muchos tests v1 estén rotos, ver qué pasa).
-3. Decidir suite de testing: vitest only (unitarios + integración con supabase-js mockeado) o sumar Playwright.
-4. Si el cliente ya hizo feedback de la demo, priorizar los ajustes pedidos antes de tests.
+1. Leer este archivo y `presentacion-cliente.md` para contexto.
+2. `git pull origin main` para sincronizar.
+3. `npm run test` para ver qué está roto.
+4. Decidir suite de testing: vitest only (unitarios + integración con
+   supabase-js mockeado) o sumar Playwright.
+5. Si hubo feedback del cliente posterior a la demo, **eso tiene prioridad
+   sobre los tests** — preguntar al usuario antes de arrancar.
