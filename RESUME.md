@@ -1,143 +1,109 @@
 # Retomar trabajo — APOPS Siempre
 
-> Doc de handoff entre sesiones. Última actualización: 2026-05-04.
-> Branch activa: `001-afiliado-auth`. PR #1 abierto a `main`.
+> Doc de handoff entre sesiones. Última actualización: 2026-05-10.
+> Branch activa: `main`. Trabajo en producción en `https://apops.vercel.app`.
 
 ## Estado al cerrar la sesión
 
-**Lo que funciona end-to-end** (probable en `http://localhost:3000`):
+**Live en cloud**: https://apops.vercel.app — deploy automático desde `main` vía Vercel Pro.
+**Repo**: https://github.com/saadypacheco/apops
+**Supabase Cloud**: project `pozbdplbichrhojjeqiv` (apops-desa, plan free, region South America).
+**Stack confirmado**: Next.js 14 App Router + Supabase (auth + RLS + Storage) + TypeScript + Tailwind. PWA mobile-first sobre container `max-w-[480px]` con decoración lateral discreta en desktop.
 
-- **Landing** (`/`): gradient navy → azul medio, logo APOPS oficial, carousel de noticias, form de login (DNI + legajo), botón flotante de ayuda con WhatsApp/Email/Tel, footer minimalista con contacto, link "Afiliate ahora".
-- **Auth completo** (`/login` redirige a `/`, `/login-sin-legajo`, `/email`, `/nombre-completo`, `/magic-link-enviado`, `/magic-link-expirado`, `/pendiente-validacion`).
-- **Post-login con ruteo por rol** (`/feed`, `/admin`, `/delegados`, `/perfil`).
-- **Afiliación pública** (`/afiliarse`): wizard de 3 pasos con StepIndicator visual, validación per-step, firma digital con canvas pad. Guarda en DB tabla `solicitudes_afiliacion`. Termina en `/afiliarse/exito`.
+### Datos demo cargados (3 cuentas)
 
-**Datos de prueba disponibles (seed)**:
-- DNI 30000001 + L-0001 → activo APOPS
-- DNI 20000001 (sin legajo) → jubilado APOPS
-- DNI 99999999 + L-9999 → no en padrón (queda como pendiente)
-- 4 noticias del seed visibles en landing y `/feed`
+| Usuario | Email login | Password | Rol | Notas |
+|---|---|---|---|---|
+| **siempreapops** (Méndez, Carolina) | `siempreapops@apops.org.ar` | `siempreapops` | admin + role-switch | Es la cuenta de **demo al cliente**. Tiene flag `permite_role_switch=true` que activa un dropdown en el header para cambiar rol en vivo (admin / delegado / afiliado). Identifier de login: `siempreapops` (legajo). |
+| **García, Lucía** | `delegado.norte@apops.org.ar` | `delegadonorte` | delegado | Norte. Representa a Pérez María y Rodríguez Ana. |
+| **Sosa, Roberto** | `delegado.sur@apops.org.ar` | `delegadosur` | delegado | Sur. Representa a Martínez Pablo. |
 
-**Tests**: 62/62 verde a commit anterior. Tests de la afiliación nueva NO escritos.
+> Importante: **no hay rastro del nombre real (Pacheco/Saady) en la demo cloud**. El admin se llama "Méndez, Carolina" con adherentes "Méndez, Daniel" (cónyuge) y "Méndez, Mateo" (hijo).
 
-## Lo que falta de la afiliación
+### Padrón demo
 
-Lo dejé en estado WIP funcional. La firma se captura y guarda en DB, pero **no se genera PDF ni se mandan emails**. Próxima sesión retomamos los pasos B y C que estaban en agenda:
+- 6 cotizantes en `padron_cotizantes`:
+  - `30000001` Pérez, María (activa, APOPS, L-0001) — representada por García, Lucía
+  - `20000001` Rodríguez, Ana (jubilada APOPS) — representada por García, Lucía
+  - `30000003` Martínez, Pablo (NO afiliado APOPS, está en ATE) — representado por Sosa, Roberto
+  - `99000001` Méndez, Carolina (admin demo, L-SIEMPREAPOPS) — representa a los 2 delegados
+  - `99000002` García, Lucía (delegada norte, L-N0001) — representada por Méndez
+  - `99000003` Sosa, Roberto (delegado sur, L-S0001) — representado por Méndez
+- 6 adherentes en `padron_adherentes`:
+  - 3 de Pérez María (Carlos cónyuge, Juan hijo, Laura hija)
+  - 1 de Rodríguez Ana (Mario cónyuge)
+  - 2 de Méndez Carolina (Daniel cónyuge, Mateo hijo)
+- 10 noticias (algunas duplicadas del seed inicial — no molesta)
+- 6 solicitudes de afiliación pendientes con firma SVG embebida (Fernández, Rojas, Pereyra × 2 cada uno)
+- 2 mensajes de delegados a CD sobre el plenario
 
-### Paso B — Generación PDF server-side
+### Lo que funciona end-to-end (validable en `https://apops.vercel.app`)
 
-**Lib propuesta**: `pdf-lib` (~250 KB, sin dependencias nativas, corre en Node y Edge).
+- **Landing pública** con login compacto, carrusel autoplay con noticias destacadas (chevrons + CTA "Ver noticia"), decoración lateral desktop.
+- **Auth v2** completo: login con clave + magic link + recovery + registro + bifurcación "no en padrón".
+- **Credencial digital** con titular + adherentes (tabs), compartir por WhatsApp/email/link público sin destinatario fijo.
+- **Vista pública** `/credencial-publica/[id]` (UUID como secret).
+- **Feed** del afiliado: credencial al tope + widget de consultas WA/email/teléfono al gremio. Bottom nav: Inicio · Novedades · Mi perfil · Notificaciones.
+- **/noticias** y **/noticias/[id]** públicas (para linkear desde landing).
+- **/novedades** autenticada con AppShell.
+- **Panel admin** (`/admin`): solicitudes pendientes (no-en-padrón) + solicitudes de afiliación online con detalle completo y firma + atajos a Gestionar novedades / Mensajes delegados / Notificaciones, todos con badges.
+- **Gestión de novedades** (`/admin/novedades`): crear / editar / toggle publicada / toggle destacada / **eliminar** con confirmación.
+- **Panel delegados** (`/delegados`): listado de cotizantes representados (cruce por `representante` en padrón) con stats por rol y badges por gremio. Form para mandar mensajes a CD (sistema viejo `mensajes_delegado`).
+- **Mensajes de delegados** (`/admin/mensajes`): inbox para admins de los mensajes del delegado, con marcar leído + responder por mailto.
+- **Notificaciones** (sistema nuevo `/notificaciones`):
+  - Inbox con tabs Todas / Sin leer, listado de hilos con preview, indicador no-leído, flecha enviado/recibido, badge por rol.
+  - Nueva notificación (`/notificaciones/nueva`) con buscador (nombre/DNI/legajo), chips de filtro según rol, selección múltiple, "Marcar todos los visibles", preview antes de enviar.
+  - Vista de hilo (`/notificaciones/[hiloId]`) estilo chat con bubbles brand para los míos vs neutral para la contraparte. Form de respuesta con auto-reset y focus.
+  - Reglas: admin ve a todos · delegado a sus cotizantes + admins · afiliado a SU delegado + admins.
+- **Campana del header** activa con badge contador rojo (no-leídos).
+- **FAB WhatsApp verde** en todas las pantallas autenticadas (saludo pre-cargado según rol, sin destinatario).
+- **Role switcher** demo en el header (solo para `permite_role_switch=true`): dropdown 🛡️ Admin / 🤝 Delegado / 🧑 Afiliado.
+- **Mi perfil** + cambio de clave (campo "actual" opcional para el caso "entré por magic link").
+- **Página /software** demostrativa pública para presentar al cliente (con mocks visuales detallados de las 4 pantallas clave).
 
-Instalar:
-```bash
-npm install pdf-lib
-```
+### Lo que NO está implementado todavía
 
-Crear: `src/lib/afiliacion/generate-pdf.ts`
+- **Push notifications reales** (Web Push con VAPID). Hoy todo es in-app — para enterarse de algo el usuario tiene que abrir la app.
+- **Tests** unitarios e integración. Lo que existe son tests viejos de auth v1 que probablemente están rotos.
+- **PDF de afiliación + emails automáticos** al solicitante (features B y C del roadmap original).
+- **Sistema viejo `mensajes_delegado` sigue coexistiendo** con el nuevo de notificaciones. Es deuda técnica — los dos hacen casi lo mismo.
+- **AGENTS.md está desactualizado**: declara el "núcleo del producto" como *"sistema de consultas tipo ticket"*. Lo que construimos es distinto (credencial digital + comunicación bidireccional). Si el cliente lee AGENTS.md, hay tensión.
 
-Función esperada:
-```ts
-import { PDFDocument, StandardFonts, rgb } from 'pdf-lib'
+## Próxima sesión — Testing
 
-export async function generateAfiliacionPDF(solicitud: SolicitudRow): Promise<Uint8Array> {
-  // 1. PDFDocument.create()
-  // 2. addPage A4 (595 x 842)
-  // 3. Embed font (StandardFonts.Helvetica + Helvetica-Bold)
-  // 4. Drawing: header con título "FICHA DE AFILIACIÓN", logo (opcional, embed PNG), datos por sección
-  // 5. Embed firma_png como image (data URL → base64 → embedPng)
-  // 6. return pdfDoc.save()
-}
-```
+**Objetivo declarado**: hacer tests de integración + tests unitarios + cualquier cierre que haga falta para considerar esta aplicación "terminada hasta acá".
 
-Layout sugerido (A4 vertical):
-- Header: "FICHA DE AFILIACIÓN APOPS" centrado + fecha
-- Sección Datos Personales: tabla con apellido, doc, fecha nac, estado civil
-- Sección Domicilio
-- Sección Contacto (tel, cel, email, CBU)
-- Sección Lugar de Trabajo (legajo, edificio, gerencia, área, planta)
-- Sección Familia: cónyuge si hay, lista de familiares
-- Sección Consentimiento: texto del 3% + tilde "✓ Aceptado"
-- Sección Firma: imagen del PNG con label "Firma del solicitante" debajo
-- Footer: "Solicitud #abc123, generada el ..."
+### Sugerencia de orden
 
-**Endpoint de descarga** para que el admin/usuario lo baje:
-- Route handler `src/app/(auth)/afiliarse/[id]/pdf/route.ts` que retorna el PDF con `Content-Type: application/pdf`.
-- En `/afiliarse/exito`, agregar botón "Descargar mi ficha (PDF)" linkeando a esa ruta.
+**1. Suite de tests unitarios** (vitest, ya configurado):
+- Helpers puros: `parseIdentifier`, `firstName`, helpers de fecha, validaciones zod.
+- Server actions con mocks de Supabase: `loginConClave`, `registrar`, `solicitarMagicLink`, `solicitarAcceso`, `cambiarClave`, `enviarNotificacion`, `responderHilo`, `aprobarAfiliacion`, etc.
+- Componentes críticos con React Testing Library: `LoginForm`, `CredencialCarousel`, `NuevaNotificacionForm`.
 
-### Paso C — Email PDF + WhatsApp
+**2. Tests de integración** (Playwright o equivalente):
+- Flujo de registro nuevo afiliado (DNI en padrón).
+- Flujo de login con clave + flujo de magic link.
+- Flujo de afiliación online completo (wizard 3 pasos + firma).
+- Flujo de enviar notificación admin → varios destinatarios + respuesta.
+- Flujo de aprobación de afiliación desde admin.
 
-**Email** (server-side desde Server Action):
-- Usar `nodemailer` (Node, NO deno mailer del Edge Function porque la action corre en Node).
-- Reusar las variables de env `APP_SMTP_HOST/PORT/FROM` que ya existen en `supabase/config.toml` y `.env.local`.
-- Envío de 2 mails por solicitud:
-  1. Al afiliado (`solicitud.email`): asunto "Recibimos tu solicitud", PDF adjunto, mensaje de bienvenida, próximos pasos
-  2. Al gremio (`apops@apops.org.ar`): asunto "Nueva afiliación: {nombre} ({DNI})", PDF adjunto
+**3. Tests de RLS** (críticos — ya hay un test viejo `tests/rls/afiliados-self-only.test.ts` que probablemente está roto):
+- Verificar que un afiliado NO puede ver datos de otro afiliado.
+- Verificar que un afiliado NO puede leer `padron_cotizantes` directamente (solo via server action).
+- Verificar que las nuevas tablas (`hilos_notificacion`, `mensajes_notificacion`, `padron_adherentes`, `mensajes_delegado`) tienen RLS deny por default.
 
-Instalar:
-```bash
-npm install nodemailer
-npm install -D @types/nodemailer
-```
+**4. Smoke test manual en producción** (`https://apops.vercel.app`):
+- Login + registro + magic link
+- Credencial + compartir
+- Cambio de rol con switcher demo
+- Notificaciones admin → delegado → afiliado
+- Eliminar noticia
+- WhatsApp FAB
 
-Crear: `src/lib/afiliacion/send-emails.ts`
-
-```ts
-import nodemailer from 'nodemailer'
-
-export async function sendAfiliacionEmails(args: {
-  pdfBytes: Uint8Array
-  emailAfiliado: string
-  nombreAfiliado: string
-  dni: string
-}) {
-  const transporter = nodemailer.createTransport({
-    host: process.env.APP_SMTP_HOST ?? '127.0.0.1',
-    port: Number(process.env.APP_SMTP_PORT ?? 1025),
-    secure: false,
-  })
-  
-  const attachment = {
-    filename: `ficha-afiliacion-${args.dni}.pdf`,
-    content: Buffer.from(args.pdfBytes),
-    contentType: 'application/pdf',
-  }
-  
-  // 2 sends en paralelo: afiliado + gremio
-  await Promise.all([
-    transporter.sendMail({
-      from: process.env.APP_SMTP_FROM ?? 'no-reply@apops.local',
-      to: args.emailAfiliado,
-      subject: 'Recibimos tu solicitud de afiliación',
-      html: '...mensaje al afiliado...',
-      attachments: [attachment],
-    }),
-    transporter.sendMail({
-      from: process.env.APP_SMTP_FROM ?? 'no-reply@apops.local',
-      to: 'apops@apops.org.ar',
-      subject: `Nueva afiliación: ${args.nombreAfiliado} (DNI ${args.dni})`,
-      html: '...mensaje al gremio...',
-      attachments: [attachment],
-    }),
-  ])
-}
-```
-
-**Wirear en submitAfiliacion**: después del INSERT exitoso, generar PDF y mandar emails. NO bloquear la response — los emails pueden tardar. Opciones:
-- Síncrono (más simple, response tarda 2-5s extra)
-- Background con `after()` de Next.js 14 (`unstable_after`) — más complejo pero mejor UX
-
-**WhatsApp link en `/afiliarse/exito`**:
-- Agregar botón verde estilo WhatsApp:
-  ```tsx
-  <a href={`https://wa.me/5491155448300?text=${encodeURIComponent(`Hola, soy ${nombre} (DNI ${dni}) y acabo de enviar mi solicitud de afiliación. ¿Podemos confirmar?`)}`}>
-    Avisarle al gremio por WhatsApp
-  </a>
-  ```
-- Para que el botón tenga los datos, la página de éxito tiene que recibir nombre+DNI vía searchParams (hoy solo tiene `id`). Cambiar `redirect(`/afiliarse/exito?id=${id}&nombre=${nombre}&dni=${dni}`)` en submitAfiliacion.
-
-### Validar los emails localmente
-
-Mailpit corre en `http://localhost:54324`. Después de probar el form, los 2 emails caen ahí — abrís Mailpit y los ves.
+**5. Cleanup pendiente** (si queda tiempo):
+- Eliminar tests viejos de auth v1 que ya no aplican.
+- Actualizar AGENTS.md con el estado real del producto (no "tickets" sino "credencial + comunicación").
+- Resolver duplicados de noticias / solicitudes de afiliación en cloud (correr SQL de limpieza si molesta).
 
 ## Cómo arrancar la próxima sesión
 
@@ -145,48 +111,60 @@ Mailpit corre en `http://localhost:54324`. Después de probar el form, los 2 ema
 # 1. Posicionarse
 cd c:/repos/proyectosClaude/apops
 
-# 2. Verificar branch
-git status              # debe ser 001-afiliado-auth, working tree clean
-git log -3 --oneline    # último commit: e33cb9e (afiliación + UX landing)
+# 2. Sincronizar
+git pull origin main
 
-# 3. Levantar Supabase (si no está corriendo)
-npx supabase status     # ver si está up
-npx supabase start      # si no, arrancar
+# 3. Verificar Supabase local (probablemente esté corriendo)
+"/c/Users/User/AppData/Local/npm-cache/_npx/aa8e5c70f9d8d161/node_modules/supabase/bin/supabase.exe" status
 
-# 4. Levantar Next.js
-npm run dev             # http://localhost:3000
+# 4. Tests del estado actual (probablemente algunos rotos)
+npm run test
 
-# 5. Empezar paso B
-npm install pdf-lib
-# después seguir con el plan de "Paso B" arriba
+# 5. Levantar dev server
+npm run dev
 ```
 
-## Estado del PR y commits
+## URLs útiles
+
+- **App live**: https://apops.vercel.app
+- **App live (software)**: https://apops.vercel.app/software
+- **App live (health check)**: https://apops.vercel.app/api/health
+- **Vercel dashboard**: https://vercel.com/saadypacheco-4143s-projects/apops
+- **Supabase dashboard**: https://supabase.com/dashboard/project/pozbdplbichrhojjeqiv
+- **Repo**: https://github.com/saadypacheco/apops
+
+## Decisiones técnicas tomadas en esta sesión
+
+- **Hilos de notificaciones 1-a-1 paralelos** (no grupales). Cuando A manda a [B,C,D] se crean 3 hilos separados. Si B responde, su respuesta queda solo en el hilo A↔B.
+- **Role switcher solo para cuentas con flag `permite_role_switch=true`**. Es feature de demo, no producción.
+- **Keys legacy JWT** (`eyJ...`) en lugar de las nuevas `sb_publishable_*` / `sb_secret_*` porque el SDK no soporta las nuevas todavía. Lección documentada.
+- **GRANTs explícitos** en migration 0025 porque Supabase Cloud con "Automatically expose new tables" desmarcado no aplica los GRANTs automáticos esperados por las migrations. Lección documentada.
+- **Cambio de clave con `actual` opcional** para cubrir el caso "entré por magic link y no recuerdo la clave anterior".
+- **Compartir credencial siempre sin destinatario** (afiliado elige contacto de su agenda), porque el padrón no tiene teléfonos/emails confiables de adherentes.
+
+## Lecciones / anti-patterns capturados
+
+- ⚠️ **"Automatically expose new tables" desmarcado** en Supabase Cloud → rompe los GRANTs por default. Resultado: PostgreSQL `42501 permission denied for table` en TODAS las queries, hasta service_role. Documentado en migration 0025 + en `presentacion-cliente.md`.
+- 🐛 **`supabase gen types`** mete líneas espurias antes y después del bloque útil (warning del CLI + tag de plugin). Cleanup manual con `sed -n '/^export type Json/,/^} as const$/p'` hasta encontrar fix definitivo.
+- 🔧 **Path dependence**: el path largo a `supabase.exe` (cacheado por npx) cambia entre versiones. Usar `npx supabase ...` es más portable y resuelve.
+- 🔑 **`/api/health` endpoint** es oro puro para debug remoto post-deploy. Copiar este patrón a cualquier proyecto futuro con Next.js + Supabase.
+- 🔑 **Logs estructurados con `[NOMBRE_FLUJO {traceId}]`** en server actions permiten correlacionar requests en Vercel Logs. Vale para cualquier server action crítica.
+
+## PRs / commits
 
 ```
-e33cb9e  feat: afiliación online (wizard 3 pasos + firma) + UX landing  ← ÚLTIMO (no pusheado)
-56ff17b  feat: landing con noticias + login + ruteo por rol             ← no pusheado
-cd889b7  feat(auth): Phase 6 — cierre (T070-T078)                       ← pusheado
-405162b  feat(auth): Phase 6 — logout y magic-link reenvío (T065-T069)  ← pusheado
-5485e7f  feat(auth): Phase 5 — US3 pendiente_validacion (T057-T064)     ← pusheado
+HEAD (a8ae7fd)  feat(notif): tanda 4 — campana activa, atajos, badges con contador
 ...
+6963f31         feat(auth): Auth v2 — login con clave + magic link + registro + recuperación
+e33cb9e         feat: afiliación online (wizard 3 pasos + firma) + UX landing
+56ff17b         feat: landing con noticias + login + ruteo por rol
 ```
 
-**PR #1** (a `main`): https://github.com/saadypacheco/apops/pull/1 — abierto. Los 2 commits locales nuevos (`56ff17b`, `e33cb9e`) **NO están pusheados todavía**. La próxima sesión, decidir si:
-- Pushearlos al PR existente (queda como un solo PR grande con feature 001 + landing nueva + afiliación)
-- O abrir un PR nuevo desde una branch limpia para la afiliación (más prolijo metodológicamente, pero más laburo)
+Ya está todo mergeado a `main`. PR #1 cerrado como MERGED el 2026-05-07.
 
-## Notas operacionales
+## Para la próxima sesión — checklist de bienvenida
 
-- **Logo**: `public/logo-apops.png` (PNG con fondo cyan cuadrado). El componente `Logo.tsx` lo rounded-full + overflow-hidden. Si conseguís un PNG transparente, reemplazás el archivo.
-- **Email del gremio para envío**: usé `apops@apops.org.ar` cabe directamente en el código de `send-emails.ts` cuando lo escribas. Si en el futuro hay otro email exclusivo para afiliaciones, ajustar.
-- **WhatsApp del gremio**: usé `+5491155448300` (su tel oficial). Si tienen un WA específico para afiliaciones, cambiar en la página de éxito y en el HelpButton.
-- **Routine de seguimiento del PR #1**: programada para 2026-05-09 (https://claude.ai/code/routines/trig_01SDVgh3DH1c8Tv6U4FqgSxt).
-
-## Cosas que no se hicieron y vale anotar
-
-- Tests automatizados de la afiliación nueva (form + server action + DB).
-- Panel admin para listar/procesar `solicitudes_afiliacion` (la API está, falta UI).
-- Captcha o rate limit en `/afiliarse` (la ruta es pública anon, alguien podría spammear).
-- Pasada manual de a11y con NVDA (T074 de Phase 6 sigue pendiente).
-- Tests Playwright e2e (test:e2e corre vacío).
+1. Leer **este archivo** (RESUME.md) y `presentacion-cliente.md` para contexto.
+2. Verificar que `npm run test` corre (aunque muchos tests v1 estén rotos, ver qué pasa).
+3. Decidir suite de testing: vitest only (unitarios + integración con supabase-js mockeado) o sumar Playwright.
+4. Si el cliente ya hizo feedback de la demo, priorizar los ajustes pedidos antes de tests.
