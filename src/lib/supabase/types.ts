@@ -394,7 +394,7 @@ export type Database = {
           cotiza_papel: boolean
           cuil: string | null
           descripcion_lugar_relevamiento: string | null
-          dni: string
+          dni: string | null
           fecha_actualizacion_delegados: string | null
           fecha_ingreso: string | null
           fecha_nacimiento: string | null
@@ -427,7 +427,7 @@ export type Database = {
           cotiza_papel?: boolean
           cuil?: string | null
           descripcion_lugar_relevamiento?: string | null
-          dni: string
+          dni?: string | null
           fecha_actualizacion_delegados?: string | null
           fecha_ingreso?: string | null
           fecha_nacimiento?: string | null
@@ -460,7 +460,7 @@ export type Database = {
           cotiza_papel?: boolean
           cuil?: string | null
           descripcion_lugar_relevamiento?: string | null
-          dni?: string
+          dni?: string | null
           fecha_actualizacion_delegados?: string | null
           fecha_ingreso?: string | null
           fecha_nacimiento?: string | null

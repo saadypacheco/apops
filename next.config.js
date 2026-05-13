@@ -4,6 +4,8 @@ const nextConfig = {
   poweredByHeader: false,
   experimental: {
     typedRoutes: true,
+    // Default 1MB. Padrón ANSES con ~15k filas pesa 3-5MB; 15MB da margen.
+    serverActions: { bodySizeLimit: '15mb' },
   },
 };
 

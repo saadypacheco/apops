@@ -133,3 +133,8 @@ temp/
 NOTES.md
 TODO.private.md
 borradores/
+
+# ---------- Datos de prueba sensibles ----------
+# Excels del padrón ANSES, exports, samples con datos reales del organismo.
+# Nunca debe llegar a git ni a public/ (se serviría estático en Vercel).
+data/
