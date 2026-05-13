@@ -137,7 +137,8 @@ borradores/
 # ---------- Datos de prueba sensibles ----------
 # Excels del padrón ANSES, exports, samples con datos reales del organismo.
 # Nunca debe llegar a git ni a public/ (se serviría estático en Vercel).
-data/
+# Slash inicial = matchea solo el top-level data/ (no src/lib/admin/data/ etc).
+/data/
 
 # Cloud Supabase creds para scripts ad-hoc (seed, migraciones puntuales).
 # Solo existe local-temp; nunca a git.

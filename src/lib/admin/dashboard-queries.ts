@@ -7,9 +7,29 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '@/lib/supabase/types'
 
-// Límite explícito para superar el max_rows default de PostgREST (1000).
-// Necesario para snapshots completos de 15k+ filas.
-const ROW_LIMIT = 50000
+// PostgREST tiene cap default de 1000 filas por request en Supabase Cloud,
+// y el .range() de supabase-js no lo supera. Para snapshots de 15k+ filas
+// paginamos en chunks. Cuando un chunk vuelve con < CHUNK filas, terminamos.
+const CHUNK = 1000
+
+type ChunkQuery<Row> = (
+  from: number,
+  to: number,
+) => PromiseLike<{ data: Row[] | null; error: { message: string } | null }>
+
+async function fetchAllRows<Row>(query: ChunkQuery<Row>): Promise<Row[]> {
+  const out: Row[] = []
+  let from = 0
+  while (true) {
+    const { data, error } = await query(from, from + CHUNK - 1)
+    if (error) throw new Error(`fetchAllRows: ${error.message}`)
+    if (!data || data.length === 0) break
+    out.push(...data)
+    if (data.length < CHUNK) break
+    from += CHUNK
+  }
+  return out
+}
 
 // =====================================================================
 // Tipos compartidos
@@ -39,6 +59,9 @@ export type DistribucionApops = {
   totalApops: number
   porEdificio: Bucket[] // top 10 + "Otros"
   porProvincia: Bucket[]
+  /** Conteo crudo por nombre de provincia tal como vino del padrón.
+   *  Usado por el mapa para choropleth (la lista por provincia ya es top-N). */
+  porProvinciaMap: Record<string, number>
   porPlanta: { pp: number; pt: number; sin: number }
   porSexo: { varon: number; mujer: number; otro: number; sin: number }
   porCategoria: Bucket[] // ordenado por categoría asc
@@ -127,16 +150,17 @@ export async function getDistribucionApops(
   admin: SupabaseClient<Database>,
   snapshotId: string,
 ): Promise<DistribucionApops> {
-  const { data } = await admin
-    .from('padron_cotizantes')
-    .select(
-      'lugar_trabajo_padron, lugar_trabajo_rrhh, provincia, sexo, categoria, tipo_planta, fecha_nacimiento',
-    )
-    .eq('padron_snapshot_id', snapshotId)
-    .eq('afiliado_apops', true)
-    .range(0, ROW_LIMIT)
-
-  const rows = (data as DistRow[] | null) ?? []
+  const rows = await fetchAllRows<DistRow>(async (from, to) => {
+    const res = await admin
+      .from('padron_cotizantes')
+      .select(
+        'lugar_trabajo_padron, lugar_trabajo_rrhh, provincia, sexo, categoria, tipo_planta, fecha_nacimiento',
+      )
+      .eq('padron_snapshot_id', snapshotId)
+      .eq('afiliado_apops', true)
+      .range(from, to)
+    return { data: (res.data as DistRow[] | null) ?? null, error: res.error }
+  })
   const total = rows.length
 
   const edificios = new Map<string, number>()
@@ -184,6 +208,7 @@ export async function getDistribucionApops(
     totalApops: total,
     porEdificio: topN(edificios, 10),
     porProvincia: topN(provincias, 8),
+    porProvinciaMap: Object.fromEntries(provincias),
     porPlanta: planta,
     porSexo: sexo,
     porCategoria,
@@ -232,23 +257,28 @@ export async function getComisionDirectiva(
 
   // 3. Edificios APOPS sin delegado asignado.
   // (Edificio donde hay APOPS pero ningún cotizante del edificio es delegado.)
-  const { data: apopsByEdif } = await admin
-    .from('padron_cotizantes')
-    .select(
-      'lugar_trabajo_padron, lugar_trabajo_rrhh, fecha_actualizacion_delegados',
-    )
-    .eq('padron_snapshot_id', snapshotId)
-    .eq('afiliado_apops', true)
-    .range(0, ROW_LIMIT)
+  type ApopsByEdifRow = {
+    lugar_trabajo_padron: string | null
+    lugar_trabajo_rrhh: string | null
+    fecha_actualizacion_delegados: string | null
+  }
+  const apopsByEdif = await fetchAllRows<ApopsByEdifRow>(async (from, to) => {
+    const res = await admin
+      .from('padron_cotizantes')
+      .select(
+        'lugar_trabajo_padron, lugar_trabajo_rrhh, fecha_actualizacion_delegados',
+      )
+      .eq('padron_snapshot_id', snapshotId)
+      .eq('afiliado_apops', true)
+      .range(from, to)
+    return {
+      data: (res.data as ApopsByEdifRow[] | null) ?? null,
+      error: res.error,
+    }
+  })
 
   const edifTieneDelegado = new Map<string, boolean>()
-  for (const r of (apopsByEdif as
-    | {
-        lugar_trabajo_padron: string | null
-        lugar_trabajo_rrhh: string | null
-        fecha_actualizacion_delegados: string | null
-      }[]
-    | null) ?? []) {
+  for (const r of apopsByEdif) {
     const edif = r.lugar_trabajo_padron ?? r.lugar_trabajo_rrhh
     if (!edif) continue
     const previo = edifTieneDelegado.get(edif) ?? false
@@ -342,25 +372,21 @@ export async function getEvolucion(
   currentId: string,
   previousId: string,
 ): Promise<Evolucion> {
-  const [currentRes, previousRes] = await Promise.all([
-    admin
-      .from('padron_cotizantes')
-      .select(
-        'legajo, categoria, afiliado_apops, afiliado_ate, afiliado_upcn, afiliado_secasfpi, fecha_actualizacion_delegados',
-      )
-      .eq('padron_snapshot_id', currentId)
-      .range(0, ROW_LIMIT),
-    admin
-      .from('padron_cotizantes')
-      .select(
-        'legajo, categoria, afiliado_apops, afiliado_ate, afiliado_upcn, afiliado_secasfpi, fecha_actualizacion_delegados',
-      )
-      .eq('padron_snapshot_id', previousId)
-      .range(0, ROW_LIMIT),
+  const fetchEvol = (snapshotId: string) =>
+    fetchAllRows<EvolRow>(async (from, to) => {
+      const res = await admin
+        .from('padron_cotizantes')
+        .select(
+          'legajo, categoria, afiliado_apops, afiliado_ate, afiliado_upcn, afiliado_secasfpi, fecha_actualizacion_delegados',
+        )
+        .eq('padron_snapshot_id', snapshotId)
+        .range(from, to)
+      return { data: (res.data as EvolRow[] | null) ?? null, error: res.error }
+    })
+  const [curr, prev] = await Promise.all([
+    fetchEvol(currentId),
+    fetchEvol(previousId),
   ])
-
-  const curr = (currentRes.data as EvolRow[] | null) ?? []
-  const prev = (previousRes.data as EvolRow[] | null) ?? []
 
   const currByLeg = new Map<string, EvolRow>()
   curr.forEach((r) => {

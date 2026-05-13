@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { requireRole } from '@/lib/auth/role'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { AppShell } from '@/components/app/AppShell'
+import { ArgentinaMap } from '@/components/admin/ArgentinaMap'
 import {
   getAppVsPadron,
   getComisionDirectiva,
@@ -192,17 +193,32 @@ export default async function DashboardPage() {
 
         {/* Bloque 3 — Distribución APOPS */}
         <Block titulo={`Distribución APOPS (${numero(distribucion.totalApops)} afiliados)`}>
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-            <Distribucion
-              titulo="Por edificio (top 10)"
-              buckets={distribucion.porEdificio}
-              total={distribucion.totalApops}
-            />
-            <Distribucion
-              titulo="Por provincia"
-              buckets={distribucion.porProvincia}
-              total={distribucion.totalApops}
-            />
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_2fr]">
+            <div className="flex flex-col gap-2">
+              <h3 className="text-sm font-semibold text-brand-ink">
+                Mapa por provincia
+              </h3>
+              <ArgentinaMap
+                data={distribucion.porProvinciaMap}
+                label="APOPS"
+              />
+              <p className="text-xs text-brand-muted">
+                Pasá el cursor por encima de una provincia para ver el conteo.
+                CABA aparece como punto sobre Buenos Aires.
+              </p>
+            </div>
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+              <Distribucion
+                titulo="Por edificio (top 10)"
+                buckets={distribucion.porEdificio}
+                total={distribucion.totalApops}
+              />
+              <Distribucion
+                titulo="Por provincia (top 8)"
+                buckets={distribucion.porProvincia}
+                total={distribucion.totalApops}
+              />
+            </div>
           </div>
           <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
             <Distribucion
