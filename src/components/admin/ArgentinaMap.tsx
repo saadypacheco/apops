@@ -87,7 +87,9 @@ export function ArgentinaMap({ data, label = 'APOPS' }: Props) {
               )
             })}
           </g>
-          {/* Texto encima — separado para que quede por arriba de todos los paths */}
+          {/* Texto encima — separado para que quede por arriba de todos los paths.
+              paint-order + stroke blanco para que el texto sea legible aún
+              donde el fill es del mismo tono. */}
           <g style={{ pointerEvents: 'none' }} fontFamily="system-ui">
             {ARGENTINA_PROVINCES.map((p) => {
               const count = byGeojson[p.geojsonName] ?? 0
@@ -98,9 +100,12 @@ export function ArgentinaMap({ data, label = 'APOPS' }: Props) {
                   key={p.geojsonName}
                   x={p.cx}
                   y={p.cy}
-                  fontSize="10"
-                  fontWeight="600"
+                  fontSize="13"
+                  fontWeight="700"
                   fill={textColorForRatio(ratio)}
+                  stroke={textColorForRatio(ratio) === '#fff' ? '#1e293b' : '#fff'}
+                  strokeWidth="2.5"
+                  paintOrder="stroke"
                   textAnchor="middle"
                   dominantBaseline="central"
                 >
