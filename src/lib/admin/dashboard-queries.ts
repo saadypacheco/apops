@@ -94,6 +94,30 @@ export type Evolucion = {
   bajasApops: number
 }
 
+/** Una persona del padrón con datos para listar en altas/bajas. */
+export type PersonaPadron = {
+  legajo: string
+  dni: string | null
+  nombre: string
+  edificio: string | null
+  provincia: string | null
+  /** Lista de gremios a los que pertenece. Vacío = ninguno conocido. */
+  gremios: ('APOPS' | 'ATE' | 'UPCN' | 'SECASFPI')[]
+  /** Si cotiza solo en papel, es jubilado de carrera. */
+  cotizaPapel: boolean
+  /** Solo presente en bajas: si tenía cuenta en la app, datos para contactar. */
+  cuentaApp?: {
+    id: string
+    email: string
+    estado: string
+  } | null
+}
+
+export type AltasYBajas = {
+  altas: PersonaPadron[]
+  bajas: PersonaPadron[]
+}
+
 // =====================================================================
 // Snapshot
 // =====================================================================
@@ -351,6 +375,146 @@ export async function getAppVsPadron(
     pendientesAcceso: pendientesAcceso ?? 0,
     pendientesAfiliacion: pendientesAfiliacion ?? 0,
   }
+}
+
+// =====================================================================
+// Altas y Bajas detalladas (Tab altas-bajas)
+// =====================================================================
+
+type PadronFullRow = {
+  legajo: string | null
+  dni: string | null
+  nombre: string
+  lugar_trabajo_padron: string | null
+  lugar_trabajo_rrhh: string | null
+  provincia: string | null
+  afiliado_apops: boolean | null
+  afiliado_ate: boolean | null
+  afiliado_upcn: boolean | null
+  afiliado_secasfpi: boolean | null
+  cotiza_papel: boolean | null
+  categoria: number | null
+}
+
+function toPersona(r: PadronFullRow): PersonaPadron {
+  const gremios: PersonaPadron['gremios'] = []
+  if (r.afiliado_apops) gremios.push('APOPS')
+  if (r.afiliado_ate) gremios.push('ATE')
+  if (r.afiliado_upcn) gremios.push('UPCN')
+  if (r.afiliado_secasfpi) gremios.push('SECASFPI')
+  return {
+    legajo: r.legajo ?? '',
+    dni: r.dni,
+    nombre: r.nombre,
+    edificio: r.lugar_trabajo_padron ?? r.lugar_trabajo_rrhh,
+    provincia: r.provincia,
+    gremios,
+    cotizaPapel: !!r.cotiza_papel,
+  }
+}
+
+export async function getAltasYBajas(
+  admin: SupabaseClient<Database>,
+  currentId: string,
+  previousId: string,
+): Promise<AltasYBajas> {
+  const SELECT =
+    'legajo, dni, nombre, lugar_trabajo_padron, lugar_trabajo_rrhh, provincia, afiliado_apops, afiliado_ate, afiliado_upcn, afiliado_secasfpi, cotiza_papel, categoria'
+
+  const fetchSnap = (snapshotId: string) =>
+    fetchAllRows<PadronFullRow>(async (from, to) => {
+      const res = await admin
+        .from('padron_cotizantes')
+        .select(SELECT)
+        .eq('padron_snapshot_id', snapshotId)
+        .range(from, to)
+      return { data: (res.data as PadronFullRow[] | null) ?? null, error: res.error }
+    })
+
+  const [currRows, prevRows] = await Promise.all([
+    fetchSnap(currentId),
+    fetchSnap(previousId),
+  ])
+
+  // Diff por legajo
+  const currByLeg = new Map<string, PadronFullRow>()
+  currRows.forEach((r) => {
+    if (r.legajo) currByLeg.set(r.legajo, r)
+  })
+  const prevByLeg = new Map<string, PadronFullRow>()
+  prevRows.forEach((r) => {
+    if (r.legajo) prevByLeg.set(r.legajo, r)
+  })
+
+  // Altas: en curr y no en prev
+  const altas: PersonaPadron[] = []
+  for (const [leg, r] of currByLeg) {
+    if (!prevByLeg.has(leg)) altas.push(toPersona(r))
+  }
+  // Bajas: en prev y no en curr
+  const bajasRaw: PersonaPadron[] = []
+  for (const [leg, r] of prevByLeg) {
+    if (!currByLeg.has(leg)) bajasRaw.push(toPersona(r))
+  }
+
+  // Para las bajas, intentar matchear con la tabla afiliados (cuenta en la app)
+  // por DNI o legajo. Una sola query para todos los DNIs/legajos.
+  const dnisBajas = bajasRaw.map((b) => b.dni).filter((d): d is string => !!d)
+  const legajosBajas = bajasRaw.map((b) => b.legajo).filter((l) => !!l)
+  const afiliadosByDni = new Map<string, { id: string; email: string; estado: string }>()
+  const afiliadosByLegajo = new Map<string, { id: string; email: string; estado: string }>()
+  if (dnisBajas.length > 0 || legajosBajas.length > 0) {
+    const orParts: string[] = []
+    if (dnisBajas.length > 0) {
+      orParts.push(`dni.in.(${dnisBajas.join(',')})`)
+    }
+    if (legajosBajas.length > 0) {
+      // legajos pueden tener letras — escapar comas escapando cada uno entre dobles comillas
+      const escaped = legajosBajas.map((l) => `"${l}"`).join(',')
+      orParts.push(`legajo.in.(${escaped})`)
+    }
+    if (orParts.length > 0) {
+      const { data } = await admin
+        .from('afiliados')
+        .select('id, dni, legajo, email, estado')
+        .or(orParts.join(','))
+      for (const a of (data as
+        | {
+            id: string
+            dni: string
+            legajo: string | null
+            email: string
+            estado: string
+          }[]
+        | null) ?? []) {
+        afiliadosByDni.set(a.dni, {
+          id: a.id,
+          email: a.email,
+          estado: a.estado,
+        })
+        if (a.legajo) {
+          afiliadosByLegajo.set(a.legajo, {
+            id: a.id,
+            email: a.email,
+            estado: a.estado,
+          })
+        }
+      }
+    }
+  }
+  const bajas = bajasRaw.map((b) => ({
+    ...b,
+    cuentaApp:
+      (b.dni && afiliadosByDni.get(b.dni)) ||
+      (b.legajo && afiliadosByLegajo.get(b.legajo)) ||
+      null,
+  }))
+
+  // Orden: por nombre alfabético
+  altas.sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'))
+  bajas.sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'))
+
+  return { altas, bajas }
 }
 
 // =====================================================================

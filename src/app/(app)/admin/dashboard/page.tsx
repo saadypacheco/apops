@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { requireRole } from '@/lib/auth/role'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { AppShell } from '@/components/app/AppShell'
+import { AltasBajasList } from '@/components/admin/AltasBajasList'
 import { ArgentinaMap } from '@/components/admin/ArgentinaMap'
 import {
   DashboardTabs,
@@ -10,11 +11,13 @@ import {
   type DashboardTab,
 } from '@/components/admin/DashboardTabs'
 import {
+  getAltasYBajas,
   getAppVsPadron,
   getComisionDirectiva,
   getDistribucionApops,
   getEvolucion,
   getSnapshots,
+  type AltasYBajas,
   type AppVsPadron,
   type Bucket,
   type ComisionDirectiva,
@@ -90,8 +93,9 @@ export default async function DashboardPage({
   const needsCD = activeTab === 'delegados' || activeTab === 'resumen'
   const needsApp = activeTab === 'app' || activeTab === 'resumen'
   const needsEvolucion = activeTab === 'evolucion' || activeTab === 'resumen'
+  const needsAltasBajas = activeTab === 'altas-bajas'
 
-  const [distribucion, cd, app, evolucion] = await Promise.all([
+  const [distribucion, cd, app, evolucion, altasBajas] = await Promise.all([
     needsDistribucion
       ? getDistribucionApops(admin, current.id)
       : Promise.resolve(null),
@@ -101,6 +105,9 @@ export default async function DashboardPage({
       : Promise.resolve(null),
     needsEvolucion && previous
       ? getEvolucion(admin, current.id, previous.id)
+      : Promise.resolve(null),
+    needsAltasBajas && previous
+      ? getAltasYBajas(admin, current.id, previous.id)
       : Promise.resolve(null),
   ])
 
@@ -158,7 +165,13 @@ export default async function DashboardPage({
           )}
           {activeTab === 'delegados' && cd && <DelegadosTab cd={cd} />}
           {activeTab === 'app' && app && <AppTab app={app} />}
-          {activeTab === 'altas-bajas' && <AltasBajasTab />}
+          {activeTab === 'altas-bajas' && (
+            <AltasBajasTab
+              altasBajas={altasBajas}
+              previous={previous}
+              current={current}
+            />
+          )}
         </div>
       </div>
     </AppShell>
@@ -567,13 +580,47 @@ function AppTab({ app }: { app: AppVsPadron }) {
   )
 }
 
-function AltasBajasTab() {
+function AltasBajasTab({
+  altasBajas,
+  previous,
+  current,
+}: {
+  altasBajas: AltasYBajas | null
+  previous: SnapshotMeta | null
+  current: SnapshotMeta
+}) {
+  if (!previous) {
+    return (
+      <Block titulo="Altas y Bajas">
+        <p className="text-sm text-brand-muted">
+          Solo hay un snapshot del padrón (
+          {periodoLabel(current.periodo_year, current.periodo_month)}). Cargá
+          otro mes desde{' '}
+          <Link href="/admin/padron" className="text-brand-blue hover:underline">
+            /admin/padron
+          </Link>{' '}
+          para ver altas y bajas.
+        </p>
+      </Block>
+    )
+  }
+  if (!altasBajas) {
+    return (
+      <Block titulo="Altas y Bajas">
+        <p className="text-sm text-brand-muted">Cargando…</p>
+      </Block>
+    )
+  }
   return (
-    <Block titulo="Altas y Bajas">
-      <p className="text-sm text-brand-muted">
-        Próximo bloque a construir — listas detalladas con datos para mandar
-        mensaje de bienvenida / despedida vía WhatsApp o email.
+    <Block
+      titulo={`Altas y bajas vs ${periodoLabel(previous.periodo_year, previous.periodo_month)}`}
+    >
+      <p className="mb-4 text-xs text-brand-muted">
+        Click en <strong>Mensaje bienvenida / despedida</strong> abre WhatsApp
+        con la plantilla pre-cargada. Elegís el contacto de tu agenda. Para
+        bajas con cuenta en la app también aparece el botón de email.
       </p>
+      <AltasBajasList altas={altasBajas.altas} bajas={altasBajas.bajas} />
     </Block>
   )
 }
