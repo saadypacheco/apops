@@ -48,7 +48,7 @@ export async function getDestinatariosDisponibles(
   // solo ve a admins.
   if (session.rol === 'afiliado') {
     const { data: miPadron } = await admin
-      .from('padron_cotizantes')
+      .from('padron_cotizantes_actual')
       .select('representante')
       .or(`dni.eq.${session.dni}${session.legajo ? `,legajo.eq.${session.legajo}` : ''}`)
       .maybeSingle()
@@ -77,7 +77,7 @@ export async function getDestinatariosDisponibles(
     // como representados por este delegado)
     const target = session.nombre.trim().toLowerCase()
     const { data: padronRepresentados } = await admin
-      .from('padron_cotizantes')
+      .from('padron_cotizantes_actual')
       .select('dni, legajo, representante')
       .not('representante', 'is', null)
     const dnisRepresentados = new Set(

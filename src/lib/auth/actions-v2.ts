@@ -262,13 +262,27 @@ export async function registrar(
   const padronColumn = parsedId.tipo === 'dni' ? 'dni' : 'legajo'
   log('padron_query', { tipo: parsedId.tipo, valor: parsedId.valor, columna: padronColumn })
 
-  const { data: padron, error: padronError } = await admin
-    .from('padron_cotizantes')
+  // Cast: la vista padron_cotizantes_actual filtra de padron_cotizantes
+  // donde id/dni/nombre/afiliado_apops/cotiza_papel son NOT NULL en la
+  // tabla base. Supabase no puede inferirlo en views y los marca nullable.
+  type PadronRow = {
+    id: string
+    dni: string
+    legajo: string | null
+    nombre: string
+    afiliado_apops: boolean
+    cotiza_papel: boolean
+  }
+  const { data: padron, error: padronError } = (await admin
+    .from('padron_cotizantes_actual')
     .select(
       'id, dni, legajo, nombre, afiliado_apops, cotiza_papel',
     )
     .eq(padronColumn, parsedId.valor)
-    .maybeSingle()
+    .maybeSingle()) as {
+    data: PadronRow | null
+    error: { message: string; hint: string | null } | null
+  }
 
   if (padronError) {
     log('padron_error', { msg: padronError.message, hint: padronError.hint })

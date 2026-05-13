@@ -89,7 +89,7 @@ export async function GET() {
   try {
     const admin = createAdminClient()
     const { data, count, error, status, statusText } = await admin
-      .from('padron_cotizantes')
+      .from('padron_cotizantes_actual')
       .select('id', { count: 'exact', head: false })
       .limit(1)
     const check: Check = {

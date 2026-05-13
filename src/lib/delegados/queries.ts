@@ -69,7 +69,7 @@ export async function getCotizantesRepresentados(
     vence_mandato_30dias: boolean | null
   }
   const { data: rows } = (await admin
-    .from('padron_cotizantes')
+    .from('padron_cotizantes_actual')
     .select(
       'id, dni, nombre, legajo, afiliado_apops, cotiza_papel, afiliado_ate, afiliado_sec, afiliado_upcn, afiliado_secasfpi, representante, lugar_trabajo_padron, lugar_trabajo_rrhh, provincia, regional, tipo_planta, categoria, vence_mandato_30dias',
     )

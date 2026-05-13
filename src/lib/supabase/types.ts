@@ -23,6 +23,7 @@ export type Database = {
           dni: string
           email: string
           estado: string
+          fecha_baja: string | null
           id: string
           last_login_at: string | null
           legajo: string | null
@@ -42,6 +43,7 @@ export type Database = {
           dni: string
           email: string
           estado?: string
+          fecha_baja?: string | null
           id?: string
           last_login_at?: string | null
           legajo?: string | null
@@ -61,6 +63,7 @@ export type Database = {
           dni?: string
           email?: string
           estado?: string
+          fecha_baja?: string | null
           id?: string
           last_login_at?: string | null
           legajo?: string | null
@@ -78,6 +81,13 @@ export type Database = {
             columns: ["padron_id"]
             isOneToOne: false
             referencedRelation: "padron_cotizantes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "afiliados_padron_id_fkey"
+            columns: ["padron_id"]
+            isOneToOne: false
+            referencedRelation: "padron_cotizantes_actual"
             referencedColumns: ["id"]
           },
         ]
@@ -395,6 +405,7 @@ export type Database = {
           lugar_trabajo_relevamiento: string | null
           lugar_trabajo_rrhh: string | null
           nombre: string
+          padron_snapshot_id: string
           periodo_mandato: string | null
           provincia: string | null
           regional: string | null
@@ -427,6 +438,7 @@ export type Database = {
           lugar_trabajo_relevamiento?: string | null
           lugar_trabajo_rrhh?: string | null
           nombre: string
+          padron_snapshot_id: string
           periodo_mandato?: string | null
           provincia?: string | null
           regional?: string | null
@@ -459,6 +471,7 @@ export type Database = {
           lugar_trabajo_relevamiento?: string | null
           lugar_trabajo_rrhh?: string | null
           nombre?: string
+          padron_snapshot_id?: string
           periodo_mandato?: string | null
           provincia?: string | null
           regional?: string | null
@@ -469,7 +482,80 @@ export type Database = {
           unidad_organica_historica?: string | null
           vence_mandato_30dias?: boolean | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "padron_cotizantes_padron_snapshot_id_fkey"
+            columns: ["padron_snapshot_id"]
+            isOneToOne: false
+            referencedRelation: "padron_snapshots"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      padron_snapshots: {
+        Row: {
+          archivo_nombre: string | null
+          id: string
+          importado_at: string
+          importado_por: string | null
+          periodo_label: string
+          periodo_month: number
+          periodo_year: number
+          total_apops: number
+          total_ate: number
+          total_delegados: number
+          total_filas: number
+          total_papel: number
+          total_planta_perm: number
+          total_planta_trans: number
+          total_secasfpi: number
+          total_upcn: number
+        }
+        Insert: {
+          archivo_nombre?: string | null
+          id?: string
+          importado_at?: string
+          importado_por?: string | null
+          periodo_label: string
+          periodo_month: number
+          periodo_year: number
+          total_apops?: number
+          total_ate?: number
+          total_delegados?: number
+          total_filas?: number
+          total_papel?: number
+          total_planta_perm?: number
+          total_planta_trans?: number
+          total_secasfpi?: number
+          total_upcn?: number
+        }
+        Update: {
+          archivo_nombre?: string | null
+          id?: string
+          importado_at?: string
+          importado_por?: string | null
+          periodo_label?: string
+          periodo_month?: number
+          periodo_year?: number
+          total_apops?: number
+          total_ate?: number
+          total_delegados?: number
+          total_filas?: number
+          total_papel?: number
+          total_planta_perm?: number
+          total_planta_trans?: number
+          total_secasfpi?: number
+          total_upcn?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "padron_snapshots_importado_por_fkey"
+            columns: ["importado_por"]
+            isOneToOne: false
+            referencedRelation: "afiliados"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       roles_admin: {
         Row: {
@@ -681,7 +767,116 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      padron_cotizantes_actual: {
+        Row: {
+          afiliado_apops: boolean | null
+          afiliado_ate: boolean | null
+          afiliado_nuevo: boolean | null
+          afiliado_sec: boolean | null
+          afiliado_secasfpi: boolean | null
+          afiliado_upcn: boolean | null
+          categoria: number | null
+          cotiza_papel: boolean | null
+          cuil: string | null
+          descripcion_lugar_relevamiento: string | null
+          dni: string | null
+          fecha_actualizacion_delegados: string | null
+          fecha_ingreso: string | null
+          fecha_nacimiento: string | null
+          id: string | null
+          ingestado_at: string | null
+          legajo: string | null
+          lugar_trabajo_padron: string | null
+          lugar_trabajo_relevamiento: string | null
+          lugar_trabajo_rrhh: string | null
+          nombre: string | null
+          padron_snapshot_id: string | null
+          periodo_mandato: string | null
+          provincia: string | null
+          regional: string | null
+          representante: string | null
+          sexo: string | null
+          source_batch: string | null
+          tipo_planta: string | null
+          unidad_organica_historica: string | null
+          vence_mandato_30dias: boolean | null
+        }
+        Insert: {
+          afiliado_apops?: boolean | null
+          afiliado_ate?: boolean | null
+          afiliado_nuevo?: boolean | null
+          afiliado_sec?: boolean | null
+          afiliado_secasfpi?: boolean | null
+          afiliado_upcn?: boolean | null
+          categoria?: number | null
+          cotiza_papel?: boolean | null
+          cuil?: string | null
+          descripcion_lugar_relevamiento?: string | null
+          dni?: string | null
+          fecha_actualizacion_delegados?: string | null
+          fecha_ingreso?: string | null
+          fecha_nacimiento?: string | null
+          id?: string | null
+          ingestado_at?: string | null
+          legajo?: string | null
+          lugar_trabajo_padron?: string | null
+          lugar_trabajo_relevamiento?: string | null
+          lugar_trabajo_rrhh?: string | null
+          nombre?: string | null
+          padron_snapshot_id?: string | null
+          periodo_mandato?: string | null
+          provincia?: string | null
+          regional?: string | null
+          representante?: string | null
+          sexo?: string | null
+          source_batch?: string | null
+          tipo_planta?: string | null
+          unidad_organica_historica?: string | null
+          vence_mandato_30dias?: boolean | null
+        }
+        Update: {
+          afiliado_apops?: boolean | null
+          afiliado_ate?: boolean | null
+          afiliado_nuevo?: boolean | null
+          afiliado_sec?: boolean | null
+          afiliado_secasfpi?: boolean | null
+          afiliado_upcn?: boolean | null
+          categoria?: number | null
+          cotiza_papel?: boolean | null
+          cuil?: string | null
+          descripcion_lugar_relevamiento?: string | null
+          dni?: string | null
+          fecha_actualizacion_delegados?: string | null
+          fecha_ingreso?: string | null
+          fecha_nacimiento?: string | null
+          id?: string | null
+          ingestado_at?: string | null
+          legajo?: string | null
+          lugar_trabajo_padron?: string | null
+          lugar_trabajo_relevamiento?: string | null
+          lugar_trabajo_rrhh?: string | null
+          nombre?: string | null
+          padron_snapshot_id?: string | null
+          periodo_mandato?: string | null
+          provincia?: string | null
+          regional?: string | null
+          representante?: string | null
+          sexo?: string | null
+          source_batch?: string | null
+          tipo_planta?: string | null
+          unidad_organica_historica?: string | null
+          vence_mandato_30dias?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "padron_cotizantes_padron_snapshot_id_fkey"
+            columns: ["padron_snapshot_id"]
+            isOneToOne: false
+            referencedRelation: "padron_snapshots"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       [_ in never]: never
