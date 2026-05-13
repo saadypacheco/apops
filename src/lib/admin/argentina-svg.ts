@@ -79,6 +79,48 @@ function geometryToPath(g: Geometry): string {
     .join(' ')
 }
 
+// Centroide aproximado: promedio de vértices del polígono principal.
+// Para provincias con MultiPolygon (Tierra del Fuego con sus islas) tomamos
+// el polígono más grande para que el label caiga en la masa continental.
+function geometryCentroid(g: Geometry): [number, number] {
+  let bestRing: Ring | null = null
+  let bestArea = 0
+  const consider = (ring: Ring) => {
+    // Aproximamos "área" por bounding box — barato y suficiente para escoger
+    // el polígono principal.
+    let minLng = Infinity
+    let maxLng = -Infinity
+    let minLat = Infinity
+    let maxLat = -Infinity
+    for (const p of ring) {
+      if (p[0] < minLng) minLng = p[0]
+      if (p[0] > maxLng) maxLng = p[0]
+      if (p[1] < minLat) minLat = p[1]
+      if (p[1] > maxLat) maxLat = p[1]
+    }
+    const area = (maxLng - minLng) * (maxLat - minLat)
+    if (area > bestArea) {
+      bestArea = area
+      bestRing = ring
+    }
+  }
+  if (g.type === 'Polygon') {
+    for (const r of g.coordinates) consider(r)
+  } else {
+    for (const poly of g.coordinates) for (const r of poly) consider(r)
+  }
+  if (!bestRing) return [0, 0]
+  const ring = bestRing as Ring
+  let xSum = 0
+  let ySum = 0
+  for (const [lng, lat] of ring) {
+    const [px, py] = project(lng, lat)
+    xSum += px
+    ySum += py
+  }
+  return [xSum / ring.length, ySum / ring.length]
+}
+
 // =====================================================================
 // Output: paths pre-computados por provincia + marker de CABA
 // =====================================================================
@@ -87,13 +129,21 @@ export type ProvinciaPath = {
   /** Nombre como viene del geojson (sin tildes la mayoría) */
   geojsonName: string
   d: string
+  /** Centroide del polígono principal en coords del viewBox (para label). */
+  cx: number
+  cy: number
 }
 
 export const ARGENTINA_PROVINCES: ProvinciaPath[] = COLLECTION.features.map(
-  (f) => ({
-    geojsonName: f.properties.name,
-    d: geometryToPath(f.geometry),
-  }),
+  (f) => {
+    const [cx, cy] = geometryCentroid(f.geometry)
+    return {
+      geojsonName: f.properties.name,
+      d: geometryToPath(f.geometry),
+      cx: Number(cx.toFixed(1)),
+      cy: Number(cy.toFixed(1)),
+    }
+  },
 )
 
 // CABA como marker. Coordenadas aproximadas del microcentro: -58.42, -34.61.

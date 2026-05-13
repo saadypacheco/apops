@@ -34,6 +34,18 @@ function colorForRatio(ratio: number): string {
   return `rgba(${COLOR_R}, ${COLOR_G}, ${COLOR_B}, ${alpha.toFixed(3)})`
 }
 
+// Color del label: si el fill es oscuro (ratio alto) el texto es blanco;
+// si es claro queda oscuro. Threshold simple por luminancia.
+function textColorForRatio(ratio: number): string {
+  return ratio > 0.45 ? '#fff' : '#1e293b' // slate-800
+}
+
+function formatCompact(n: number): string {
+  if (n >= 10000) return `${(n / 1000).toFixed(0)}k`
+  if (n >= 1000) return `${(n / 1000).toFixed(1)}k`
+  return String(n)
+}
+
 export function ArgentinaMap({ data, label = 'APOPS' }: Props) {
   // 1. Re-indexar data por nombre del geojson (y CABA aparte)
   const byGeojson: Record<string, number> = {}
@@ -50,6 +62,7 @@ export function ArgentinaMap({ data, label = 'APOPS' }: Props) {
   // 2. Escala: max para normalizar.
   const allCounts = [...Object.values(byGeojson), caba]
   const max = Math.max(0, ...allCounts)
+  const total = allCounts.reduce((acc, c) => acc + c, 0)
 
   // 3. Renderizar
   return (
@@ -61,11 +74,12 @@ export function ArgentinaMap({ data, label = 'APOPS' }: Props) {
           className="w-full h-auto"
           aria-label="Mapa de Argentina por provincia"
         >
-          {/* Provincias */}
+          {/* Provincias + label con el conteo encima */}
           <g stroke="#fff" strokeWidth="0.8">
             {ARGENTINA_PROVINCES.map((p) => {
               const count = byGeojson[p.geojsonName] ?? 0
-              const fill = colorForRatio(max === 0 ? 0 : count / max)
+              const ratio = max === 0 ? 0 : count / max
+              const fill = colorForRatio(ratio)
               return (
                 <path key={p.geojsonName} d={p.d} fill={fill}>
                   <title>{`${p.geojsonName}: ${count.toLocaleString('es-AR')} ${label}`}</title>
@@ -73,8 +87,30 @@ export function ArgentinaMap({ data, label = 'APOPS' }: Props) {
               )
             })}
           </g>
+          {/* Texto encima — separado para que quede por arriba de todos los paths */}
+          <g style={{ pointerEvents: 'none' }} fontFamily="system-ui">
+            {ARGENTINA_PROVINCES.map((p) => {
+              const count = byGeojson[p.geojsonName] ?? 0
+              if (count === 0) return null
+              const ratio = max === 0 ? 0 : count / max
+              return (
+                <text
+                  key={p.geojsonName}
+                  x={p.cx}
+                  y={p.cy}
+                  fontSize="10"
+                  fontWeight="600"
+                  fill={textColorForRatio(ratio)}
+                  textAnchor="middle"
+                  dominantBaseline="central"
+                >
+                  {formatCompact(count)}
+                </text>
+              )
+            })}
+          </g>
 
-          {/* CABA — círculo, no polígono (falta del geojson) */}
+          {/* CABA — círculo separado + texto con label y conteo */}
           {caba > 0 && (
             <g>
               <circle
@@ -89,15 +125,48 @@ export function ArgentinaMap({ data, label = 'APOPS' }: Props) {
               </circle>
               <text
                 x={CABA_MARKER.cx + 9}
-                y={CABA_MARKER.cy + 3}
-                fontSize="10"
+                y={CABA_MARKER.cy + 1}
+                fontSize="9"
+                fontWeight="600"
                 fill="#1e293b"
                 style={{ pointerEvents: 'none' }}
               >
-                CABA
+                CABA {formatCompact(caba)}
               </text>
             </g>
           )}
+
+          {/* Overlay TOTAL en la esquina superior derecha */}
+          <g style={{ pointerEvents: 'none' }} fontFamily="system-ui">
+            <rect
+              x={VB_W - 110}
+              y={6}
+              width={104}
+              height={42}
+              rx={6}
+              fill="rgba(255,255,255,0.92)"
+              stroke="#e2e8f0"
+              strokeWidth="0.5"
+            />
+            <text
+              x={VB_W - 102}
+              y={20}
+              fontSize="8"
+              fill="#64748b"
+              letterSpacing="0.05em"
+            >
+              TOTAL {label.toUpperCase()}
+            </text>
+            <text
+              x={VB_W - 102}
+              y={40}
+              fontSize="18"
+              fontWeight="700"
+              fill="#1d4ed8"
+            >
+              {total.toLocaleString('es-AR')}
+            </text>
+          </g>
         </svg>
         {/* Mini leyenda */}
         <div className="mt-1 flex items-center gap-2 text-xs text-brand-muted">
