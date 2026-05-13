@@ -5,12 +5,22 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { AppShell } from '@/components/app/AppShell'
 import { ArgentinaMap } from '@/components/admin/ArgentinaMap'
 import {
+  DashboardTabs,
+  isValidTab,
+  type DashboardTab,
+} from '@/components/admin/DashboardTabs'
+import {
   getAppVsPadron,
   getComisionDirectiva,
   getDistribucionApops,
   getEvolucion,
   getSnapshots,
+  type AppVsPadron,
   type Bucket,
+  type ComisionDirectiva,
+  type DistribucionApops,
+  type Evolucion,
+  type SnapshotMeta,
 } from '@/lib/admin/dashboard-queries'
 
 export const metadata: Metadata = {
@@ -49,7 +59,13 @@ function numero(n: number): string {
 // Página
 // =====================================================================
 
-export default async function DashboardPage() {
+type SearchParams = { tab?: string }
+
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: SearchParams
+}) {
   const session = await requireRole('admin')
   const admin = createAdminClient()
 
@@ -64,18 +80,33 @@ export default async function DashboardPage() {
 
   const current = snaps[0]!
   const previous = snaps[1] ?? null
+  const activeTab: DashboardTab = isValidTab(searchParams.tab)
+    ? searchParams.tab
+    : 'resumen'
+
+  // Cada tab decide qué queries necesita — evitamos pedir toda la data
+  // si la tab no la usa.
+  const needsDistribucion = activeTab === 'padron' || activeTab === 'resumen'
+  const needsCD = activeTab === 'delegados' || activeTab === 'resumen'
+  const needsApp = activeTab === 'app' || activeTab === 'resumen'
+  const needsEvolucion = activeTab === 'evolucion' || activeTab === 'resumen'
 
   const [distribucion, cd, app, evolucion] = await Promise.all([
-    getDistribucionApops(admin, current.id),
-    getComisionDirectiva(admin, current.id),
-    getAppVsPadron(admin, current.id, current.total_apops),
-    previous ? getEvolucion(admin, current.id, previous.id) : Promise.resolve(null),
+    needsDistribucion
+      ? getDistribucionApops(admin, current.id)
+      : Promise.resolve(null),
+    needsCD ? getComisionDirectiva(admin, current.id) : Promise.resolve(null),
+    needsApp
+      ? getAppVsPadron(admin, current.id, current.total_apops)
+      : Promise.resolve(null),
+    needsEvolucion && previous
+      ? getEvolucion(admin, current.id, previous.id)
+      : Promise.resolve(null),
   ])
 
   return (
     <AppShell nombre={session.nombre} rol={session.rol} current="admin">
-      <div className="flex flex-col gap-6">
-        {/* Header */}
+      <div className="flex flex-col gap-5">
         <header className="flex flex-col gap-1">
           <Link
             href="/admin"
@@ -87,240 +118,163 @@ export default async function DashboardPage() {
             Dashboard Comisión Directiva
           </h1>
           <p className="text-sm text-brand-muted">
-            Padrón {periodoLabel(current.periodo_year, current.periodo_month)} ·
-            {' '}
+            Padrón {periodoLabel(current.periodo_year, current.periodo_month)}
+            {' · '}
             {numero(current.total_filas)} cotizantes ·{' '}
-            <strong className="text-brand-ink">{numero(current.total_apops)} APOPS</strong>
+            <strong className="text-brand-ink">
+              {numero(current.total_apops)} APOPS
+            </strong>
             {previous && (
               <>
-                {' '}· comparando contra{' '}
+                {' · comparando contra '}
                 {periodoLabel(previous.periodo_year, previous.periodo_month)}
               </>
             )}
           </p>
         </header>
 
-        {/* Bloque 1 — Resumen del padrón */}
-        <Block titulo="Resumen del padrón">
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-            <BigStat label="Cotizantes" value={current.total_filas} primary />
-            <BigStat
-              label="APOPS"
-              value={current.total_apops}
-              of={current.total_filas}
-            />
-            <BigStat label="Delegados" value={current.total_delegados} />
-            <BigStat
-              label="Planta Permanente"
-              value={current.total_planta_perm}
-              of={current.total_filas}
-            />
-            <BigStat
-              label="Planta Transitoria"
-              value={current.total_planta_trans}
-              of={current.total_filas}
-            />
-            <BigStat
-              label="Solo papel"
-              value={current.total_papel}
-              hint="Jubilados que siguen afiliados"
-            />
-          </div>
-          <div className="mt-4 grid grid-cols-3 gap-3">
-            <SmallStat
-              label="ATE"
-              value={current.total_ate}
-              of={current.total_filas}
-            />
-            <SmallStat
-              label="UPCN"
-              value={current.total_upcn}
-              of={current.total_filas}
-            />
-            <SmallStat
-              label="SECASFPI"
-              value={current.total_secasfpi}
-              of={current.total_filas}
-            />
-          </div>
-        </Block>
+        <DashboardTabs active={activeTab} />
 
-        {/* Bloque 2 — Evolución vs mes anterior */}
-        {evolucion && previous && (
-          <Block
-            titulo={`Cambios desde ${periodoLabel(previous.periodo_year, previous.periodo_month)}`}
-          >
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-              <DeltaStat
-                label="Altas reales"
-                value={evolucion.altasReales}
-                tone="positive"
-                hint={`${evolucion.altasApops} APOPS`}
-              />
-              <DeltaStat
-                label="Bajas reales"
-                value={evolucion.bajasReales}
-                tone="negative"
-                hint={`${evolucion.bajasApops} APOPS`}
-              />
-              <DeltaStat
-                label="Cambios categoría"
-                value={evolucion.cambiosCategoria}
-                tone="neutral"
-              />
-              <DeltaStat
-                label="Cambios gremio"
-                value={evolucion.cambiosGremio}
-                tone="neutral"
-              />
-              <DeltaStat
-                label="Cambios delegado"
-                value={evolucion.cambiosDelegado}
-                tone="neutral"
-              />
-            </div>
-          </Block>
-        )}
-
-        {!previous && (
-          <Block titulo="Cambios mes vs mes">
-            <p className="text-sm text-brand-muted">
-              Cargá un segundo padrón para ver altas, bajas y cambios reales
-              entre meses.
-            </p>
-          </Block>
-        )}
-
-        {/* Bloque 3 — Distribución APOPS */}
-        <Block titulo={`Distribución APOPS (${numero(distribucion.totalApops)} afiliados)`}>
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_2fr]">
-            <div className="flex flex-col gap-2">
-              <h3 className="text-sm font-semibold text-brand-ink">
-                Mapa por provincia
-              </h3>
-              <ArgentinaMap
-                data={distribucion.porProvinciaMap}
-                label="APOPS"
-              />
-              <p className="text-xs text-brand-muted">
-                Pasá el cursor por encima de una provincia para ver el conteo.
-                CABA aparece como punto sobre Buenos Aires.
-              </p>
-            </div>
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-              <Distribucion
-                titulo="Por edificio (top 10)"
-                buckets={distribucion.porEdificio}
-                total={distribucion.totalApops}
-              />
-              <Distribucion
-                titulo="Por provincia (top 8)"
-                buckets={distribucion.porProvincia}
-                total={distribucion.totalApops}
-              />
-            </div>
-          </div>
-          <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
-            <Distribucion
-              titulo="Tipo de planta"
-              buckets={[
-                { label: 'Permanente', count: distribucion.porPlanta.pp },
-                { label: 'Transitoria', count: distribucion.porPlanta.pt },
-                { label: 'Sin dato', count: distribucion.porPlanta.sin },
-              ]}
-              total={distribucion.totalApops}
+        {/* Contenedor de la tab activa */}
+        <div className="flex flex-col gap-5">
+          {activeTab === 'resumen' && (
+            <ResumenTab
+              current={current}
+              previous={previous}
+              evolucion={evolucion}
+              app={app}
+              cd={cd}
             />
-            <Distribucion
-              titulo="Sexo"
-              buckets={[
-                { label: 'Mujer', count: distribucion.porSexo.mujer },
-                { label: 'Varón', count: distribucion.porSexo.varon },
-                { label: 'Otro', count: distribucion.porSexo.otro },
-                { label: 'Sin dato', count: distribucion.porSexo.sin },
-              ]}
-              total={distribucion.totalApops}
-            />
-            <Distribucion
-              titulo="Edad"
-              buckets={[
-                { label: 'Menos de 30', count: distribucion.porEdad.lt30 },
-                { label: '30–40', count: distribucion.porEdad.r30_40 },
-                { label: '40–50', count: distribucion.porEdad.r40_50 },
-                { label: '50–60', count: distribucion.porEdad.r50_60 },
-                { label: '60 o más', count: distribucion.porEdad.gte60 },
-                { label: 'Sin dato', count: distribucion.porEdad.sin },
-              ]}
-              total={distribucion.totalApops}
-            />
-          </div>
-          {distribucion.porCategoria.length > 0 && (
-            <div className="mt-6">
-              <Distribucion
-                titulo="Categorías"
-                buckets={distribucion.porCategoria}
-                total={distribucion.totalApops}
-                compact
-              />
-            </div>
           )}
-        </Block>
-
-        {/* Bloque 4 — Comisión Directiva */}
-        <Block titulo="Comisión Directiva">
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-            <BigStat label="Delegados activos" value={cd.totalDelegados} />
-            <BigStat
-              label="Mandatos vencen 30 días"
-              value={cd.mandatosVencen30.length}
-              warn={cd.mandatosVencen30.length > 0}
+          {activeTab === 'padron' && distribucion && (
+            <PadronTab distribucion={distribucion} />
+          )}
+          {activeTab === 'evolucion' && (
+            <EvolucionTab
+              evolucion={evolucion}
+              previous={previous}
+              current={current}
             />
-            <BigStat
-              label="Edificios sin delegado"
-              value={cd.edificiosSinDelegado.length}
-              warn={cd.edificiosSinDelegado.length > 0}
-              hint="con APOPS pero ningún delegado asignado"
+          )}
+          {activeTab === 'delegados' && cd && <DelegadosTab cd={cd} />}
+          {activeTab === 'app' && app && <AppTab app={app} />}
+          {activeTab === 'altas-bajas' && <AltasBajasTab />}
+        </div>
+      </div>
+    </AppShell>
+  )
+}
+
+// =====================================================================
+// Tabs
+// =====================================================================
+
+function ResumenTab({
+  current,
+  previous,
+  evolucion,
+  app,
+  cd,
+}: {
+  current: SnapshotMeta
+  previous: SnapshotMeta | null
+  evolucion: Evolucion | null
+  app: AppVsPadron | null
+  cd: ComisionDirectiva | null
+}) {
+  return (
+    <>
+      <Block titulo="Resumen del padrón">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+          <BigStat label="Cotizantes" value={current.total_filas} primary />
+          <BigStat
+            label="APOPS"
+            value={current.total_apops}
+            of={current.total_filas}
+          />
+          <BigStat label="Delegados" value={current.total_delegados} />
+          <BigStat
+            label="Planta Permanente"
+            value={current.total_planta_perm}
+            of={current.total_filas}
+          />
+          <BigStat
+            label="Planta Transitoria"
+            value={current.total_planta_trans}
+            of={current.total_filas}
+          />
+          <BigStat
+            label="Solo papel"
+            value={current.total_papel}
+            hint="Jubilados que siguen afiliados"
+          />
+        </div>
+        <div className="mt-4 grid grid-cols-3 gap-3">
+          <SmallStat
+            label="ATE"
+            value={current.total_ate}
+            of={current.total_filas}
+          />
+          <SmallStat
+            label="UPCN"
+            value={current.total_upcn}
+            of={current.total_filas}
+          />
+          <SmallStat
+            label="SECASFPI"
+            value={current.total_secasfpi}
+            of={current.total_filas}
+          />
+        </div>
+      </Block>
+
+      {evolucion && previous && (
+        <Block
+          titulo={`Cambios desde ${periodoLabel(previous.periodo_year, previous.periodo_month)}`}
+        >
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <DeltaStat
+              label="Altas reales"
+              value={evolucion.altasReales}
+              tone="positive"
+              hint={`${evolucion.altasApops} APOPS`}
+            />
+            <DeltaStat
+              label="Bajas reales"
+              value={evolucion.bajasReales}
+              tone="negative"
+              hint={`${evolucion.bajasApops} APOPS`}
+            />
+            <DeltaStat
+              label="Cambios categoría"
+              value={evolucion.cambiosCategoria}
+              tone="neutral"
+            />
+            <DeltaStat
+              label="Cambios gremio"
+              value={evolucion.cambiosGremio}
+              tone="neutral"
             />
           </div>
-
-          {cd.mandatosVencen30.length > 0 && (
-            <details className="mt-4 rounded-lg bg-amber-50 p-3 ring-1 ring-amber-200">
-              <summary className="cursor-pointer text-sm font-semibold text-amber-900">
-                Mandatos que vencen en 30 días ({cd.mandatosVencen30.length})
-              </summary>
-              <ul className="mt-2 space-y-1 text-xs">
-                {cd.mandatosVencen30.map((m, i) => (
-                  <li key={i} className="text-amber-900">
-                    <strong>{m.nombre}</strong> · L-{m.legajo}
-                    {m.edificio && <span> · {m.edificio}</span>}
-                  </li>
-                ))}
-              </ul>
-            </details>
-          )}
-
-          {cd.edificiosSinDelegado.length > 0 && (
-            <details className="mt-3 rounded-lg bg-white p-3 ring-1 ring-neutral-200">
-              <summary className="cursor-pointer text-sm font-semibold text-brand-ink">
-                Edificios APOPS sin delegado ({cd.edificiosSinDelegado.length})
-              </summary>
-              <ul className="mt-2 space-y-1 text-xs text-brand-muted">
-                {cd.edificiosSinDelegado.map((e, i) => (
-                  <li key={i}>{e}</li>
-                ))}
-              </ul>
-            </details>
-          )}
+          <p className="mt-3 text-xs text-brand-muted">
+            <Link
+              href="/admin/dashboard?tab=evolucion"
+              className="text-brand-blue hover:underline"
+            >
+              Ver detalle de evolución →
+            </Link>
+          </p>
         </Block>
+      )}
 
-        {/* Bloque 5 — App vs Padrón */}
-        <Block titulo="App APOPS vs padrón">
+      {app && (
+        <Block titulo="Aplicación APOPS">
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <BigStat
-              label="Registrados app"
+              label="Registrados"
               value={app.totalAfiliadosApp}
               primary
             />
-            <BigStat label="Activos" value={app.totalActivos} />
             <BigStat
               label="% Adopción"
               value={app.porcentajeAdopcion}
@@ -331,32 +285,310 @@ export default async function DashboardPage() {
               label="Engagement 30d"
               value={app.engaged30d}
               of={app.totalActivos}
-              hint="ingresaron en los últimos 30 días"
+              hint="ingresaron últimos 30d"
             />
-          </div>
-          <div className="mt-4 grid grid-cols-2 gap-3">
-            <SmallStat
-              label="Solicitudes de acceso pendientes"
-              value={app.pendientesAcceso}
-              warn={app.pendientesAcceso > 0}
-            />
-            <SmallStat
-              label="Afiliaciones online pendientes"
-              value={app.pendientesAfiliacion}
-              warn={app.pendientesAfiliacion > 0}
+            <BigStat
+              label="Pendientes"
+              value={app.pendientesAcceso + app.pendientesAfiliacion}
+              warn={app.pendientesAcceso + app.pendientesAfiliacion > 0}
+              hint="acceso + afiliación"
             />
           </div>
         </Block>
+      )}
+
+      {cd && (
+        <Block titulo="Comisión Directiva (resumen)">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <BigStat label="Delegados activos" value={cd.totalDelegados} />
+            <BigStat
+              label="Mandatos vencen 30d"
+              value={cd.mandatosVencen30.length}
+              warn={cd.mandatosVencen30.length > 0}
+            />
+            <BigStat
+              label="Edificios sin delegado"
+              value={cd.edificiosSinDelegado.length}
+              warn={cd.edificiosSinDelegado.length > 0}
+            />
+          </div>
+          <p className="mt-3 text-xs text-brand-muted">
+            <Link
+              href="/admin/dashboard?tab=delegados"
+              className="text-brand-blue hover:underline"
+            >
+              Ver detalle CD →
+            </Link>
+          </p>
+        </Block>
+      )}
+    </>
+  )
+}
+
+function PadronTab({ distribucion }: { distribucion: DistribucionApops }) {
+  return (
+    <Block
+      titulo={`Distribución APOPS (${numero(distribucion.totalApops)} afiliados)`}
+    >
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_2fr]">
+        <div className="flex flex-col gap-2">
+          <h3 className="text-sm font-semibold text-brand-ink">
+            Mapa por provincia
+          </h3>
+          <ArgentinaMap data={distribucion.porProvinciaMap} label="APOPS" />
+          <p className="text-xs text-brand-muted">
+            Pasá el cursor por una provincia para ver el conteo. CABA aparece
+            como punto sobre Buenos Aires.
+          </p>
+        </div>
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+          <Distribucion
+            titulo="Por edificio (top 10)"
+            buckets={distribucion.porEdificio}
+            total={distribucion.totalApops}
+          />
+          <Distribucion
+            titulo="Por provincia (top 8)"
+            buckets={distribucion.porProvincia}
+            total={distribucion.totalApops}
+          />
+        </div>
       </div>
-    </AppShell>
+      <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <Distribucion
+          titulo="Tipo de planta"
+          buckets={[
+            { label: 'Permanente', count: distribucion.porPlanta.pp },
+            { label: 'Transitoria', count: distribucion.porPlanta.pt },
+            { label: 'Sin dato', count: distribucion.porPlanta.sin },
+          ]}
+          total={distribucion.totalApops}
+        />
+        <Distribucion
+          titulo="Sexo"
+          buckets={[
+            { label: 'Mujer', count: distribucion.porSexo.mujer },
+            { label: 'Varón', count: distribucion.porSexo.varon },
+            { label: 'Otro', count: distribucion.porSexo.otro },
+            { label: 'Sin dato', count: distribucion.porSexo.sin },
+          ]}
+          total={distribucion.totalApops}
+        />
+        <Distribucion
+          titulo="Edad"
+          buckets={[
+            { label: 'Menos de 30', count: distribucion.porEdad.lt30 },
+            { label: '30–40', count: distribucion.porEdad.r30_40 },
+            { label: '40–50', count: distribucion.porEdad.r40_50 },
+            { label: '50–60', count: distribucion.porEdad.r50_60 },
+            { label: '60 o más', count: distribucion.porEdad.gte60 },
+            { label: 'Sin dato', count: distribucion.porEdad.sin },
+          ]}
+          total={distribucion.totalApops}
+        />
+      </div>
+      {distribucion.porCategoria.length > 0 && (
+        <div className="mt-6">
+          <Distribucion
+            titulo="Categorías"
+            buckets={distribucion.porCategoria}
+            total={distribucion.totalApops}
+            compact
+          />
+        </div>
+      )}
+    </Block>
+  )
+}
+
+function EvolucionTab({
+  evolucion,
+  previous,
+  current,
+}: {
+  evolucion: Evolucion | null
+  previous: SnapshotMeta | null
+  current: SnapshotMeta
+}) {
+  if (!previous || !evolucion) {
+    return (
+      <Block titulo="Evolución mes vs mes">
+        <p className="text-sm text-brand-muted">
+          Solo hay un snapshot del padrón ({periodoLabel(current.periodo_year, current.periodo_month)}).
+          Cargá otro mes desde{' '}
+          <Link href="/admin/padron" className="text-brand-blue hover:underline">
+            /admin/padron
+          </Link>{' '}
+          para ver altas, bajas y cambios reales.
+        </p>
+      </Block>
+    )
+  }
+  return (
+    <>
+      <Block
+        titulo={`Cambios desde ${periodoLabel(previous.periodo_year, previous.periodo_month)}`}
+      >
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <DeltaStat
+            label="Altas reales"
+            value={evolucion.altasReales}
+            tone="positive"
+            hint={`${evolucion.altasApops} APOPS`}
+          />
+          <DeltaStat
+            label="Bajas reales"
+            value={evolucion.bajasReales}
+            tone="negative"
+            hint={`${evolucion.bajasApops} APOPS`}
+          />
+          <DeltaStat
+            label="Cambios categoría"
+            value={evolucion.cambiosCategoria}
+            tone="neutral"
+          />
+          <DeltaStat
+            label="Cambios gremio"
+            value={evolucion.cambiosGremio}
+            tone="neutral"
+          />
+          <DeltaStat
+            label="Cambios delegado"
+            value={evolucion.cambiosDelegado}
+            tone="neutral"
+          />
+        </div>
+        <p className="mt-4 text-xs text-brand-muted">
+          Para ver el listado detallado de quiénes son las altas y bajas con
+          accciones de mensajería, andá a la tab{' '}
+          <Link
+            href="/admin/dashboard?tab=altas-bajas"
+            className="text-brand-blue hover:underline"
+          >
+            Altas / Bajas
+          </Link>
+          .
+        </p>
+      </Block>
+    </>
+  )
+}
+
+function DelegadosTab({ cd }: { cd: ComisionDirectiva }) {
+  return (
+    <Block titulo="Comisión Directiva">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <BigStat label="Delegados activos" value={cd.totalDelegados} />
+        <BigStat
+          label="Mandatos vencen 30 días"
+          value={cd.mandatosVencen30.length}
+          warn={cd.mandatosVencen30.length > 0}
+        />
+        <BigStat
+          label="Edificios sin delegado"
+          value={cd.edificiosSinDelegado.length}
+          warn={cd.edificiosSinDelegado.length > 0}
+          hint="con APOPS pero ningún delegado asignado"
+        />
+      </div>
+
+      {cd.mandatosVencen30.length > 0 && (
+        <details
+          open
+          className="mt-4 rounded-lg bg-amber-50 p-3 ring-1 ring-amber-200"
+        >
+          <summary className="cursor-pointer text-sm font-semibold text-amber-900">
+            Mandatos que vencen en 30 días ({cd.mandatosVencen30.length})
+          </summary>
+          <ul className="mt-2 space-y-1 text-xs">
+            {cd.mandatosVencen30.map((m, i) => (
+              <li key={i} className="text-amber-900">
+                <strong>{m.nombre}</strong> · L-{m.legajo}
+                {m.edificio && <span> · {m.edificio}</span>}
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
+
+      {cd.edificiosSinDelegado.length > 0 && (
+        <details className="mt-3 rounded-lg bg-white p-3 ring-1 ring-neutral-200">
+          <summary className="cursor-pointer text-sm font-semibold text-brand-ink">
+            Edificios APOPS sin delegado ({cd.edificiosSinDelegado.length})
+          </summary>
+          <ul className="mt-2 space-y-1 text-xs text-brand-muted">
+            {cd.edificiosSinDelegado.map((e, i) => (
+              <li key={i}>{e}</li>
+            ))}
+          </ul>
+        </details>
+      )}
+    </Block>
+  )
+}
+
+function AppTab({ app }: { app: AppVsPadron }) {
+  return (
+    <Block titulo="App APOPS vs padrón">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <BigStat
+          label="Registrados app"
+          value={app.totalAfiliadosApp}
+          primary
+        />
+        <BigStat label="Activos" value={app.totalActivos} />
+        <BigStat
+          label="% Adopción"
+          value={app.porcentajeAdopcion}
+          suffix="%"
+          hint={`sobre ${numero(app.totalApopsEnPadron)} APOPS`}
+        />
+        <BigStat
+          label="Engagement 30d"
+          value={app.engaged30d}
+          of={app.totalActivos}
+          hint="ingresaron en los últimos 30 días"
+        />
+      </div>
+      <div className="mt-4 grid grid-cols-2 gap-3">
+        <SmallStat
+          label="Solicitudes de acceso pendientes"
+          value={app.pendientesAcceso}
+          warn={app.pendientesAcceso > 0}
+        />
+        <SmallStat
+          label="Afiliaciones online pendientes"
+          value={app.pendientesAfiliacion}
+          warn={app.pendientesAfiliacion > 0}
+        />
+      </div>
+    </Block>
+  )
+}
+
+function AltasBajasTab() {
+  return (
+    <Block titulo="Altas y Bajas">
+      <p className="text-sm text-brand-muted">
+        Próximo bloque a construir — listas detalladas con datos para mandar
+        mensaje de bienvenida / despedida vía WhatsApp o email.
+      </p>
+    </Block>
   )
 }
 
 // =====================================================================
-// Subcomponentes
+// Subcomponentes visuales
 // =====================================================================
 
-function Block({ titulo, children }: { titulo: string; children: React.ReactNode }) {
+function Block({
+  titulo,
+  children,
+}: {
+  titulo: string
+  children: React.ReactNode
+}) {
   return (
     <section className="flex flex-col gap-3">
       <h2 className="text-lg font-semibold text-brand-ink">{titulo}</h2>
@@ -533,8 +765,8 @@ function EmptyState() {
           Dashboard Comisión Directiva
         </h1>
         <p className="mt-2 text-sm text-brand-muted">
-          Todavía no se cargó ningún padrón. Subí el primero para empezar a
-          ver métricas.
+          Todavía no se cargó ningún padrón. Subí el primero para empezar a ver
+          métricas.
         </p>
         <Link
           href="/admin/padron"
