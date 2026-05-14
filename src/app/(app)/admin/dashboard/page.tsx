@@ -541,7 +541,7 @@ function PadronTab({
 function EvolucionTab({
   evolucion,
   previous,
-  current,
+  current: _current,
   snapshots,
 }: {
   evolucion: Evolucion | null
