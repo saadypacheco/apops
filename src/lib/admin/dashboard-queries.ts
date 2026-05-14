@@ -427,11 +427,13 @@ const MES_LABELS = [
 /**
  * Saca los cumpleaños y aniversarios de ingreso del padrón APOPS para el mes
  * indicado (1-12). Si no se especifica, usa el mes actual del calendar.
+ * Si filterLegajos viene, restringe a esos legajos (caso delegado).
  */
 export async function getEventosDelMes(
   admin: SupabaseClient<Database>,
   snapshotId: string,
   mes?: number,
+  filterLegajos?: Set<string>,
 ): Promise<EventosDelMes> {
   const ahora = new Date()
   const mesNum = mes ?? ahora.getUTCMonth() + 1
@@ -454,6 +456,7 @@ export async function getEventosDelMes(
 
   for (const r of rows) {
     if (!r.legajo) continue
+    if (filterLegajos && !filterLegajos.has(r.legajo)) continue
     const edificio = r.lugar_trabajo_padron ?? r.lugar_trabajo_rrhh
 
     if (r.fecha_nacimiento) {

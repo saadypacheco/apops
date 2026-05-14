@@ -2,7 +2,12 @@ import type { Metadata } from 'next'
 import { requireRole } from '@/lib/auth/role'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { AppShell } from '@/components/app/AppShell'
+import { EventosList } from '@/components/admin/EventosList'
 import { MensajeForm } from '@/components/delegados/MensajeForm'
+import {
+  getEventosDelMes,
+  getSnapshots,
+} from '@/lib/admin/dashboard-queries'
 import {
   getCotizantesRepresentados,
   type CotizanteResumido,
@@ -82,6 +87,37 @@ export default async function DelegadosPage() {
     .limit(5)
   const ultimosMensajes = (misMensajes ?? []) as MensajeEnviado[]
 
+  // Mi info de delegado: ¿vence mandato en 30d?
+  const { data: miPadronRaw } = await admin
+    .from('padron_cotizantes_actual')
+    .select('vence_mandato_30dias, fecha_actualizacion_delegados, periodo_mandato')
+    .or(
+      `dni.eq.${session.dni}${session.legajo ? `,legajo.eq.${session.legajo}` : ''}`,
+    )
+    .maybeSingle()
+  const miInfoDelegado = miPadronRaw as
+    | {
+        vence_mandato_30dias: boolean | null
+        fecha_actualizacion_delegados: string | null
+        periodo_mandato: string | null
+      }
+    | null
+
+  // Eventos del mes filtrados a mis representados (APOPS solamente)
+  const snapshots = await getSnapshots(admin)
+  const currentSnapshot = snapshots[0] ?? null
+  const legajosRepresentados = new Set(
+    cotizantes.map((c) => c.legajo).filter((l): l is string => !!l),
+  )
+  const eventos = currentSnapshot
+    ? await getEventosDelMes(
+        admin,
+        currentSnapshot.id,
+        undefined,
+        legajosRepresentados,
+      )
+    : null
+
   return (
     <AppShell nombre={session.nombre} rol={session.rol} current="delegados">
       <div className="flex flex-col gap-5">
@@ -99,6 +135,29 @@ export default async function DelegadosPage() {
             </p>
           )}
         </header>
+
+        {/* Alerta de mandato si vence en 30 días */}
+        {miInfoDelegado?.vence_mandato_30dias && (
+          <div
+            role="alert"
+            className="flex items-start gap-3 rounded-xl bg-amber-50 p-4 ring-1 ring-amber-200"
+          >
+            <span aria-hidden className="text-2xl">⚠️</span>
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-amber-900">
+                Tu mandato como delegado/a vence en los próximos 30 días.
+              </p>
+              <p className="mt-1 text-xs text-amber-800">
+                {miInfoDelegado.periodo_mandato && (
+                  <>
+                    Período: <strong>{miInfoDelegado.periodo_mandato}</strong>.{' '}
+                  </>
+                )}
+                Contactá a la CD para renovar o transferir la representación.
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Stats */}
         {stats.total > 0 && (
@@ -129,6 +188,28 @@ export default async function DelegadosPage() {
             />
           </section>
         )}
+
+        {/* Eventos APOPS del mes en mi sector */}
+        {eventos &&
+          (eventos.cumpleanos.length > 0 || eventos.aniversarios.length > 0) && (
+            <section className="flex flex-col gap-3">
+              <header>
+                <h2 className="text-lg font-semibold text-brand-ink capitalize">
+                  Eventos APOPS de {eventos.mesLabel} en tu sector
+                </h2>
+                <p className="text-xs text-brand-muted">
+                  Cumpleaños y aniversarios de ingreso de tus representados
+                  APOPS este mes. Click en el botón verde abre WhatsApp con la
+                  plantilla lista.
+                </p>
+              </header>
+              <EventosList
+                mesLabel={eventos.mesLabel}
+                cumpleanos={eventos.cumpleanos}
+                aniversarios={eventos.aniversarios}
+              />
+            </section>
+          )}
 
         {/* Listado */}
         {cotizantes.length === 0 ? (
