@@ -107,6 +107,29 @@ export async function enviarNotificacion(
     },
   })
 
+  // Push notifications — best effort, no abortamos si falla.
+  // Se dispara a las suscripciones de cada destinatario.
+  try {
+    const { sendPushToAfiliado } = await import('@/lib/push/send')
+    const bodyPreview =
+      parsed.data.mensaje.length > 100
+        ? parsed.data.mensaje.slice(0, 100) + '…'
+        : parsed.data.mensaje
+    await Promise.all(
+      destinatariosValidos.map((destId, idx) => {
+        const hiloId = hilosCreados[idx]?.id
+        return sendPushToAfiliado(admin, destId, {
+          title: parsed.data.asunto,
+          body: bodyPreview,
+          url: hiloId ? `/notificaciones/${hiloId}` : '/notificaciones',
+          tag: `hilo-${hiloId ?? destId}`,
+        })
+      }),
+    )
+  } catch (e) {
+    console.warn('[notif.push] error:', e)
+  }
+
   revalidatePath('/notificaciones')
 
   const filtrados =

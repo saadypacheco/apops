@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { requireRole } from '@/lib/auth/role'
 import { LogoutButton } from '@/components/auth/LogoutButton'
 import { AppShell } from '@/components/app/AppShell'
+import { EnablePushButton } from '@/components/notif/EnablePushButton'
 
 export const metadata: Metadata = {
   title: 'Mi perfil',
@@ -83,6 +84,10 @@ export default async function PerfilPage({
             </div>
             <span aria-hidden className="text-brand-blue">→</span>
           </Link>
+        </section>
+
+        <section>
+          <EnablePushButton />
         </section>
 
         <section>

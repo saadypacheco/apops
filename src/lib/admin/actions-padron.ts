@@ -321,6 +321,20 @@ async function notifyDelegatesAboutMovements(args: {
       autor_id: adminAfiliadoId,
       mensaje,
     })
+
+    // Push real (best effort, no abortamos si falla)
+    try {
+      const { sendPushToAfiliado } = await import('@/lib/push/send')
+      await sendPushToAfiliado(admin, d.id, {
+        title: asunto,
+        body: `Hay movimiento en ${susEdificios.size} edificio${susEdificios.size === 1 ? '' : 's'} donde representás cotizantes.`,
+        url: `/notificaciones/${hilo.id}`,
+        tag: `padron-${periodoLabel}`,
+      })
+    } catch (e) {
+      console.warn('[notif.push] error en delegado:', e)
+    }
+
     delegatesNotified++
   }
 
