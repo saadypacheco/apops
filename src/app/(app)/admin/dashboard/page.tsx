@@ -6,6 +6,7 @@ import { AppShell } from '@/components/app/AppShell'
 import { AltasBajasList } from '@/components/admin/AltasBajasList'
 import { ArgentinaMap } from '@/components/admin/ArgentinaMap'
 import { DashboardSidebar } from '@/components/admin/DashboardSidebar'
+import { DonutChart } from '@/components/admin/DonutChart'
 import {
   DashboardTabs,
   isValidTab,
@@ -57,6 +58,11 @@ function pct(part: number, total: number): string {
 
 function numero(n: number): string {
   return n.toLocaleString('es-AR')
+}
+
+function deltaPct(current: number, previous: number): number {
+  if (previous === 0) return 0
+  return ((current - previous) / previous) * 100
 }
 
 // =====================================================================
@@ -161,7 +167,7 @@ export default async function DashboardPage({
             />
           )}
           {activeTab === 'padron' && distribucion && (
-            <PadronTab distribucion={distribucion} />
+            <PadronTab distribucion={distribucion} current={current} />
           )}
           {activeTab === 'evolucion' && (
             <EvolucionTab
@@ -179,10 +185,34 @@ export default async function DashboardPage({
               current={current}
             />
           )}
+
+            <DashboardFooter current={current} />
           </div>
         </div>
       </div>
     </AppShell>
+  )
+}
+
+function DashboardFooter({ current }: { current: SnapshotMeta }) {
+  const fechaCarga = new Date(current.importado_at).toLocaleString('es-AR', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+  return (
+    <footer className="mt-4 flex flex-col items-center gap-1 border-t border-neutral-200 py-4 text-xs text-brand-muted">
+      <p>
+        Última actualización del padrón:{' '}
+        <strong className="text-brand-ink">{fechaCarga}</strong>
+        {current.archivo_nombre && (
+          <span> · {current.archivo_nombre}</span>
+        )}
+      </p>
+      <p className="italic">Unidos somos más fuertes</p>
+    </footer>
   )
 }
 
@@ -203,17 +233,54 @@ function ResumenTab({
   app: AppVsPadron | null
   cd: ComisionDirectiva | null
 }) {
+  const prevLabel = previous
+    ? `vs ${periodoLabel(previous.periodo_year, previous.periodo_month)}`
+    : undefined
   return (
     <>
-      <Block titulo="Resumen del padrón">
+      {/* KPIs primarios — fila destacada con iconos circulares y delta */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <KpiCard
+          label="Cotizantes"
+          value={current.total_filas}
+          icon={<UsersIcon />}
+          tone="brand"
+          delta={previous ? deltaPct(current.total_filas, previous.total_filas) : undefined}
+          deltaLabel={prevLabel}
+        />
+        <KpiCard
+          label="APOPS"
+          value={current.total_apops}
+          icon={<UnionIcon />}
+          tone="success"
+          delta={previous ? deltaPct(current.total_apops, previous.total_apops) : undefined}
+          deltaLabel={prevLabel}
+          hint={`${pct(current.total_apops, current.total_filas)} del padrón`}
+        />
+        <KpiCard
+          label="Delegados"
+          value={current.total_delegados}
+          icon={<ShieldIcon />}
+          tone="purple"
+          delta={previous ? deltaPct(current.total_delegados, previous.total_delegados) : undefined}
+          deltaLabel={prevLabel}
+        />
+        <KpiCard
+          label="Adopción app"
+          value={app?.porcentajeAdopcion ?? 0}
+          suffix="%"
+          icon={<SmartphoneIcon />}
+          tone="amber"
+          hint={
+            app
+              ? `${numero(app.totalAfiliadosApp)} de ${numero(app.totalApopsEnPadron)} APOPS`
+              : undefined
+          }
+        />
+      </div>
+
+      <Block titulo="Detalle del padrón">
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-          <BigStat label="Cotizantes" value={current.total_filas} primary />
-          <BigStat
-            label="APOPS"
-            value={current.total_apops}
-            of={current.total_filas}
-          />
-          <BigStat label="Delegados" value={current.total_delegados} />
           <BigStat
             label="Planta Permanente"
             value={current.total_planta_perm}
@@ -347,7 +414,31 @@ function ResumenTab({
   )
 }
 
-function PadronTab({ distribucion }: { distribucion: DistribucionApops }) {
+function PadronTab({
+  distribucion,
+  current,
+}: {
+  distribucion: DistribucionApops
+  current: SnapshotMeta
+}) {
+  // Donut de gremios sobre el universo total de cotizantes.
+  // "Sin gremio conocido" = cotizantes que no aparecen en ningún flag.
+  // Estimación: total - max(suma de gremios). Algunos pueden estar en >1.
+  const sinGremioAprox = Math.max(
+    0,
+    current.total_filas -
+      current.total_apops -
+      current.total_ate -
+      current.total_upcn -
+      current.total_secasfpi,
+  )
+  const gremioSlices = [
+    { label: 'APOPS', value: current.total_apops, color: '#1d4ed8' },
+    { label: 'ATE', value: current.total_ate, color: '#10b981' },
+    { label: 'UPCN', value: current.total_upcn, color: '#a78bfa' },
+    { label: 'SECASFPI', value: current.total_secasfpi, color: '#f59e0b' },
+    { label: 'Sin gremio identificado', value: sinGremioAprox, color: '#cbd5e1' },
+  ]
   return (
     <Block
       titulo={`Distribución APOPS (${numero(distribucion.totalApops)} afiliados)`}
@@ -375,6 +466,19 @@ function PadronTab({ distribucion }: { distribucion: DistribucionApops }) {
             total={distribucion.totalApops}
           />
         </div>
+      </div>
+
+      <div className="mt-6">
+        <h3 className="mb-3 text-sm font-semibold text-brand-ink">
+          Cotizantes por gremio (todo el padrón)
+        </h3>
+        <DonutChart
+          slices={gremioSlices}
+          centerLabel="TOTAL"
+          centerValue={current.total_filas}
+          title="Cotizantes por gremio"
+          size={200}
+        />
       </div>
       <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
         <Distribucion
@@ -649,6 +753,124 @@ function Block({
       <h2 className="text-lg font-semibold text-brand-ink">{titulo}</h2>
       <div className="rounded-2xl bg-white p-5 shadow-card">{children}</div>
     </section>
+  )
+}
+
+type KpiTone = 'brand' | 'success' | 'purple' | 'amber' | 'red'
+
+const TONE_STYLES: Record<KpiTone, { bg: string; text: string }> = {
+  brand: { bg: 'bg-brand-blue/10', text: 'text-brand-blue' },
+  success: { bg: 'bg-emerald-100', text: 'text-emerald-700' },
+  purple: { bg: 'bg-violet-100', text: 'text-violet-700' },
+  amber: { bg: 'bg-amber-100', text: 'text-amber-700' },
+  red: { bg: 'bg-red-100', text: 'text-red-700' },
+}
+
+function KpiCard({
+  label,
+  value,
+  icon,
+  tone = 'brand',
+  delta,
+  deltaLabel,
+  hint,
+  suffix,
+}: {
+  label: string
+  value: number
+  icon?: React.ReactNode
+  tone?: KpiTone
+  /** porcentaje de cambio (puede ser negativo). Si undefined, no se muestra. */
+  delta?: number
+  deltaLabel?: string
+  hint?: string
+  suffix?: string
+}) {
+  const t = TONE_STYLES[tone]
+  return (
+    <div className="rounded-2xl bg-white p-4 shadow-card">
+      <div className="flex items-start justify-between gap-3">
+        <span className="text-xs uppercase tracking-wide text-brand-muted">
+          {label}
+        </span>
+        {icon && (
+          <span
+            aria-hidden
+            className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${t.bg} ${t.text}`}
+          >
+            {icon}
+          </span>
+        )}
+      </div>
+      <div className="mt-3">
+        <span className="text-3xl font-bold leading-tight text-brand-ink">
+          {numero(value)}
+          {suffix && (
+            <span className="ml-0.5 text-xl font-semibold">{suffix}</span>
+          )}
+        </span>
+      </div>
+      {delta !== undefined && (
+        <div className="mt-1 text-xs">
+          <span
+            className={
+              delta > 0
+                ? 'font-semibold text-emerald-600'
+                : delta < 0
+                  ? 'font-semibold text-red-600'
+                  : 'text-brand-muted'
+            }
+          >
+            {delta > 0 ? '↑ +' : delta < 0 ? '↓ ' : '· '}
+            {delta.toFixed(1)}%
+          </span>
+          {deltaLabel && (
+            <span className="ml-1 text-brand-muted">{deltaLabel}</span>
+          )}
+        </div>
+      )}
+      {hint && <p className="mt-1 text-xs text-brand-muted">{hint}</p>}
+    </div>
+  )
+}
+
+// =====================================================================
+// Icons para KpiCard
+// =====================================================================
+
+function UsersIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-5 w-5" aria-hidden>
+      <path d="M17 21v-2a4 4 0 00-4-4H7a4 4 0 00-4 4v2" strokeLinecap="round" strokeLinejoin="round" />
+      <circle cx="10" cy="7" r="4" />
+      <path d="M21 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+function UnionIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-5 w-5" aria-hidden>
+      <path d="M12 2L4 6v6c0 5 3.5 9 8 10 4.5-1 8-5 8-10V6l-8-4z" strokeLinejoin="round" />
+      <path d="M9 12l2 2 4-4" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+function ShieldIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-5 w-5" aria-hidden>
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+function SmartphoneIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-5 w-5" aria-hidden>
+      <rect x="5" y="2" width="14" height="20" rx="2" strokeLinejoin="round" />
+      <line x1="11" y1="18" x2="13" y2="18" strokeLinecap="round" strokeWidth={3} />
+    </svg>
   )
 }
 
