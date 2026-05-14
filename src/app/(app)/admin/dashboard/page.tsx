@@ -10,6 +10,7 @@ import { DonutChart } from '@/components/admin/DonutChart'
 import { EventosList } from '@/components/admin/EventosList'
 import { HeatmapEdificios } from '@/components/admin/HeatmapEdificios'
 import { LineChart, type LinePoint } from '@/components/admin/LineChart'
+import { PeriodoSelector } from '@/components/admin/PeriodoSelector'
 import {
   DashboardTabs,
   isValidTab,
@@ -76,7 +77,7 @@ function deltaPct(current: number, previous: number): number {
 // Página
 // =====================================================================
 
-type SearchParams = { tab?: string }
+type SearchParams = { tab?: string; periodo?: string }
 
 type NoticiaResumen = {
   id: string
@@ -104,8 +105,24 @@ export default async function DashboardPage({
     )
   }
 
-  const current = snaps[0]!
-  const previous = snaps[1] ?? null
+  // Resolver período seleccionado. snaps viene desc (más nuevo primero).
+  // Si vino ?periodo=YYYY-MM, encuentro su índice; sino tomo el más reciente.
+  let currentIdx = 0
+  if (searchParams.periodo) {
+    const match = searchParams.periodo.match(/^(\d{4})-(\d{1,2})$/)
+    if (match) {
+      const y = parseInt(match[1]!, 10)
+      const m = parseInt(match[2]!, 10)
+      const idx = snaps.findIndex(
+        (s) => s.periodo_year === y && s.periodo_month === m,
+      )
+      if (idx >= 0) currentIdx = idx
+    }
+  }
+  const current = snaps[currentIdx]!
+  // "Previous" = el inmediato anterior cronológicamente. Como snaps viene
+  // desc, es el del índice +1.
+  const previous = snaps[currentIdx + 1] ?? null
   const activeTab: DashboardTab = isValidTab(searchParams.tab)
     ? searchParams.tab
     : 'resumen'
@@ -156,30 +173,44 @@ export default async function DashboardPage({
   return (
     <AppShell nombre={session.nombre} rol={session.rol} current="admin" wide>
       <div className="flex flex-col gap-5">
-        <header className="flex flex-col gap-1">
+        <header className="flex flex-col gap-2">
           <Link
             href="/admin"
             className="text-sm font-medium text-brand-blue hover:underline"
           >
             ← Volver al panel
           </Link>
-          <h1 className="mt-2 text-2xl font-semibold text-brand-ink">
-            Dashboard Comisión Directiva
-          </h1>
-          <p className="text-sm text-brand-muted">
-            Padrón {periodoLabel(current.periodo_year, current.periodo_month)}
-            {' · '}
-            {numero(current.total_filas)} cotizantes ·{' '}
-            <strong className="text-brand-ink">
-              {numero(current.total_apops)} APOPS
-            </strong>
-            {previous && (
-              <>
-                {' · comparando contra '}
-                {periodoLabel(previous.periodo_year, previous.periodo_month)}
-              </>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <h1 className="text-2xl font-semibold text-brand-ink">
+                Dashboard Comisión Directiva
+              </h1>
+              <p className="mt-1 text-sm text-brand-muted">
+                Padrón {periodoLabel(current.periodo_year, current.periodo_month)}
+                {' · '}
+                {numero(current.total_filas)} cotizantes ·{' '}
+                <strong className="text-brand-ink">
+                  {numero(current.total_apops)} APOPS
+                </strong>
+                {previous && (
+                  <>
+                    {' · comparando contra '}
+                    {periodoLabel(previous.periodo_year, previous.periodo_month)}
+                  </>
+                )}
+              </p>
+            </div>
+            {snaps.length > 1 && (
+              <PeriodoSelector
+                value={`${current.periodo_year}-${String(current.periodo_month).padStart(2, '0')}`}
+                options={snaps.map((s) => ({
+                  periodoYear: s.periodo_year,
+                  periodoMonth: s.periodo_month,
+                  label: periodoLabel(s.periodo_year, s.periodo_month),
+                }))}
+              />
             )}
-          </p>
+          </div>
         </header>
 
         {/* Mobile: tabs horizontal. Desktop: el menú vive en el sidebar. */}
