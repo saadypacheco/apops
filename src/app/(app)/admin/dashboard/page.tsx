@@ -80,7 +80,22 @@ function deltaPct(current: number, previous: number): number {
 // Página
 // =====================================================================
 
-type SearchParams = { tab?: string; periodo?: string }
+type SearchParams = { tab?: string; periodo?: string; gremio?: string }
+
+type GremioFiltro = '' | 'apops' | 'ate' | 'upcn' | 'secasfpi' | 'ninguno'
+
+const GREMIO_FILTROS: { key: GremioFiltro; label: string }[] = [
+  { key: '', label: 'Todos' },
+  { key: 'apops', label: 'APOPS' },
+  { key: 'ate', label: 'ATE' },
+  { key: 'upcn', label: 'UPCN' },
+  { key: 'secasfpi', label: 'SECASFPI' },
+  { key: 'ninguno', label: 'Sin gremio' },
+]
+
+function isGremioFiltro(s: string | undefined): s is GremioFiltro {
+  return GREMIO_FILTROS.some((g) => g.key === s)
+}
 
 type NoticiaResumen = {
   id: string
@@ -129,6 +144,9 @@ export default async function DashboardPage({
   const activeTab: DashboardTab = isValidTab(searchParams.tab)
     ? searchParams.tab
     : 'resumen'
+  const gremioFiltro: GremioFiltro = isGremioFiltro(searchParams.gremio)
+    ? searchParams.gremio
+    : ''
 
   // Cada tab decide qué queries necesita — evitamos pedir toda la data
   // si la tab no la usa.
@@ -272,6 +290,8 @@ export default async function DashboardPage({
               altasBajas={altasBajas}
               previous={previous}
               current={current}
+              gremioFiltro={gremioFiltro}
+              periodo={searchParams.periodo}
             />
           )}
           {activeTab === 'eventos' && <EventosTab eventos={eventos} />}
@@ -1027,10 +1047,14 @@ function AltasBajasTab({
   altasBajas,
   previous,
   current,
+  gremioFiltro,
+  periodo,
 }: {
   altasBajas: AltasYBajas | null
   previous: SnapshotMeta | null
   current: SnapshotMeta
+  gremioFiltro: GremioFiltro
+  periodo: string | undefined
 }) {
   if (!previous) {
     return (
@@ -1054,17 +1078,70 @@ function AltasBajasTab({
       </Block>
     )
   }
+
+  // Filtrar por gremio si aplica
+  const filterFn = (p: { gremios: string[] }) => {
+    if (!gremioFiltro) return true
+    if (gremioFiltro === 'ninguno') return p.gremios.length === 0
+    return p.gremios.some((g) => g.toLowerCase() === gremioFiltro)
+  }
+  const altasFiltradas = altasBajas.altas.filter(filterFn)
+  const bajasFiltradas = altasBajas.bajas.filter(filterFn)
+
   return (
     <Block
       titulo={`Altas y bajas vs ${periodoLabel(previous.periodo_year, previous.periodo_month)}`}
     >
-      <p className="mb-4 text-xs text-brand-muted">
+      {/* Chips de filtro por gremio */}
+      <GremioChips
+        active={gremioFiltro}
+        periodo={periodo}
+      />
+
+      <p className="mb-4 mt-3 text-xs text-brand-muted">
         Click en <strong>Mensaje bienvenida / despedida</strong> abre WhatsApp
         con la plantilla pre-cargada. Elegís el contacto de tu agenda. Para
         bajas con cuenta en la app también aparece el botón de email.
       </p>
-      <AltasBajasList altas={altasBajas.altas} bajas={altasBajas.bajas} />
+      <AltasBajasList altas={altasFiltradas} bajas={bajasFiltradas} />
     </Block>
+  )
+}
+
+function GremioChips({
+  active,
+  periodo,
+}: {
+  active: GremioFiltro
+  periodo: string | undefined
+}) {
+  return (
+    <nav
+      aria-label="Filtrar por gremio"
+      className="-mx-1 flex flex-wrap gap-1"
+    >
+      {GREMIO_FILTROS.map((g) => {
+        const params = new URLSearchParams()
+        params.set('tab', 'altas-bajas')
+        if (g.key) params.set('gremio', g.key)
+        if (periodo) params.set('periodo', periodo)
+        const isActive = g.key === active
+        return (
+          <Link
+            key={g.key}
+            href={`/admin/dashboard?${params.toString()}`}
+            scroll={false}
+            className={
+              isActive
+                ? 'rounded-full bg-brand-blue px-3 py-1 text-xs font-semibold text-white'
+                : 'rounded-full bg-neutral-100 px-3 py-1 text-xs font-medium text-brand-muted hover:bg-neutral-200 hover:text-brand-ink'
+            }
+          >
+            {g.label}
+          </Link>
+        )
+      })}
+    </nav>
   )
 }
 
