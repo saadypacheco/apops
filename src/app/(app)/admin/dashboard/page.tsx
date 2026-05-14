@@ -7,6 +7,7 @@ import { AltasBajasList } from '@/components/admin/AltasBajasList'
 import { ArgentinaMap } from '@/components/admin/ArgentinaMap'
 import { DashboardSidebar } from '@/components/admin/DashboardSidebar'
 import { DonutChart } from '@/components/admin/DonutChart'
+import { LineChart, type LinePoint } from '@/components/admin/LineChart'
 import {
   DashboardTabs,
   isValidTab,
@@ -174,6 +175,7 @@ export default async function DashboardPage({
               evolucion={evolucion}
               previous={previous}
               current={current}
+              snapshots={snaps}
             />
           )}
           {activeTab === 'delegados' && cd && <DelegadosTab cd={cd} />}
@@ -531,71 +533,131 @@ function EvolucionTab({
   evolucion,
   previous,
   current,
+  snapshots,
 }: {
   evolucion: Evolucion | null
   previous: SnapshotMeta | null
   current: SnapshotMeta
+  snapshots: SnapshotMeta[]
 }) {
-  if (!previous || !evolucion) {
-    return (
-      <Block titulo="Evolución mes vs mes">
-        <p className="text-sm text-brand-muted">
-          Solo hay un snapshot del padrón ({periodoLabel(current.periodo_year, current.periodo_month)}).
-          Cargá otro mes desde{' '}
-          <Link href="/admin/padron" className="text-brand-blue hover:underline">
-            /admin/padron
-          </Link>{' '}
-          para ver altas, bajas y cambios reales.
-        </p>
-      </Block>
-    )
-  }
+  // Snapshots cronológicamente ascendentes (el de abajo del array viene
+  // descendente; lo damos vuelta para el chart).
+  const cronologico = [...snapshots].sort((a, b) =>
+    a.periodo_year !== b.periodo_year
+      ? a.periodo_year - b.periodo_year
+      : a.periodo_month - b.periodo_month,
+  )
+
+  const linePoints: LinePoint[] = cronologico.map((s) => ({
+    x: periodoLabel(s.periodo_year, s.periodo_month),
+    values: {
+      apops: s.total_apops,
+      ate: s.total_ate,
+      upcn: s.total_upcn,
+      secasfpi: s.total_secasfpi,
+      delegados: s.total_delegados,
+    },
+  }))
+
   return (
     <>
-      <Block
-        titulo={`Cambios desde ${periodoLabel(previous.periodo_year, previous.periodo_month)}`}
-      >
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <DeltaStat
-            label="Altas reales"
-            value={evolucion.altasReales}
-            tone="positive"
-            hint={`${evolucion.altasApops} APOPS`}
+      {cronologico.length >= 2 && (
+        <Block
+          titulo={`Evolución por gremio (${cronologico.length} períodos)`}
+        >
+          <LineChart
+            data={linePoints}
+            series={[
+              { key: 'apops', label: 'APOPS', color: '#1d4ed8' },
+              { key: 'ate', label: 'ATE', color: '#10b981' },
+              { key: 'upcn', label: 'UPCN', color: '#a78bfa' },
+              { key: 'secasfpi', label: 'SECASFPI', color: '#f59e0b' },
+              { key: 'delegados', label: 'Delegados', color: '#64748b' },
+            ]}
+            height={260}
           />
-          <DeltaStat
-            label="Bajas reales"
-            value={evolucion.bajasReales}
-            tone="negative"
-            hint={`${evolucion.bajasApops} APOPS`}
+          <p className="mt-3 text-xs text-brand-muted">
+            Pasá el cursor sobre los puntos para ver el valor exacto en cada
+            período.
+          </p>
+        </Block>
+      )}
+
+      {cronologico.length >= 2 && (
+        <Block titulo="Cotizantes totales por período">
+          <LineChart
+            data={linePoints.map((p, i) => ({
+              x: p.x,
+              values: { cotizantes: cronologico[i]!.total_filas },
+            }))}
+            series={[
+              { key: 'cotizantes', label: 'Cotizantes', color: '#1d4ed8' },
+            ]}
+            height={200}
           />
-          <DeltaStat
-            label="Cambios categoría"
-            value={evolucion.cambiosCategoria}
-            tone="neutral"
-          />
-          <DeltaStat
-            label="Cambios gremio"
-            value={evolucion.cambiosGremio}
-            tone="neutral"
-          />
-          <DeltaStat
-            label="Cambios delegado"
-            value={evolucion.cambiosDelegado}
-            tone="neutral"
-          />
-        </div>
-        <p className="mt-4 text-xs text-brand-muted">
-          Para ver el listado detallado de quiénes son las altas y bajas con
-          accciones de mensajería, andá a la tab{' '}
-          <Link
-            href="/admin/dashboard?tab=altas-bajas"
-            className="text-brand-blue hover:underline"
-          >
-            Altas / Bajas
-          </Link>
-          .
-        </p>
-      </Block>
+        </Block>
+      )}
+
+      {previous && evolucion ? (
+        <Block
+          titulo={`Cambios desde ${periodoLabel(previous.periodo_year, previous.periodo_month)}`}
+        >
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <DeltaStat
+              label="Altas reales"
+              value={evolucion.altasReales}
+              tone="positive"
+              hint={`${evolucion.altasApops} APOPS`}
+            />
+            <DeltaStat
+              label="Bajas reales"
+              value={evolucion.bajasReales}
+              tone="negative"
+              hint={`${evolucion.bajasApops} APOPS`}
+            />
+            <DeltaStat
+              label="Cambios categoría"
+              value={evolucion.cambiosCategoria}
+              tone="neutral"
+            />
+            <DeltaStat
+              label="Cambios gremio"
+              value={evolucion.cambiosGremio}
+              tone="neutral"
+            />
+            <DeltaStat
+              label="Cambios delegado"
+              value={evolucion.cambiosDelegado}
+              tone="neutral"
+            />
+          </div>
+          <p className="mt-4 text-xs text-brand-muted">
+            Para ver el listado detallado de quiénes son las altas y bajas con
+            acciones de mensajería, andá a la tab{' '}
+            <Link
+              href="/admin/dashboard?tab=altas-bajas"
+              className="text-brand-blue hover:underline"
+            >
+              Altas / Bajas
+            </Link>
+            .
+          </p>
+        </Block>
+      ) : (
+        <Block titulo="Cambios mes vs mes">
+          <p className="text-sm text-brand-muted">
+            Necesitás al menos 2 snapshots cargados para ver altas/bajas y
+            cambios. Hoy hay{' '}
+            <strong>{cronologico.length}</strong>{' '}
+            ({cronologico.length === 1 ? 'solo el actual' : 'cargados'}). Subí
+            otro padrón desde{' '}
+            <Link href="/admin/padron" className="text-brand-blue hover:underline">
+              /admin/padron
+            </Link>
+            .
+          </p>
+        </Block>
+      )}
     </>
   )
 }
