@@ -5,6 +5,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { AppShell } from '@/components/app/AppShell'
 import { AltasBajasList } from '@/components/admin/AltasBajasList'
 import { ArgentinaMap } from '@/components/admin/ArgentinaMap'
+import { BarChart } from '@/components/admin/BarChart'
 import { DashboardSidebar } from '@/components/admin/DashboardSidebar'
 import { DonutChart } from '@/components/admin/DonutChart'
 import { EventosList } from '@/components/admin/EventosList'
@@ -17,6 +18,7 @@ import {
   type DashboardTab,
 } from '@/components/admin/DashboardTabs'
 import {
+  getAltasBajasPorMes,
   getAltasYBajas,
   getAppVsPadron,
   getComisionDirectiva,
@@ -29,6 +31,7 @@ import {
   type AppVsPadron,
   type Bucket,
   type ComisionDirectiva,
+  type DeltaPorMes,
   type DistribucionApops,
   type EventosDelMes,
   type Evolucion,
@@ -137,9 +140,19 @@ export default async function DashboardPage({
   const needsEventos = activeTab === 'eventos'
   const needsHeatmap = activeTab === 'padron'
   const needsNoticias = activeTab === 'resumen'
+  const needsAltasBajasPorMes = activeTab === 'evolucion'
 
-  const [distribucion, cd, app, evolucion, altasBajas, eventos, heatmap, noticias] =
-    await Promise.all([
+  const [
+    distribucion,
+    cd,
+    app,
+    evolucion,
+    altasBajas,
+    eventos,
+    heatmap,
+    noticias,
+    altasBajasPorMes,
+  ] = await Promise.all([
       needsDistribucion
         ? getDistribucionApops(admin, current.id)
         : Promise.resolve(null),
@@ -167,6 +180,9 @@ export default async function DashboardPage({
             .order('publicada_at', { ascending: false })
             .limit(5)
             .then((res) => res.data ?? [])
+        : Promise.resolve(null),
+      needsAltasBajasPorMes
+        ? getAltasBajasPorMes(admin, snaps)
         : Promise.resolve(null),
     ])
 
@@ -246,6 +262,7 @@ export default async function DashboardPage({
               previous={previous}
               current={current}
               snapshots={snaps}
+              deltasPorMes={altasBajasPorMes}
             />
           )}
           {activeTab === 'delegados' && cd && <DelegadosTab cd={cd} />}
@@ -685,11 +702,13 @@ function EvolucionTab({
   previous,
   current: _current,
   snapshots,
+  deltasPorMes,
 }: {
   evolucion: Evolucion | null
   previous: SnapshotMeta | null
   current: SnapshotMeta
   snapshots: SnapshotMeta[]
+  deltasPorMes: DeltaPorMes[] | null
 }) {
   // Snapshots cronológicamente ascendentes (el de abajo del array viene
   // descendente; lo damos vuelta para el chart).
@@ -746,6 +765,68 @@ function EvolucionTab({
             ]}
             height={200}
           />
+        </Block>
+      )}
+
+      {deltasPorMes && deltasPorMes.length > 0 && (
+        <Block titulo="Altas y bajas por mes">
+          <BarChart
+            data={deltasPorMes.map((d) => ({
+              x: d.periodoLabel,
+              values: { altas: d.altas, bajas: d.bajas },
+            }))}
+            series={[
+              { key: 'altas', label: 'Altas reales', color: '#10b981' },
+              { key: 'bajas', label: 'Bajas reales', color: '#ef4444' },
+            ]}
+            height={220}
+          />
+          <p className="mt-3 text-xs text-brand-muted">
+            Altas = legajos que aparecen en el mes y no estaban en el anterior.
+            Bajas = legajos que estaban en el mes anterior y desaparecen.
+          </p>
+
+          {/* Detalle APOPS por mes (sub-segmento de altas/bajas reales) */}
+          <details className="mt-3 rounded-lg bg-neutral-50 p-3 text-xs">
+            <summary className="cursor-pointer font-semibold text-brand-ink">
+              Detalle APOPS por mes ({deltasPorMes.length} períodos)
+            </summary>
+            <table className="mt-2 w-full text-xs">
+              <thead>
+                <tr className="border-b border-neutral-200 text-left text-brand-muted">
+                  <th className="py-1.5 pr-3">Período</th>
+                  <th className="py-1.5 px-2 text-right">Altas</th>
+                  <th className="py-1.5 px-2 text-right">Altas APOPS</th>
+                  <th className="py-1.5 px-2 text-right">Bajas</th>
+                  <th className="py-1.5 px-2 text-right">Bajas APOPS</th>
+                </tr>
+              </thead>
+              <tbody>
+                {deltasPorMes.map((d) => (
+                  <tr
+                    key={d.periodoLabel}
+                    className="border-b border-neutral-100 last:border-b-0"
+                  >
+                    <td className="py-1.5 pr-3 text-brand-ink">
+                      {d.periodoLabel}
+                    </td>
+                    <td className="py-1.5 px-2 text-right text-emerald-700 font-semibold">
+                      +{d.altas}
+                    </td>
+                    <td className="py-1.5 px-2 text-right text-emerald-600">
+                      {d.altasApops}
+                    </td>
+                    <td className="py-1.5 px-2 text-right text-red-700 font-semibold">
+                      −{d.bajas}
+                    </td>
+                    <td className="py-1.5 px-2 text-right text-red-600">
+                      {d.bajasApops}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </details>
         </Block>
       )}
 

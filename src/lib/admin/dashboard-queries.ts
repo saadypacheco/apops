@@ -31,6 +31,21 @@ async function fetchAllRows<Row>(query: ChunkQuery<Row>): Promise<Row[]> {
   return out
 }
 
+const MES_LABELS = [
+  'enero',
+  'febrero',
+  'marzo',
+  'abril',
+  'mayo',
+  'junio',
+  'julio',
+  'agosto',
+  'septiembre',
+  'octubre',
+  'noviembre',
+  'diciembre',
+]
+
 // =====================================================================
 // Tipos compartidos
 // =====================================================================
@@ -134,6 +149,15 @@ export type EventosDelMes = {
   mesLabel: string
   cumpleanos: EventoMes[]
   aniversarios: EventoMes[]
+}
+
+export type DeltaPorMes = {
+  /** Período "más nuevo" del par. ej. "JULIO 2016" */
+  periodoLabel: string
+  altas: number
+  bajas: number
+  altasApops: number
+  bajasApops: number
 }
 
 export type HeatmapEdificioRow = {
@@ -408,6 +432,97 @@ export async function getAppVsPadron(
 }
 
 // =====================================================================
+// Altas/bajas por mes — para bar chart de evolución
+// =====================================================================
+
+type LegajoSnap = {
+  legajo: string | null
+  afiliado_apops: boolean | null
+}
+
+/**
+ * Para cada par de snapshots adyacentes cronológicamente, computa cuántas
+ * altas y bajas hubo (real movement, no in-place changes).
+ *
+ * Más liviano que getAltasYBajas porque solo trae 2 columnas (legajo +
+ * apops flag) por snapshot. Útil para gráficos de evolución multi-mes.
+ */
+export async function getAltasBajasPorMes(
+  admin: SupabaseClient<Database>,
+  snapshots: SnapshotMeta[],
+): Promise<DeltaPorMes[]> {
+  if (snapshots.length < 2) return []
+
+  // Cronológicos ascendentes (snapshots viene desc del caller)
+  const cronologico = [...snapshots].sort((a, b) =>
+    a.periodo_year !== b.periodo_year
+      ? a.periodo_year - b.periodo_year
+      : a.periodo_month - b.periodo_month,
+  )
+
+  // Index de cada snapshot: { legajos: Set, legajosApops: Set }
+  const dataBySnap = new Map<
+    string,
+    { legajos: Set<string>; apops: Set<string> }
+  >()
+
+  for (const snap of cronologico) {
+    const rows = await fetchAllRows<LegajoSnap>(async (from, to) => {
+      const res = await admin
+        .from('padron_cotizantes')
+        .select('legajo, afiliado_apops')
+        .eq('padron_snapshot_id', snap.id)
+        .range(from, to)
+      return {
+        data: (res.data as LegajoSnap[] | null) ?? null,
+        error: res.error,
+      }
+    })
+    const legajos = new Set<string>()
+    const apops = new Set<string>()
+    for (const r of rows) {
+      if (!r.legajo) continue
+      legajos.add(r.legajo)
+      if (r.afiliado_apops) apops.add(r.legajo)
+    }
+    dataBySnap.set(snap.id, { legajos, apops })
+  }
+
+  const result: DeltaPorMes[] = []
+  for (let i = 1; i < cronologico.length; i++) {
+    const prev = dataBySnap.get(cronologico[i - 1]!.id)!
+    const curr = dataBySnap.get(cronologico[i]!.id)!
+
+    let altas = 0
+    let altasApops = 0
+    for (const leg of curr.legajos) {
+      if (!prev.legajos.has(leg)) {
+        altas++
+        if (curr.apops.has(leg)) altasApops++
+      }
+    }
+    let bajas = 0
+    let bajasApops = 0
+    for (const leg of prev.legajos) {
+      if (!curr.legajos.has(leg)) {
+        bajas++
+        if (prev.apops.has(leg)) bajasApops++
+      }
+    }
+
+    const c = cronologico[i]!
+    result.push({
+      periodoLabel: `${MES_LABELS[c.periodo_month - 1] ?? ''} ${c.periodo_year}`,
+      altas,
+      bajas,
+      altasApops,
+      bajasApops,
+    })
+  }
+  return result
+}
+
+// =====================================================================
 // Heatmap edificios — métricas por edificio para tabla coloreada
 // =====================================================================
 
@@ -481,21 +596,6 @@ type EventoRow = {
   fecha_nacimiento: string | null
   fecha_ingreso: string | null
 }
-
-const MES_LABELS = [
-  'enero',
-  'febrero',
-  'marzo',
-  'abril',
-  'mayo',
-  'junio',
-  'julio',
-  'agosto',
-  'septiembre',
-  'octubre',
-  'noviembre',
-  'diciembre',
-]
 
 /**
  * Saca los cumpleaños y aniversarios de ingreso del padrón APOPS para el mes
