@@ -118,6 +118,24 @@ export type AltasYBajas = {
   bajas: PersonaPadron[]
 }
 
+export type EventoMes = {
+  legajo: string
+  dni: string | null
+  nombre: string
+  edificio: string | null
+  /** 1-31 — día del mes en que cae el evento. */
+  dia: number
+  /** Edad que cumple (cumpleaños) o años de servicio (aniversario). null si no se puede calcular. */
+  anos: number | null
+}
+
+export type EventosDelMes = {
+  mes: number // 1-12
+  mesLabel: string
+  cumpleanos: EventoMes[]
+  aniversarios: EventoMes[]
+}
+
 // =====================================================================
 // Snapshot
 // =====================================================================
@@ -374,6 +392,113 @@ export async function getAppVsPadron(
     engaged30d: engaged30d ?? 0,
     pendientesAcceso: pendientesAcceso ?? 0,
     pendientesAfiliacion: pendientesAfiliacion ?? 0,
+  }
+}
+
+// =====================================================================
+// Eventos del mes — cumpleaños + aniversarios de ingreso (Tab eventos)
+// =====================================================================
+
+type EventoRow = {
+  legajo: string | null
+  dni: string | null
+  nombre: string
+  lugar_trabajo_padron: string | null
+  lugar_trabajo_rrhh: string | null
+  fecha_nacimiento: string | null
+  fecha_ingreso: string | null
+}
+
+const MES_LABELS = [
+  'enero',
+  'febrero',
+  'marzo',
+  'abril',
+  'mayo',
+  'junio',
+  'julio',
+  'agosto',
+  'septiembre',
+  'octubre',
+  'noviembre',
+  'diciembre',
+]
+
+/**
+ * Saca los cumpleaños y aniversarios de ingreso del padrón APOPS para el mes
+ * indicado (1-12). Si no se especifica, usa el mes actual del calendar.
+ */
+export async function getEventosDelMes(
+  admin: SupabaseClient<Database>,
+  snapshotId: string,
+  mes?: number,
+): Promise<EventosDelMes> {
+  const ahora = new Date()
+  const mesNum = mes ?? ahora.getUTCMonth() + 1
+  const anoActual = ahora.getUTCFullYear()
+
+  const rows = await fetchAllRows<EventoRow>(async (from, to) => {
+    const res = await admin
+      .from('padron_cotizantes')
+      .select(
+        'legajo, dni, nombre, lugar_trabajo_padron, lugar_trabajo_rrhh, fecha_nacimiento, fecha_ingreso',
+      )
+      .eq('padron_snapshot_id', snapshotId)
+      .eq('afiliado_apops', true)
+      .range(from, to)
+    return { data: (res.data as EventoRow[] | null) ?? null, error: res.error }
+  })
+
+  const cumpleanos: EventoMes[] = []
+  const aniversarios: EventoMes[] = []
+
+  for (const r of rows) {
+    if (!r.legajo) continue
+    const edificio = r.lugar_trabajo_padron ?? r.lugar_trabajo_rrhh
+
+    if (r.fecha_nacimiento) {
+      const d = new Date(r.fecha_nacimiento)
+      if (!isNaN(d.getTime()) && d.getUTCMonth() + 1 === mesNum) {
+        const dia = d.getUTCDate()
+        const anos = anoActual - d.getUTCFullYear()
+        cumpleanos.push({
+          legajo: r.legajo,
+          dni: r.dni,
+          nombre: r.nombre,
+          edificio,
+          dia,
+          anos: anos > 0 && anos < 120 ? anos : null,
+        })
+      }
+    }
+
+    if (r.fecha_ingreso) {
+      const d = new Date(r.fecha_ingreso)
+      if (!isNaN(d.getTime()) && d.getUTCMonth() + 1 === mesNum) {
+        const dia = d.getUTCDate()
+        const anos = anoActual - d.getUTCFullYear()
+        // Solo aniversarios "redondos" cuentan más, pero mostramos todos
+        // los que cumplen este mes.
+        aniversarios.push({
+          legajo: r.legajo,
+          dni: r.dni,
+          nombre: r.nombre,
+          edificio,
+          dia,
+          anos: anos > 0 && anos < 80 ? anos : null,
+        })
+      }
+    }
+  }
+
+  cumpleanos.sort((a, b) => a.dia - b.dia)
+  aniversarios.sort((a, b) => a.dia - b.dia)
+
+  return {
+    mes: mesNum,
+    mesLabel: MES_LABELS[mesNum - 1] ?? 'mes',
+    cumpleanos,
+    aniversarios,
   }
 }
 

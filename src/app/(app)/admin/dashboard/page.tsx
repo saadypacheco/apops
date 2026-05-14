@@ -7,6 +7,7 @@ import { AltasBajasList } from '@/components/admin/AltasBajasList'
 import { ArgentinaMap } from '@/components/admin/ArgentinaMap'
 import { DashboardSidebar } from '@/components/admin/DashboardSidebar'
 import { DonutChart } from '@/components/admin/DonutChart'
+import { EventosList } from '@/components/admin/EventosList'
 import { LineChart, type LinePoint } from '@/components/admin/LineChart'
 import {
   DashboardTabs,
@@ -18,6 +19,7 @@ import {
   getAppVsPadron,
   getComisionDirectiva,
   getDistribucionApops,
+  getEventosDelMes,
   getEvolucion,
   getSnapshots,
   type AltasYBajas,
@@ -25,6 +27,7 @@ import {
   type Bucket,
   type ComisionDirectiva,
   type DistribucionApops,
+  type EventosDelMes,
   type Evolucion,
   type SnapshotMeta,
 } from '@/lib/admin/dashboard-queries'
@@ -102,22 +105,27 @@ export default async function DashboardPage({
   const needsApp = activeTab === 'app' || activeTab === 'resumen'
   const needsEvolucion = activeTab === 'evolucion' || activeTab === 'resumen'
   const needsAltasBajas = activeTab === 'altas-bajas'
+  const needsEventos = activeTab === 'eventos'
 
-  const [distribucion, cd, app, evolucion, altasBajas] = await Promise.all([
-    needsDistribucion
-      ? getDistribucionApops(admin, current.id)
-      : Promise.resolve(null),
-    needsCD ? getComisionDirectiva(admin, current.id) : Promise.resolve(null),
-    needsApp
-      ? getAppVsPadron(admin, current.id, current.total_apops)
-      : Promise.resolve(null),
-    needsEvolucion && previous
-      ? getEvolucion(admin, current.id, previous.id)
-      : Promise.resolve(null),
-    needsAltasBajas && previous
-      ? getAltasYBajas(admin, current.id, previous.id)
-      : Promise.resolve(null),
-  ])
+  const [distribucion, cd, app, evolucion, altasBajas, eventos] =
+    await Promise.all([
+      needsDistribucion
+        ? getDistribucionApops(admin, current.id)
+        : Promise.resolve(null),
+      needsCD ? getComisionDirectiva(admin, current.id) : Promise.resolve(null),
+      needsApp
+        ? getAppVsPadron(admin, current.id, current.total_apops)
+        : Promise.resolve(null),
+      needsEvolucion && previous
+        ? getEvolucion(admin, current.id, previous.id)
+        : Promise.resolve(null),
+      needsAltasBajas && previous
+        ? getAltasYBajas(admin, current.id, previous.id)
+        : Promise.resolve(null),
+      needsEventos
+        ? getEventosDelMes(admin, current.id)
+        : Promise.resolve(null),
+    ])
 
   return (
     <AppShell nombre={session.nombre} rol={session.rol} current="admin" wide>
@@ -187,6 +195,7 @@ export default async function DashboardPage({
               current={current}
             />
           )}
+          {activeTab === 'eventos' && <EventosTab eventos={eventos} />}
 
             <DashboardFooter current={current} />
           </div>
@@ -750,6 +759,31 @@ function AppTab({ app }: { app: AppVsPadron }) {
           warn={app.pendientesAfiliacion > 0}
         />
       </div>
+    </Block>
+  )
+}
+
+function EventosTab({ eventos }: { eventos: EventosDelMes | null }) {
+  if (!eventos) {
+    return (
+      <Block titulo="Eventos del mes">
+        <p className="text-sm text-brand-muted">Cargando…</p>
+      </Block>
+    )
+  }
+  return (
+    <Block titulo={`Eventos APOPS de ${eventos.mesLabel}`}>
+      <p className="mb-4 text-xs text-brand-muted">
+        Personas afiliadas a APOPS que cumplen años o festejan aniversario de
+        ingreso al organismo en <strong>{eventos.mesLabel}</strong>. Click en
+        el botón verde abre WhatsApp con la plantilla de saludo lista para
+        mandar.
+      </p>
+      <EventosList
+        mesLabel={eventos.mesLabel}
+        cumpleanos={eventos.cumpleanos}
+        aniversarios={eventos.aniversarios}
+      />
     </Block>
   )
 }
