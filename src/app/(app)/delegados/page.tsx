@@ -2,9 +2,11 @@ import type { Metadata } from 'next'
 import { requireRole } from '@/lib/auth/role'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { AppShell } from '@/components/app/AppShell'
+import { AltasBajasList } from '@/components/admin/AltasBajasList'
 import { EventosList } from '@/components/admin/EventosList'
 import { MensajeForm } from '@/components/delegados/MensajeForm'
 import {
+  getAltasYBajas,
   getEventosDelMes,
   getSnapshots,
 } from '@/lib/admin/dashboard-queries'
@@ -106,6 +108,7 @@ export default async function DelegadosPage() {
   // Eventos del mes filtrados a mis representados (APOPS solamente)
   const snapshots = await getSnapshots(admin)
   const currentSnapshot = snapshots[0] ?? null
+  const previousSnapshot = snapshots[1] ?? null
   const legajosRepresentados = new Set(
     cotizantes.map((c) => c.legajo).filter((l): l is string => !!l),
   )
@@ -117,6 +120,28 @@ export default async function DelegadosPage() {
         legajosRepresentados,
       )
     : null
+
+  // Altas/bajas en mis edificios (todos los gremios, no solo APOPS)
+  // Edificios = union de lugar_trabajo de mis cotizantes
+  const misEdificios = new Set(
+    cotizantes
+      .map((c) => c.lugar_trabajo)
+      .filter((e): e is string => !!e),
+  )
+  const altasBajasRaw =
+    currentSnapshot && previousSnapshot
+      ? await getAltasYBajas(admin, currentSnapshot.id, previousSnapshot.id)
+      : null
+  const altasMiEdificio = altasBajasRaw
+    ? altasBajasRaw.altas.filter(
+        (p) => p.edificio && misEdificios.has(p.edificio),
+      )
+    : []
+  const bajasMiEdificio = altasBajasRaw
+    ? altasBajasRaw.bajas.filter(
+        (p) => p.edificio && misEdificios.has(p.edificio),
+      )
+    : []
 
   return (
     <AppShell nombre={session.nombre} rol={session.rol} current="delegados">
@@ -207,6 +232,28 @@ export default async function DelegadosPage() {
                 mesLabel={eventos.mesLabel}
                 cumpleanos={eventos.cumpleanos}
                 aniversarios={eventos.aniversarios}
+              />
+            </section>
+          )}
+
+        {/* Altas/bajas en mi edificio (todos los gremios) */}
+        {previousSnapshot &&
+          (altasMiEdificio.length > 0 || bajasMiEdificio.length > 0) && (
+            <section className="flex flex-col gap-3">
+              <header>
+                <h2 className="text-lg font-semibold text-brand-ink">
+                  Altas y bajas en tu edificio
+                </h2>
+                <p className="text-xs text-brand-muted">
+                  Personas que entraron o salieron de los edificios donde
+                  trabajan tus representados, comparando el padrón actual
+                  contra el anterior. Incluye TODOS los gremios — útil para
+                  invitar a APOPS o despedir compañeros.
+                </p>
+              </header>
+              <AltasBajasList
+                altas={altasMiEdificio}
+                bajas={bajasMiEdificio}
               />
             </section>
           )}
