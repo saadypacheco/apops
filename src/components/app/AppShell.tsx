@@ -20,6 +20,9 @@ type Props = {
     | 'perfil'
     | 'admin'
     | 'delegados'
+  /** Si true, el contenido se expande hasta max-w-7xl en desktop.
+   *  Mobile sigue siendo max-w-md. Para páginas tipo dashboard con sidebar. */
+  wide?: boolean
 }
 
 const roleLabel: Record<Rol, string> = {
@@ -28,7 +31,8 @@ const roleLabel: Record<Rol, string> = {
   admin: 'Administrador',
 }
 
-export function AppShell({ children, nombre, rol, current }: Props) {
+export function AppShell({ children, nombre, rol, current, wide }: Props) {
+  const mainMaxW = wide ? 'md:max-w-7xl' : 'md:max-w-md'
   const homeHref =
     rol === 'admin' ? '/admin' : rol === 'delegado' ? '/delegados' : '/feed'
 
@@ -56,7 +60,7 @@ export function AppShell({ children, nombre, rol, current }: Props) {
         </div>
       </header>
 
-      <main className="mx-auto w-full max-w-md flex-1 px-5 py-6">
+      <main className={`mx-auto w-full max-w-md ${mainMaxW} flex-1 px-5 py-6`}>
         {children}
       </main>
 

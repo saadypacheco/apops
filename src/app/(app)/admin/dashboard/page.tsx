@@ -5,6 +5,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { AppShell } from '@/components/app/AppShell'
 import { AltasBajasList } from '@/components/admin/AltasBajasList'
 import { ArgentinaMap } from '@/components/admin/ArgentinaMap'
+import { DashboardSidebar } from '@/components/admin/DashboardSidebar'
 import {
   DashboardTabs,
   isValidTab,
@@ -112,7 +113,7 @@ export default async function DashboardPage({
   ])
 
   return (
-    <AppShell nombre={session.nombre} rol={session.rol} current="admin">
+    <AppShell nombre={session.nombre} rol={session.rol} current="admin" wide>
       <div className="flex flex-col gap-5">
         <header className="flex flex-col gap-1">
           <Link
@@ -140,11 +141,17 @@ export default async function DashboardPage({
           </p>
         </header>
 
-        <DashboardTabs active={activeTab} />
+        {/* Mobile: tabs horizontal. Desktop: el menú vive en el sidebar. */}
+        <div className="md:hidden">
+          <DashboardTabs active={activeTab} />
+        </div>
 
-        {/* Contenedor de la tab activa */}
-        <div className="flex flex-col gap-5">
-          {activeTab === 'resumen' && (
+        <div className="flex flex-col gap-5 md:flex-row md:items-start">
+          <DashboardSidebar active={activeTab} />
+
+          {/* Contenedor de la tab activa */}
+          <div className="flex min-w-0 flex-1 flex-col gap-5">
+            {activeTab === 'resumen' && (
             <ResumenTab
               current={current}
               previous={previous}
@@ -172,6 +179,7 @@ export default async function DashboardPage({
               current={current}
             />
           )}
+          </div>
         </div>
       </div>
     </AppShell>
