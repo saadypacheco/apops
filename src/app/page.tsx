@@ -74,12 +74,6 @@ export default async function LandingPage({
           <BellButton />
         </header>
 
-        {/* Hero saludo */}
-        <section className="relative z-10 px-5 pb-1 pt-0.5">
-          <h1 className="text-2xl font-bold leading-tight text-white">¡Hola! 👋</h1>
-          <p className="text-sm text-white/90">Bienvenido a tu portal</p>
-        </section>
-
         {/* Carousel de noticias */}
         {noticias.length > 0 && (
           <div className="relative z-10 pb-1.5">
