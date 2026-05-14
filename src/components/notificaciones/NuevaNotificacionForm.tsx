@@ -259,6 +259,16 @@ export function NuevaNotificacionForm({ destinatarios, miRol }: Props) {
             </ul>
           </section>
 
+          {/* Plantillas rápidas — solo para admin */}
+          {miRol === 'admin' && (
+            <PlantillasRapidas
+              onSelect={(asuntoTpl, mensajeTpl) => {
+                setAsunto(asuntoTpl)
+                setMensaje(mensajeTpl)
+              }}
+            />
+          )}
+
           {/* Asunto + mensaje */}
           <div className="flex flex-col gap-1.5">
             <label htmlFor="asunto-input" className="text-xs font-semibold uppercase tracking-wider text-brand-muted">
@@ -423,5 +433,78 @@ function ConfirmarBtn() {
     >
       {pending ? 'Enviando…' : 'Confirmar envío ✓'}
     </button>
+  )
+}
+
+// =====================================================================
+// Plantillas rápidas — solo admin
+// =====================================================================
+
+type Plantilla = {
+  icon: string
+  titulo: string
+  asunto: string
+  mensaje: string
+}
+
+const PLANTILLAS_ADMIN: Plantilla[] = [
+  {
+    icon: '🥽',
+    titulo: 'Anteojos listos',
+    asunto: 'Anteojos listos para retirar',
+    mensaje:
+      'Hola. Te avisamos que los anteojos están listos para retirar en la óptica. Coordiná con tu delegado o pasá por la sede del gremio para más detalles.',
+  },
+  {
+    icon: '🌴',
+    titulo: 'Vacaciones confirmadas',
+    asunto: 'Reserva de vacaciones confirmada',
+    mensaje:
+      'Hola. Te confirmamos la reserva de vacaciones. Coordiná con tu delegado para más detalles de fechas, lugar y documentación.',
+  },
+  {
+    icon: '📋',
+    titulo: 'Trámite resuelto',
+    asunto: 'Tu trámite fue resuelto',
+    mensaje:
+      'Hola. Te avisamos que el trámite quedó resuelto. Cualquier consulta, escribinos o coordiná con tu delegado.',
+  },
+  {
+    icon: '📅',
+    titulo: 'Recordatorio plenario',
+    asunto: 'Recordatorio: próximo plenario',
+    mensaje:
+      'Hola. Te recordamos el próximo plenario. Esperamos contar con tu presencia.',
+  },
+]
+
+function PlantillasRapidas({
+  onSelect,
+}: {
+  onSelect: (asunto: string, mensaje: string) => void
+}) {
+  return (
+    <div className="flex flex-col gap-2 rounded-lg bg-brand-blue/5 p-3 ring-1 ring-brand-blue/10">
+      <span className="text-xs font-semibold uppercase tracking-wider text-brand-blue">
+        Plantillas rápidas
+      </span>
+      <p className="text-xs text-brand-muted">
+        Click en una plantilla pre-llena asunto + mensaje. Después podés editar
+        lo que necesites.
+      </p>
+      <div className="flex flex-wrap gap-2">
+        {PLANTILLAS_ADMIN.map((p) => (
+          <button
+            key={p.titulo}
+            type="button"
+            onClick={() => onSelect(p.asunto, p.mensaje)}
+            className="inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-brand-ink shadow-card transition hover:bg-brand-blue hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue"
+          >
+            <span aria-hidden>{p.icon}</span>
+            {p.titulo}
+          </button>
+        ))}
+      </div>
+    </div>
   )
 }
