@@ -69,20 +69,20 @@ export default async function LandingPage({
         />
 
         {/* Header: logo a la izquierda + campana a la derecha */}
-        <header className="relative z-10 flex w-full items-center justify-between gap-3 px-5 pb-1 pt-3">
+        <header className="relative z-10 flex w-full items-center justify-between gap-3 px-5 pb-0.5 pt-2">
           <Logo as="onBlue" priority />
           <BellButton />
         </header>
 
         {/* Hero saludo */}
-        <section className="relative z-10 px-5 pb-2 pt-1">
+        <section className="relative z-10 px-5 pb-1 pt-0.5">
           <h1 className="text-2xl font-bold leading-tight text-white">¡Hola! 👋</h1>
           <p className="text-sm text-white/90">Bienvenido a tu portal</p>
         </section>
 
         {/* Carousel de noticias */}
         {noticias.length > 0 && (
-          <div className="relative z-10 pb-3">
+          <div className="relative z-10 pb-1.5">
             <NoticiasCarousel noticias={noticias} />
           </div>
         )}
@@ -93,7 +93,7 @@ export default async function LandingPage({
         </section>
 
         {/* CTA: afiliarse */}
-        <div className="relative z-10 px-5 pt-2">
+        <div className="relative z-10 px-5 pt-1.5">
           <div className="flex items-center gap-3 rounded-2xl bg-white p-2.5 shadow-card">
             <span
               aria-hidden
@@ -114,7 +114,7 @@ export default async function LandingPage({
         </div>
 
         {/* Footer */}
-        <footer className="relative z-10 mt-3 px-5 pb-3">
+        <footer className="relative z-10 mt-1.5 px-5 pb-2">
           <div className="flex flex-col items-center gap-0.5 rounded-2xl bg-white/85 px-4 py-2 text-center text-[11px] text-brand-ink shadow-card backdrop-blur-sm">
             <p className="font-medium">
               Viamonte 1654, CABA · (011) 5544-8300

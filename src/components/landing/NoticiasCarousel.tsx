@@ -89,7 +89,7 @@ export function NoticiasCarousel({ noticias }: { noticias: Noticia[] }) {
   return (
     <section
       aria-label="Últimas noticias del gremio"
-      className="flex flex-col gap-2.5"
+      className="flex flex-col gap-1.5"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
       onTouchStart={() => setPaused(true)}
@@ -146,39 +146,6 @@ export function NoticiasCarousel({ noticias }: { noticias: Noticia[] }) {
           </>
         )}
       </div>
-
-      {noticias.length > 1 && (
-        <div
-          className="flex items-center justify-center gap-1 px-5"
-          role="tablist"
-          aria-label="Indicador de noticia"
-        >
-          {noticias.map((n, i) => (
-            <button
-              key={n.id}
-              type="button"
-              role="tab"
-              aria-selected={i === active}
-              aria-label={`Ir a noticia ${i + 1} de ${noticias.length}`}
-              onClick={() => goTo(i)}
-              // Target táctil 44px para WCAG (la regla global de globals.css
-              // ya nos da min-height; agregamos min-width). El dot visual
-              // chico va adentro como span aria-hidden.
-              className="group flex min-h-touch min-w-touch items-center justify-center bg-transparent p-0 focus-visible:outline-none"
-            >
-              <span
-                aria-hidden
-                className={
-                  'h-2 w-2 rounded-full transition-colors group-focus-visible:ring-2 group-focus-visible:ring-white ' +
-                  (i === active
-                    ? 'bg-brand-blue'
-                    : 'bg-white/50 group-hover:bg-white/75')
-                }
-              />
-            </button>
-          ))}
-        </div>
-      )}
     </section>
   )
 }
