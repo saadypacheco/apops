@@ -105,6 +105,16 @@ function normalizeName(s: string): string {
     .replace(/[̀-ͯ]/g, '')
 }
 
+function gremioLabel(p: {
+  gremios: ('APOPS' | 'ATE' | 'UPCN' | 'SECASFPI')[]
+  cotizaPapel: boolean
+}): string {
+  if (p.gremios.length === 0 && !p.cotizaPapel) return 'sin gremio'
+  const parts: string[] = [...p.gremios]
+  if (p.cotizaPapel) parts.push('papel jubilado')
+  return parts.join(' · ')
+}
+
 /**
  * Tras cargar un padrón nuevo, notifica a cada delegado registrado en la
  * app sobre las altas/bajas reales en sus edificios. Crea hilos de
@@ -226,16 +236,31 @@ async function notifyDelegatesAboutMovements(args: {
     const susEdificios = edificiosPorDelegado.get(key)
     if (!susEdificios || susEdificios.size === 0) continue
 
-    // Edificios suyos con movimiento + conteos
+    // Edificios suyos con movimiento + detalle de cada persona
     const lines: string[] = []
     for (const edif of susEdificios) {
-      const altas = altasByEdif.get(edif)?.length ?? 0
-      const bajas = bajasByEdif.get(edif)?.length ?? 0
-      if (altas === 0 && bajas === 0) continue
-      const parts: string[] = []
-      if (altas > 0) parts.push(`+${altas} alta${altas === 1 ? '' : 's'}`)
-      if (bajas > 0) parts.push(`-${bajas} baja${bajas === 1 ? '' : 's'}`)
-      lines.push(`• ${edif}: ${parts.join(' / ')}`)
+      const altasEdif = altasByEdif.get(edif) ?? []
+      const bajasEdif = bajasByEdif.get(edif) ?? []
+      if (altasEdif.length === 0 && bajasEdif.length === 0) continue
+
+      lines.push(`📍 ${edif}`)
+      if (altasEdif.length > 0) {
+        lines.push(
+          `  🟢 Altas (${altasEdif.length}):`,
+        )
+        for (const p of altasEdif) {
+          lines.push(`    • ${p.nombre} (${gremioLabel(p)})`)
+        }
+      }
+      if (bajasEdif.length > 0) {
+        lines.push(
+          `  🔴 Bajas (${bajasEdif.length}):`,
+        )
+        for (const p of bajasEdif) {
+          lines.push(`    • ${p.nombre} (${gremioLabel(p)})`)
+        }
+      }
+      lines.push('') // separador entre edificios
     }
     if (lines.length === 0) continue
 
@@ -247,8 +272,7 @@ async function notifyDelegatesAboutMovements(args: {
       `Se cargó el padrón de ${periodoLabel} y detectamos cambios en los edificios donde trabajan tus representados:`,
       '',
       ...lines,
-      '',
-      'Entrá a la app (sección Delegados) para ver los nombres y mandarles saludo de bienvenida o despedida.',
+      'Entrá a la app (sección Delegados) para ver los nombres completos, DNI/legajo, y mandarles saludo de bienvenida o despedida.',
     ].join('\n')
 
     const { data: hilo, error: hiloErr } = await admin

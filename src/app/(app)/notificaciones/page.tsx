@@ -40,17 +40,45 @@ function initials(nombre: string): string {
 
 type Tab = 'todos' | 'sin-leer'
 
+function normalize(s: string): string {
+  return s
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+}
+
 export default async function NotificacionesInboxPage({
   searchParams,
 }: {
-  searchParams?: { tab?: string }
+  searchParams?: { tab?: string; q?: string }
 }) {
   const session = await requireRole('afiliado')
   const tab: Tab = searchParams?.tab === 'sin-leer' ? 'sin-leer' : 'todos'
+  const q = (searchParams?.q ?? '').trim()
+  const qNorm = q ? normalize(q) : ''
 
   const hilos = await getHilosDelUsuario(session.afiliadoId)
+
+  // Filtro por búsqueda (nombre/apellido contraparte, DNI, legajo, asunto)
+  const aplicarBusqueda = (h: (typeof hilos)[number]) => {
+    if (!qNorm) return true
+    if (normalize(h.contraparteNombre).includes(qNorm)) return true
+    if (normalize(h.asunto).includes(qNorm)) return true
+    if (h.contraparteDni && h.contraparteDni.includes(qNorm)) return true
+    if (
+      h.contraparteLegajo &&
+      normalize(h.contraparteLegajo).includes(qNorm)
+    )
+      return true
+    return false
+  }
+
+  const hilosBuscados = hilos.filter(aplicarBusqueda)
   const hilosFiltrados =
-    tab === 'sin-leer' ? hilos.filter((h) => !h.leidoPorMi) : hilos
+    tab === 'sin-leer'
+      ? hilosBuscados.filter((h) => !h.leidoPorMi)
+      : hilosBuscados
 
   const sinLeerCount = hilos.filter((h) => !h.leidoPorMi).length
 
@@ -82,10 +110,43 @@ export default async function NotificacionesInboxPage({
           </Link>
         </header>
 
+        {/* Búsqueda + tabs */}
+        <form
+          method="GET"
+          className="flex flex-col gap-2 sm:flex-row sm:items-center"
+          aria-label="Buscar en notificaciones"
+        >
+          {/* preserva tab al buscar */}
+          <input type="hidden" name="tab" value={tab} />
+          <input
+            type="search"
+            name="q"
+            defaultValue={q}
+            placeholder="Buscar por nombre, DNI, legajo o asunto"
+            maxLength={50}
+            className="flex-1 rounded-lg border border-neutral-300 px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue"
+          />
+          {q ? (
+            <Link
+              href={`/notificaciones${tab === 'sin-leer' ? '?tab=sin-leer' : ''}`}
+              className="text-xs text-brand-blue hover:underline"
+            >
+              Limpiar
+            </Link>
+          ) : (
+            <button
+              type="submit"
+              className="rounded-lg bg-brand-blue px-3 py-2 text-xs font-semibold text-white hover:bg-brand-blue/90"
+            >
+              Buscar
+            </button>
+          )}
+        </form>
+
         {/* Tabs */}
         <div className="flex gap-2">
           <Link
-            href="/notificaciones?tab=todos"
+            href={`/notificaciones?tab=todos${q ? `&q=${encodeURIComponent(q)}` : ''}`}
             className={
               'rounded-full px-3 py-1 text-xs font-semibold transition ' +
               (tab === 'todos'
@@ -93,10 +154,10 @@ export default async function NotificacionesInboxPage({
                 : 'bg-neutral-100 text-brand-muted hover:bg-neutral-200')
             }
           >
-            Todas ({hilos.length})
+            Todas ({q ? hilosBuscados.length : hilos.length})
           </Link>
           <Link
-            href="/notificaciones?tab=sin-leer"
+            href={`/notificaciones?tab=sin-leer${q ? `&q=${encodeURIComponent(q)}` : ''}`}
             className={
               'inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold transition ' +
               (tab === 'sin-leer'
@@ -177,6 +238,21 @@ export default async function NotificacionesInboxPage({
                           {formatRelative(h.ultimoMensajeAt)}
                         </span>
                       </header>
+
+                      {/* DNI / legajo de la contraparte (útil para admin) */}
+                      {(h.contraparteDni || h.contraparteLegajo) && (
+                        <p className="text-[10px] text-brand-muted/80">
+                          {h.contraparteDni && (
+                            <span>DNI {h.contraparteDni}</span>
+                          )}
+                          {h.contraparteDni && h.contraparteLegajo && (
+                            <span> · </span>
+                          )}
+                          {h.contraparteLegajo && (
+                            <span>L-{h.contraparteLegajo.replace(/^L-?/, '')}</span>
+                          )}
+                        </p>
+                      )}
 
                       <p
                         className={

@@ -181,12 +181,18 @@ export async function getHilosDelUsuario(
   )
   const { data: personas } = await admin
     .from('afiliados')
-    .select('id, nombre, rol')
+    .select('id, nombre, rol, dni, legajo')
     .in('id', contraparteIds)
   const personaById = new Map(
-    ((personas ?? []) as Array<{ id: string; nombre: string; rol: string }>).map(
-      (p) => [p.id, p],
-    ),
+    (
+      (personas ?? []) as Array<{
+        id: string
+        nombre: string
+        rol: string
+        dni: string | null
+        legajo: string | null
+      }>
+    ).map((p) => [p.id, p]),
   )
 
   // Lookup batch del último mensaje de cada hilo (preview)
@@ -220,6 +226,8 @@ export async function getHilosDelUsuario(
       yoSoyAutor,
       contraparteNombre: contraparte?.nombre ?? 'Usuario eliminado',
       contraparteRol: (contraparte?.rol as Rol) ?? 'afiliado',
+      contraparteDni: contraparte?.dni ?? null,
+      contraparteLegajo: contraparte?.legajo ?? null,
       leidoPorMi,
       ultimoMensajePreview: previewByHilo.get(h.id) ?? '',
     }

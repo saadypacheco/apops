@@ -61,6 +61,10 @@ export type HiloResumen = {
   yoSoyAutor: boolean // true si yo inicié el hilo, false si soy destinatario
   contraparteNombre: string
   contraparteRol: 'afiliado' | 'delegado' | 'admin'
+  /** DNI de la contraparte. Útil para búsqueda admin por documento. */
+  contraparteDni: string | null
+  /** Legajo de la contraparte. Útil para búsqueda admin. */
+  contraparteLegajo: string | null
   leidoPorMi: boolean
   ultimoMensajePreview: string
 }
