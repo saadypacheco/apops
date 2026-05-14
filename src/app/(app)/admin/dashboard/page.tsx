@@ -78,6 +78,15 @@ function deltaPct(current: number, previous: number): number {
 
 type SearchParams = { tab?: string }
 
+type NoticiaResumen = {
+  id: string
+  titulo: string
+  resumen: string | null
+  publicada_at: string | null
+  autor: string | null
+  destacada: boolean | null
+}
+
 export default async function DashboardPage({
   searchParams,
 }: {
@@ -110,8 +119,9 @@ export default async function DashboardPage({
   const needsAltasBajas = activeTab === 'altas-bajas'
   const needsEventos = activeTab === 'eventos'
   const needsHeatmap = activeTab === 'padron'
+  const needsNoticias = activeTab === 'resumen'
 
-  const [distribucion, cd, app, evolucion, altasBajas, eventos, heatmap] =
+  const [distribucion, cd, app, evolucion, altasBajas, eventos, heatmap, noticias] =
     await Promise.all([
       needsDistribucion
         ? getDistribucionApops(admin, current.id)
@@ -131,6 +141,15 @@ export default async function DashboardPage({
         : Promise.resolve(null),
       needsHeatmap
         ? getHeatmapEdificios(admin, current.id)
+        : Promise.resolve(null),
+      needsNoticias
+        ? admin
+            .from('noticias')
+            .select('id, titulo, resumen, publicada_at, autor, destacada')
+            .eq('publicada', true)
+            .order('publicada_at', { ascending: false })
+            .limit(5)
+            .then((res) => res.data ?? [])
         : Promise.resolve(null),
     ])
 
@@ -180,6 +199,7 @@ export default async function DashboardPage({
               evolucion={evolucion}
               app={app}
               cd={cd}
+              noticias={(noticias as NoticiaResumen[] | null) ?? []}
             />
           )}
           {activeTab === 'padron' && distribucion && (
@@ -248,12 +268,14 @@ function ResumenTab({
   evolucion,
   app,
   cd,
+  noticias,
 }: {
   current: SnapshotMeta
   previous: SnapshotMeta | null
   evolucion: Evolucion | null
   app: AppVsPadron | null
   cd: ComisionDirectiva | null
+  noticias: NoticiaResumen[]
 }) {
   const prevLabel = previous
     ? `vs ${periodoLabel(previous.periodo_year, previous.periodo_month)}`
@@ -417,11 +439,15 @@ function ResumenTab({
               label="Mandatos vencen 30d"
               value={cd.mandatosVencen30.length}
               warn={cd.mandatosVencen30.length > 0}
+              objetivo="0"
+              objetivoMax={0}
             />
             <BigStat
               label="Edificios sin delegado"
               value={cd.edificiosSinDelegado.length}
               warn={cd.edificiosSinDelegado.length > 0}
+              objetivo="0"
+              objetivoMax={0}
             />
           </div>
           <p className="mt-3 text-xs text-brand-muted">
@@ -430,6 +456,62 @@ function ResumenTab({
               className="text-brand-blue hover:underline"
             >
               Ver detalle CD →
+            </Link>
+          </p>
+        </Block>
+      )}
+
+      {noticias.length > 0 && (
+        <Block titulo="Últimas novedades publicadas">
+          <ul className="flex flex-col gap-3">
+            {noticias.map((n) => (
+              <li
+                key={n.id}
+                className="flex gap-3 border-b border-neutral-100 pb-3 last:border-b-0 last:pb-0"
+              >
+                <span
+                  aria-hidden
+                  className={
+                    'mt-1.5 h-2 w-2 shrink-0 rounded-full ' +
+                    (n.destacada ? 'bg-amber-400' : 'bg-brand-blue/60')
+                  }
+                />
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-baseline justify-between gap-2">
+                    <p className="truncate text-xs uppercase tracking-wide text-brand-muted">
+                      {n.publicada_at
+                        ? new Date(n.publicada_at).toLocaleDateString('es-AR', {
+                            day: '2-digit',
+                            month: '2-digit',
+                            year: 'numeric',
+                          })
+                        : 'Sin fecha'}
+                      {n.autor && <span> · {n.autor}</span>}
+                    </p>
+                    {n.destacada && (
+                      <span className="shrink-0 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-900">
+                        DESTACADA
+                      </span>
+                    )}
+                  </div>
+                  <h3 className="text-sm font-semibold text-brand-ink">
+                    {n.titulo}
+                  </h3>
+                  {n.resumen && (
+                    <p className="line-clamp-2 text-xs text-brand-muted">
+                      {n.resumen}
+                    </p>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-3 text-xs text-brand-muted">
+            <Link
+              href="/admin/novedades"
+              className="text-brand-blue hover:underline"
+            >
+              Gestionar novedades →
             </Link>
           </p>
         </Block>
@@ -709,12 +791,16 @@ function DelegadosTab({ cd }: { cd: ComisionDirectiva }) {
           label="Mandatos vencen 30 días"
           value={cd.mandatosVencen30.length}
           warn={cd.mandatosVencen30.length > 0}
+          objetivo="0"
+          objetivoMax={0}
         />
         <BigStat
           label="Edificios sin delegado"
           value={cd.edificiosSinDelegado.length}
           warn={cd.edificiosSinDelegado.length > 0}
           hint="con APOPS pero ningún delegado asignado"
+          objetivo="0"
+          objetivoMax={0}
         />
       </div>
 
@@ -754,6 +840,10 @@ function DelegadosTab({ cd }: { cd: ComisionDirectiva }) {
 }
 
 function AppTab({ app }: { app: AppVsPadron }) {
+  const engagementPct =
+    app.totalActivos > 0
+      ? Math.round((app.engaged30d / app.totalActivos) * 100)
+      : 0
   return (
     <Block titulo="App APOPS vs padrón">
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -768,12 +858,16 @@ function AppTab({ app }: { app: AppVsPadron }) {
           value={app.porcentajeAdopcion}
           suffix="%"
           hint={`sobre ${numero(app.totalApopsEnPadron)} APOPS`}
+          objetivo="70%"
+          objetivoMin={70}
         />
         <BigStat
           label="Engagement 30d"
-          value={app.engaged30d}
-          of={app.totalActivos}
-          hint="ingresaron en los últimos 30 días"
+          value={engagementPct}
+          suffix="%"
+          hint={`${numero(app.engaged30d)} de ${numero(app.totalActivos)} activos`}
+          objetivo="50%"
+          objetivoMin={50}
         />
       </div>
       <div className="mt-4 grid grid-cols-2 gap-3">
@@ -1053,6 +1147,9 @@ function BigStat({
   primary,
   warn,
   suffix,
+  objetivo,
+  objetivoMin,
+  objetivoMax,
 }: {
   label: string
   value: number
@@ -1061,6 +1158,9 @@ function BigStat({
   primary?: boolean
   warn?: boolean
   suffix?: string
+  objetivo?: string
+  objetivoMin?: number
+  objetivoMax?: number
 }) {
   return (
     <div className="flex flex-col">
@@ -1085,6 +1185,14 @@ function BigStat({
         )}
       </span>
       {hint && <span className="text-xs text-brand-muted">{hint}</span>}
+      {objetivo !== undefined && (
+        <ObjetivoBadge
+          value={value}
+          objetivo={objetivo}
+          min={objetivoMin}
+          max={objetivoMax}
+        />
+      )}
     </div>
   )
 }
