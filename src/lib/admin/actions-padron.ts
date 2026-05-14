@@ -2,9 +2,12 @@
 
 import { headers } from 'next/headers'
 import { revalidatePath } from 'next/cache'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getCurrentAfiliado } from '@/lib/auth/role'
 import { parseXlsxPadron } from '@/lib/admin/padron-parser'
+import { getAltasYBajas } from '@/lib/admin/dashboard-queries'
+import type { Database } from '@/lib/supabase/types'
 import type {
   PadronRow,
   SoftError,
@@ -88,6 +91,189 @@ function calcTotals(
     plantaPerm: rows.filter((r) => r.tipo_planta === 'PP').length,
     plantaTrans: rows.filter((r) => r.tipo_planta === 'PT').length,
   }
+}
+
+// =====================================================================
+// Notificación in-app a delegados ante altas/bajas en sus edificios
+// =====================================================================
+
+function normalizeName(s: string): string {
+  return s
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+}
+
+/**
+ * Tras cargar un padrón nuevo, notifica a cada delegado registrado en la
+ * app sobre las altas/bajas reales en sus edificios. Crea hilos de
+ * notificación in-app (no Web Push aún) usando la infra existente.
+ *
+ * Idempotencia: si la función falla a mitad, algunos delegados pueden ya
+ * tener notif y otros no. El re-disparo crearía duplicados. Por ahora
+ * aceptamos eso a cambio de simpleza (la importación misma es la
+ * operación crítica; las notif son "best effort").
+ */
+async function notifyDelegatesAboutMovements(args: {
+  admin: SupabaseClient<Database>
+  currentSnapshotId: string
+  periodoLabel: string
+  adminAfiliadoId: string
+  log: (step: string, data?: Record<string, unknown>) => void
+}): Promise<{ delegatesNotified: number }> {
+  const { admin, currentSnapshotId, periodoLabel, adminAfiliadoId, log } = args
+
+  // 1. Encontrar el snapshot inmediato anterior cronológicamente
+  const { data: allSnaps } = await admin
+    .from('padron_snapshots')
+    .select('id, periodo_year, periodo_month')
+  const sorted = [...(allSnaps ?? [])].sort((a, b) =>
+    a.periodo_year !== b.periodo_year
+      ? b.periodo_year - a.periodo_year
+      : b.periodo_month - a.periodo_month,
+  )
+  const currentIdx = sorted.findIndex((s) => s.id === currentSnapshotId)
+  const previousSnap = currentIdx >= 0 ? sorted[currentIdx + 1] : null
+  if (!previousSnap) {
+    log('notif_no_previous')
+    return { delegatesNotified: 0 }
+  }
+
+  // 2. Computar altas/bajas reales contra snapshot anterior
+  const altasYBajas = await getAltasYBajas(
+    admin,
+    currentSnapshotId,
+    previousSnap.id,
+  )
+
+  // 3. Index altas/bajas por edificio (normalizado)
+  const altasByEdif = new Map<string, typeof altasYBajas.altas>()
+  const bajasByEdif = new Map<string, typeof altasYBajas.bajas>()
+  for (const a of altasYBajas.altas) {
+    if (!a.edificio) continue
+    const arr = altasByEdif.get(a.edificio) ?? []
+    arr.push(a)
+    altasByEdif.set(a.edificio, arr)
+  }
+  for (const b of altasYBajas.bajas) {
+    if (!b.edificio) continue
+    const arr = bajasByEdif.get(b.edificio) ?? []
+    arr.push(b)
+    bajasByEdif.set(b.edificio, arr)
+  }
+
+  const edificiosConMovimiento = new Set([
+    ...altasByEdif.keys(),
+    ...bajasByEdif.keys(),
+  ])
+  if (edificiosConMovimiento.size === 0) {
+    log('notif_no_movements')
+    return { delegatesNotified: 0 }
+  }
+  log('notif_movements', { edificios: edificiosConMovimiento.size })
+
+  // 4. Buscar delegados registrados en la app
+  const { data: delegadosApp } = await admin
+    .from('afiliados')
+    .select('id, nombre')
+    .eq('rol', 'delegado')
+    .eq('estado', 'activo')
+  const delegados = (delegadosApp ?? []) as { id: string; nombre: string }[]
+  if (delegados.length === 0) {
+    log('notif_no_delegados_app')
+    return { delegatesNotified: 0 }
+  }
+
+  // 5. Mapear nombre normalizado → edificios del delegado (current snapshot)
+  // Una sola query paginada en JS.
+  type RepRow = {
+    representante: string | null
+    lugar_trabajo_padron: string | null
+    lugar_trabajo_rrhh: string | null
+  }
+  const CHUNK = 1000
+  const repRows: RepRow[] = []
+  let from = 0
+  while (true) {
+    const { data, error } = await admin
+      .from('padron_cotizantes')
+      .select('representante, lugar_trabajo_padron, lugar_trabajo_rrhh')
+      .eq('padron_snapshot_id', currentSnapshotId)
+      .not('representante', 'is', null)
+      .range(from, from + CHUNK - 1)
+    if (error || !data) break
+    repRows.push(...(data as RepRow[]))
+    if (data.length < CHUNK) break
+    from += CHUNK
+  }
+  const edificiosPorDelegado = new Map<string, Set<string>>()
+  for (const r of repRows) {
+    if (!r.representante) continue
+    const key = normalizeName(r.representante)
+    const edif = r.lugar_trabajo_padron ?? r.lugar_trabajo_rrhh
+    if (!edif) continue
+    const set = edificiosPorDelegado.get(key) ?? new Set<string>()
+    set.add(edif)
+    edificiosPorDelegado.set(key, set)
+  }
+
+  // 6. Para cada delegado registrado: ¿alguno de sus edificios tuvo movimiento?
+  let delegatesNotified = 0
+  for (const d of delegados) {
+    if (d.id === adminAfiliadoId) continue // no notifiqués al que cargó
+    const key = normalizeName(d.nombre)
+    const susEdificios = edificiosPorDelegado.get(key)
+    if (!susEdificios || susEdificios.size === 0) continue
+
+    // Edificios suyos con movimiento + conteos
+    const lines: string[] = []
+    for (const edif of susEdificios) {
+      const altas = altasByEdif.get(edif)?.length ?? 0
+      const bajas = bajasByEdif.get(edif)?.length ?? 0
+      if (altas === 0 && bajas === 0) continue
+      const parts: string[] = []
+      if (altas > 0) parts.push(`+${altas} alta${altas === 1 ? '' : 's'}`)
+      if (bajas > 0) parts.push(`-${bajas} baja${bajas === 1 ? '' : 's'}`)
+      lines.push(`• ${edif}: ${parts.join(' / ')}`)
+    }
+    if (lines.length === 0) continue
+
+    // Crear hilo + primer mensaje
+    const asunto = `Movimiento en tu edificio — ${periodoLabel}`
+    const mensaje = [
+      `Hola ${d.nombre.split(',')[1]?.trim().split(' ')[0] ?? d.nombre}.`,
+      '',
+      `Se cargó el padrón de ${periodoLabel} y detectamos cambios en los edificios donde trabajan tus representados:`,
+      '',
+      ...lines,
+      '',
+      'Entrá a la app (sección Delegados) para ver los nombres y mandarles saludo de bienvenida o despedida.',
+    ].join('\n')
+
+    const { data: hilo, error: hiloErr } = await admin
+      .from('hilos_notificacion')
+      .insert({
+        autor_id: adminAfiliadoId,
+        destinatario_id: d.id,
+        asunto,
+        leido_destinatario: false,
+        leido_autor: true,
+      })
+      .select('id')
+      .single()
+    if (hiloErr || !hilo) continue
+
+    await admin.from('mensajes_notificacion').insert({
+      hilo_id: hilo.id,
+      autor_id: adminAfiliadoId,
+      mensaje,
+    })
+    delegatesNotified++
+  }
+
+  log('notif_done', { delegatesNotified })
+  return { delegatesNotified }
 }
 
 // =====================================================================
@@ -363,6 +549,21 @@ export async function subirPadron(
     },
   })
   log('audit_logged')
+
+  // Notificación in-app a delegados sobre movimientos en sus edificios.
+  // Best-effort: si falla no abortamos la carga (ya está hecha).
+  try {
+    const { delegatesNotified } = await notifyDelegatesAboutMovements({
+      admin,
+      currentSnapshotId: snapshotId,
+      periodoLabel: periodo.label,
+      adminAfiliadoId: auth.afiliadoId,
+      log,
+    })
+    log('notif_delegates_completed', { count: delegatesNotified })
+  } catch (e) {
+    console.error('[PADRON_IMPORT] Notif delegados falló:', e)
+  }
 
   // Las páginas de admin (padrón + dashboard) ven datos nuevos.
   revalidatePath('/admin')
