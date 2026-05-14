@@ -52,8 +52,9 @@ dist/
 *.tsbuildinfo
 next-env.d.ts.bak
 
-# Service Worker generado por next-pwa (si lo usamos)
-public/sw.js
+# Service Worker — usábamos next-pwa que lo generaba. Ahora lo escribimos
+# a mano (commit) para tener control total. Sólo ignoramos el .map y los
+# workbox-* helpers que se generan automáticamente si volvemos a next-pwa.
 public/sw.js.map
 public/workbox-*.js
 public/workbox-*.js.map
