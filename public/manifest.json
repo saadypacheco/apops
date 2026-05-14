@@ -2,6 +2,7 @@
   "name": "APOPS Siempre",
   "short_name": "APOPS",
   "description": "App del gremio APOPS de ANSES — consultas, comunicados y credencial digital.",
+  "id": "apops-siempre",
   "start_url": "/",
   "display": "standalone",
   "orientation": "portrait",
@@ -9,6 +10,22 @@
   "theme_color": "#0F2A47",
   "lang": "es-AR",
   "scope": "/",
+  "screenshots": [
+    {
+      "src": "/screenshots/mobile-1.png",
+      "sizes": "540x1170",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "APOPS Siempre en celular"
+    },
+    {
+      "src": "/screenshots/desktop-1.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "APOPS Siempre — vista para Comisión Directiva"
+    }
+  ],
   "icons": [
     {
       "src": "/icons/icon-192.png",
