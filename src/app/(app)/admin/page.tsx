@@ -285,6 +285,29 @@ export default async function AdminPage() {
             </div>
             <span aria-hidden className="text-brand-blue">→</span>
           </Link>
+
+          <Link
+            href="/admin/adherentes"
+            className="flex items-center justify-between rounded-xl bg-white p-4 shadow-card transition hover:shadow-cardHover"
+          >
+            <div className="flex items-center gap-3">
+              <span
+                aria-hidden
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand-blue/10 text-brand-blue"
+              >
+                <FamilyIcon />
+              </span>
+              <div className="flex flex-col leading-tight">
+                <span className="text-base font-semibold text-brand-ink">
+                  Adherentes
+                </span>
+                <span className="text-xs text-brand-muted">
+                  Cargar Excel de familiares
+                </span>
+              </div>
+            </div>
+            <span aria-hidden className="text-brand-blue">→</span>
+          </Link>
         </nav>
 
         {/* ============================================================
@@ -484,6 +507,23 @@ function ChatIcon() {
         strokeLinecap="round"
         strokeLinejoin="round"
       />
+    </svg>
+  )
+}
+
+function FamilyIcon() {
+  return (
+    <svg
+      aria-hidden
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      className="h-5 w-5"
+    >
+      <circle cx="8" cy="6" r="3" />
+      <circle cx="16" cy="6" r="3" />
+      <path d="M2 21v-2a4 4 0 014-4h4a4 4 0 014 4v2M14 21v-2a4 4 0 014-4h0a4 4 0 014 4v2" strokeLinecap="round" />
     </svg>
   )
 }

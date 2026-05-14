@@ -130,9 +130,19 @@ async function notifyDelegatesAboutMovements(args: {
   currentSnapshotId: string
   periodoLabel: string
   adminAfiliadoId: string
+  /** Si true, este upload fue un reemplazo (force=true). Saltamos las notif
+   *  para no duplicar lo que ya se mandó en el upload original. El admin
+   *  puede mandar el mensaje manual si necesita re-notificar. */
+  isReplacement: boolean
   log: (step: string, data?: Record<string, unknown>) => void
-}): Promise<{ delegatesNotified: number }> {
-  const { admin, currentSnapshotId, periodoLabel, adminAfiliadoId, log } = args
+}): Promise<{ delegatesNotified: number; skippedReason?: string }> {
+  const { admin, currentSnapshotId, periodoLabel, adminAfiliadoId, isReplacement, log } = args
+
+  // Regla B: si es reemplazo de un período ya cargado, no re-notificar.
+  if (isReplacement) {
+    log('notif_skipped_replacement')
+    return { delegatesNotified: 0, skippedReason: 'replacement' }
+  }
 
   // 1. Encontrar el snapshot inmediato anterior cronológicamente
   const { data: allSnaps } = await admin
@@ -266,6 +276,24 @@ async function notifyDelegatesAboutMovements(args: {
 
     // Crear hilo + primer mensaje
     const asunto = `Movimiento en tu edificio — ${periodoLabel}`
+
+    // Regla A: idempotencia por ventana 24h. Si ya existe un hilo del mismo
+    // admin → mismo destinatario → mismo asunto, no creamos otro. Protege
+    // contra re-uploads que se cuelen sin force=true, o doble-trigger.
+    const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+    const { data: existingHilo } = await admin
+      .from('hilos_notificacion')
+      .select('id')
+      .eq('autor_id', adminAfiliadoId)
+      .eq('destinatario_id', d.id)
+      .eq('asunto', asunto)
+      .gte('created_at', since24h)
+      .maybeSingle()
+    if (existingHilo) {
+      log('notif_skipped_dup', { delegateId: d.id, hiloExistente: existingHilo.id })
+      continue
+    }
+
     const mensaje = [
       `Hola ${d.nombre.split(',')[1]?.trim().split(' ')[0] ?? d.nombre}.`,
       '',
@@ -576,15 +604,19 @@ export async function subirPadron(
 
   // Notificación in-app a delegados sobre movimientos en sus edificios.
   // Best-effort: si falla no abortamos la carga (ya está hecha).
+  // Si es un reemplazo (force=true) saltamos para no duplicar las notif
+  // que ya se mandaron en el upload original.
   try {
-    const { delegatesNotified } = await notifyDelegatesAboutMovements({
-      admin,
-      currentSnapshotId: snapshotId,
-      periodoLabel: periodo.label,
-      adminAfiliadoId: auth.afiliadoId,
-      log,
-    })
-    log('notif_delegates_completed', { count: delegatesNotified })
+    const { delegatesNotified, skippedReason } =
+      await notifyDelegatesAboutMovements({
+        admin,
+        currentSnapshotId: snapshotId,
+        periodoLabel: periodo.label,
+        adminAfiliadoId: auth.afiliadoId,
+        isReplacement: !!existing && force,
+        log,
+      })
+    log('notif_delegates_completed', { count: delegatesNotified, skippedReason })
   } catch (e) {
     console.error('[PADRON_IMPORT] Notif delegados falló:', e)
   }
