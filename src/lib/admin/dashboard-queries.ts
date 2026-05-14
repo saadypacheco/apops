@@ -136,6 +136,18 @@ export type EventosDelMes = {
   aniversarios: EventoMes[]
 }
 
+export type HeatmapEdificioRow = {
+  edificio: string
+  cotizantes: number
+  apops: number
+  /** Cotizantes con tipo_planta = 'PP' */
+  plantaPerm: number
+  /** Cotizantes con fecha_actualizacion_delegados not null */
+  delegados: number
+  /** Cotizantes con vence_mandato_30dias = true */
+  mandatosVencen: number
+}
+
 // =====================================================================
 // Snapshot
 // =====================================================================
@@ -393,6 +405,67 @@ export async function getAppVsPadron(
     pendientesAcceso: pendientesAcceso ?? 0,
     pendientesAfiliacion: pendientesAfiliacion ?? 0,
   }
+}
+
+// =====================================================================
+// Heatmap edificios — métricas por edificio para tabla coloreada
+// =====================================================================
+
+type HeatmapRawRow = {
+  lugar_trabajo_padron: string | null
+  lugar_trabajo_rrhh: string | null
+  afiliado_apops: boolean | null
+  tipo_planta: string | null
+  fecha_actualizacion_delegados: string | null
+  vence_mandato_30dias: boolean | null
+}
+
+/**
+ * Agrega por edificio del padrón. Devuelve top N por cantidad de cotizantes.
+ * Edificio = lugar_trabajo_padron, con fallback a lugar_trabajo_rrhh.
+ */
+export async function getHeatmapEdificios(
+  admin: SupabaseClient<Database>,
+  snapshotId: string,
+  topN = 15,
+): Promise<HeatmapEdificioRow[]> {
+  const rows = await fetchAllRows<HeatmapRawRow>(async (from, to) => {
+    const res = await admin
+      .from('padron_cotizantes')
+      .select(
+        'lugar_trabajo_padron, lugar_trabajo_rrhh, afiliado_apops, tipo_planta, fecha_actualizacion_delegados, vence_mandato_30dias',
+      )
+      .eq('padron_snapshot_id', snapshotId)
+      .range(from, to)
+    return {
+      data: (res.data as HeatmapRawRow[] | null) ?? null,
+      error: res.error,
+    }
+  })
+
+  const byEdif = new Map<string, HeatmapEdificioRow>()
+  for (const r of rows) {
+    const edif = r.lugar_trabajo_padron ?? r.lugar_trabajo_rrhh
+    if (!edif) continue
+    const acc = byEdif.get(edif) ?? {
+      edificio: edif,
+      cotizantes: 0,
+      apops: 0,
+      plantaPerm: 0,
+      delegados: 0,
+      mandatosVencen: 0,
+    }
+    acc.cotizantes++
+    if (r.afiliado_apops) acc.apops++
+    if (r.tipo_planta === 'PP') acc.plantaPerm++
+    if (r.fecha_actualizacion_delegados) acc.delegados++
+    if (r.vence_mandato_30dias) acc.mandatosVencen++
+    byEdif.set(edif, acc)
+  }
+
+  return [...byEdif.values()]
+    .sort((a, b) => b.cotizantes - a.cotizantes)
+    .slice(0, topN)
 }
 
 // =====================================================================

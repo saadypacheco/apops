@@ -8,6 +8,7 @@ import { ArgentinaMap } from '@/components/admin/ArgentinaMap'
 import { DashboardSidebar } from '@/components/admin/DashboardSidebar'
 import { DonutChart } from '@/components/admin/DonutChart'
 import { EventosList } from '@/components/admin/EventosList'
+import { HeatmapEdificios } from '@/components/admin/HeatmapEdificios'
 import { LineChart, type LinePoint } from '@/components/admin/LineChart'
 import {
   DashboardTabs,
@@ -21,6 +22,7 @@ import {
   getDistribucionApops,
   getEventosDelMes,
   getEvolucion,
+  getHeatmapEdificios,
   getSnapshots,
   type AltasYBajas,
   type AppVsPadron,
@@ -29,6 +31,7 @@ import {
   type DistribucionApops,
   type EventosDelMes,
   type Evolucion,
+  type HeatmapEdificioRow,
   type SnapshotMeta,
 } from '@/lib/admin/dashboard-queries'
 
@@ -106,8 +109,9 @@ export default async function DashboardPage({
   const needsEvolucion = activeTab === 'evolucion' || activeTab === 'resumen'
   const needsAltasBajas = activeTab === 'altas-bajas'
   const needsEventos = activeTab === 'eventos'
+  const needsHeatmap = activeTab === 'padron'
 
-  const [distribucion, cd, app, evolucion, altasBajas, eventos] =
+  const [distribucion, cd, app, evolucion, altasBajas, eventos, heatmap] =
     await Promise.all([
       needsDistribucion
         ? getDistribucionApops(admin, current.id)
@@ -124,6 +128,9 @@ export default async function DashboardPage({
         : Promise.resolve(null),
       needsEventos
         ? getEventosDelMes(admin, current.id)
+        : Promise.resolve(null),
+      needsHeatmap
+        ? getHeatmapEdificios(admin, current.id)
         : Promise.resolve(null),
     ])
 
@@ -176,7 +183,11 @@ export default async function DashboardPage({
             />
           )}
           {activeTab === 'padron' && distribucion && (
-            <PadronTab distribucion={distribucion} current={current} />
+            <PadronTab
+              distribucion={distribucion}
+              current={current}
+              heatmap={heatmap}
+            />
           )}
           {activeTab === 'evolucion' && (
             <EvolucionTab
@@ -287,6 +298,8 @@ function ResumenTab({
               ? `${numero(app.totalAfiliadosApp)} de ${numero(app.totalApopsEnPadron)} APOPS`
               : undefined
           }
+          objetivo="70%"
+          objetivoMin={70}
         />
       </div>
 
@@ -428,9 +441,11 @@ function ResumenTab({
 function PadronTab({
   distribucion,
   current,
+  heatmap,
 }: {
   distribucion: DistribucionApops
   current: SnapshotMeta
+  heatmap: HeatmapEdificioRow[] | null
 }) {
   // Donut de gremios sobre el universo total de cotizantes.
   // "Sin gremio conocido" = cotizantes que no aparecen en ningún flag.
@@ -491,6 +506,20 @@ function PadronTab({
           size={200}
         />
       </div>
+
+      {heatmap && heatmap.length > 0 && (
+        <div className="mt-6">
+          <h3 className="mb-3 text-sm font-semibold text-brand-ink">
+            Top {heatmap.length} edificios — métricas comparadas
+          </h3>
+          <p className="mb-3 text-xs text-brand-muted">
+            Cada celda colorea según rangos: APOPS verde si supera el 50%,
+            planta permanente verde sobre 80%, delegados verde con al menos 1,
+            mandatos por vencer verde en 0.
+          </p>
+          <HeatmapEdificios rows={heatmap} />
+        </div>
+      )}
       <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
         <Distribucion
           titulo="Tipo de planta"
@@ -871,6 +900,9 @@ function KpiCard({
   deltaLabel,
   hint,
   suffix,
+  objetivo,
+  objetivoMin,
+  objetivoMax,
 }: {
   label: string
   value: number
@@ -881,6 +913,12 @@ function KpiCard({
   deltaLabel?: string
   hint?: string
   suffix?: string
+  /** Etiqueta del objetivo (ej "70%"). Sólo informativa. */
+  objetivo?: string
+  /** Valor mínimo deseado. Si value >= objetivoMin → cumple. */
+  objetivoMin?: number
+  /** Valor máximo deseado. Si value <= objetivoMax → cumple. */
+  objetivoMax?: number
 }) {
   const t = TONE_STYLES[tone]
   return (
@@ -926,6 +964,43 @@ function KpiCard({
         </div>
       )}
       {hint && <p className="mt-1 text-xs text-brand-muted">{hint}</p>}
+      {objetivo !== undefined && (
+        <ObjetivoBadge
+          value={value}
+          objetivo={objetivo}
+          min={objetivoMin}
+          max={objetivoMax}
+        />
+      )}
+    </div>
+  )
+}
+
+function ObjetivoBadge({
+  value,
+  objetivo,
+  min,
+  max,
+}: {
+  value: number
+  objetivo: string
+  min?: number
+  max?: number
+}) {
+  let cumple = true
+  if (min !== undefined && value < min) cumple = false
+  if (max !== undefined && value > max) cumple = false
+  return (
+    <div
+      className={
+        'mt-2 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ' +
+        (cumple
+          ? 'bg-emerald-100 text-emerald-700'
+          : 'bg-amber-100 text-amber-800')
+      }
+    >
+      <span aria-hidden>{cumple ? '✓' : '!'}</span>
+      <span>Objetivo {objetivo}</span>
     </div>
   )
 }
