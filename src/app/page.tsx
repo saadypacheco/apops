@@ -10,6 +10,7 @@ import {
 } from '@/components/landing/NoticiasCarousel'
 import { LoginForm } from '@/components/auth/LoginForm'
 import { HelpButton } from '@/components/landing/HelpButton'
+import { InstallPWAButton } from '@/components/landing/InstallPWAButton'
 
 export const metadata = {
   title: 'APOPS Siempre — Bienvenida',
@@ -105,6 +106,11 @@ export default async function LandingPage({
               Afiliate
             </Link>
           </div>
+        </div>
+
+        {/* Instalar PWA */}
+        <div className="relative z-10 flex justify-center px-5 pt-1.5">
+          <InstallPWAButton variant="onBlue" label="📱 Instalar app" />
         </div>
 
         {/* Footer */}

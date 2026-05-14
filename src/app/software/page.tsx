@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { Logo } from '@/components/landing/Logo'
+import { InstallPWAButton } from '@/components/landing/InstallPWAButton'
 
 // Página /software — landing demostrativa pública (sin auth) que explica
 // qué ofrece APOPS Siempre. Pensada para que la CD del gremio o afiliados
@@ -25,6 +26,7 @@ export default function SoftwarePage() {
       <Funcionalidades />
       <ComoFunciona />
       <Capturas />
+      <ComoInstalar />
       <CTAFinal />
       <Faq />
       <FooterSec />
@@ -55,13 +57,19 @@ function NavTop() {
           <a href="#faq" className="hover:text-brand-blue">
             Preguntas
           </a>
+          <a href="#instalar" className="hover:text-brand-blue">
+            Instalar
+          </a>
         </div>
-        <Link
-          href="/"
-          className="inline-flex h-9 items-center justify-center rounded-full bg-btn-primary px-4 text-xs font-bold uppercase tracking-wider text-white shadow-card transition hover:shadow-cardHover"
-        >
-          Entrar a la app →
-        </Link>
+        <div className="flex items-center gap-2">
+          <InstallPWAButton variant="compact" label="📱 Instalar" />
+          <Link
+            href="/"
+            className="inline-flex h-9 items-center justify-center rounded-full bg-btn-primary px-4 text-xs font-bold uppercase tracking-wider text-white shadow-card transition hover:shadow-cardHover"
+          >
+            Entrar →
+          </Link>
+        </div>
       </div>
     </nav>
   )
@@ -90,9 +98,10 @@ function Hero() {
           nada.
         </p>
         <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+          <InstallPWAButton variant="onBlue" label="📱 Instalar la app" />
           <Link
             href="/"
-            className="inline-flex min-h-[3rem] items-center justify-center gap-2 rounded-full bg-white px-6 text-sm font-bold uppercase tracking-wider text-brand-deep shadow-cardHover transition hover:-translate-y-0.5 hover:shadow-cardHover focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-white/40"
+            className="inline-flex min-h-[3rem] items-center justify-center gap-2 rounded-full bg-white/10 px-6 text-sm font-bold uppercase tracking-wider text-white ring-2 ring-white/30 backdrop-blur-md transition hover:bg-white/20 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-white/40"
           >
             Probá la demo en vivo →
           </Link>
@@ -104,11 +113,87 @@ function Hero() {
           </a>
         </div>
         <p className="mt-6 text-xs text-white/70">
-          Sin descargas. Sin Play Store ni App Store. Funciona en cualquier
-          navegador moderno.
+          Sin descargas pesadas. Sin Play Store ni App Store. La app se
+          instala directo desde el navegador.
         </p>
       </div>
     </section>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Cómo instalar (sección dedicada)
+// ─────────────────────────────────────────────────────────────────────────
+function ComoInstalar() {
+  return (
+    <section
+      id="instalar"
+      className="bg-gradient-to-b from-white to-neutral-50 px-5 py-16 md:py-20"
+    >
+      <div className="mx-auto max-w-5xl">
+        <header className="text-center">
+          <span className="text-xs font-bold uppercase tracking-widest text-brand-blue">
+            Instalación
+          </span>
+          <h2 className="mt-2 text-3xl font-bold text-brand-ink md:text-4xl">
+            Una sola vez. Después, un toque.
+          </h2>
+          <p className="mt-3 text-base text-brand-muted">
+            Instalá APOPS Siempre desde tu navegador. Queda con su propio
+            ícono en la pantalla de inicio y se abre como cualquier otra
+            aplicación.
+          </p>
+        </header>
+
+        <div className="mt-10 grid grid-cols-1 gap-4 md:grid-cols-3">
+          <InstallStep
+            num="1"
+            titulo="Abrí la app desde el navegador"
+            descripcion="Entrá a apops.vercel.app en Safari (iPhone), Chrome (Android) o cualquier navegador moderno (desktop)."
+          />
+          <InstallStep
+            num="2"
+            titulo="Tocá 'Instalar app'"
+            descripcion="En esta misma página tenés un botón verde. En Android dispara la instalación directa, en iPhone te muestra los pasos para usar Compartir → Agregar a Inicio."
+          />
+          <InstallStep
+            num="3"
+            titulo="Listo, queda en tu home"
+            descripcion="El ícono APOPS aparece como cualquier otra app. Click → se abre en pantalla completa, sin barra de URL."
+          />
+        </div>
+
+        <div className="mt-10 flex flex-col items-center gap-3">
+          <InstallPWAButton variant="primary" label="📱 Instalar APOPS Siempre" />
+          <p className="text-xs text-brand-muted">
+            ¿Ya la instalaste antes? El botón te avisa con un ✓.
+          </p>
+        </div>
+      </div>
+    </section>
+  )
+}
+
+function InstallStep({
+  num,
+  titulo,
+  descripcion,
+}: {
+  num: string
+  titulo: string
+  descripcion: string
+}) {
+  return (
+    <div className="rounded-2xl bg-white p-6 shadow-card">
+      <span
+        aria-hidden
+        className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-blue text-base font-bold text-white"
+      >
+        {num}
+      </span>
+      <h3 className="mt-4 text-lg font-semibold text-brand-ink">{titulo}</h3>
+      <p className="mt-2 text-sm text-brand-muted">{descripcion}</p>
+    </div>
   )
 }
 
@@ -658,9 +743,10 @@ function CTAFinal() {
           minutos. Si no estás afiliado/a, te guiamos en el proceso.
         </p>
         <div className="mt-3 flex flex-wrap items-center justify-center gap-3">
+          <InstallPWAButton variant="onBlue" label="📱 Instalar la app" />
           <Link
             href="/registrarse"
-            className="inline-flex min-h-[3rem] items-center justify-center rounded-full bg-white px-6 text-sm font-bold uppercase tracking-wider text-brand-deep shadow-card transition hover:-translate-y-0.5 hover:shadow-cardHover"
+            className="inline-flex min-h-[3rem] items-center justify-center rounded-full bg-white/10 px-6 text-sm font-bold uppercase tracking-wider text-white ring-2 ring-white/30 backdrop-blur-sm transition hover:bg-white/20"
           >
             Registrarme →
           </Link>
@@ -683,7 +769,11 @@ function Faq() {
   const items = [
     {
       q: '¿Tengo que descargar algo?',
-      a: 'No. Es una PWA — funciona en cualquier navegador (Chrome, Safari, Firefox). Si querés, podés "agregarla a la pantalla de inicio" desde tu celular y queda como un ícono de app, pero no pasa por Play Store ni App Store.',
+      a: 'No. Es una PWA — funciona en cualquier navegador (Chrome, Safari, Firefox). Si querés, podés "instalarla" desde el botón de la página y queda como un ícono de app en tu home screen, pero no pasa por Play Store ni App Store.',
+    },
+    {
+      q: '¿Cómo se instala en mi celular?',
+      a: 'En Android (Chrome) tocás "Instalar app" y se instala automáticamente. En iPhone (Safari) tocás Compartir → Agregar a pantalla de inicio. En cualquier caso el botón "📱 Instalar app" de esta página te guía.',
     },
     {
       q: '¿Y si me olvido la clave?',
