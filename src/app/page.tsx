@@ -69,10 +69,10 @@ export default async function LandingPage({
           className="pointer-events-none absolute -right-20 -top-20 h-[260px] w-[260px] rounded-full bg-white/10 blur-md"
         />
 
-        {/* Header: logo a la izquierda + campana a la derecha */}
+        {/* Header: logo a la izquierda + botón Instalar a la derecha */}
         <header className="relative z-10 flex w-full items-center justify-between gap-3 px-5 pb-0 pt-1.5">
           <Logo as="onBlue" priority />
-          <BellButton />
+          <InstallPWAButton variant="header" label="Instalar" />
         </header>
 
         {/* Carousel de noticias */}
@@ -104,36 +104,7 @@ export default async function LandingPage({
       </div>
 
       <HelpButton />
-      <InstallPWAButton variant="fab" />
     </main>
-  )
-}
-
-function BellButton() {
-  return (
-    <button
-      type="button"
-      aria-label="Notificaciones"
-      className="relative inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-white transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
-    >
-      <svg
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth={2}
-        className="h-6 w-6"
-      >
-        <path
-          d="M18 16v-5a6 6 0 10-12 0v5l-2 2h16l-2-2zM10 21a2 2 0 004 0"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      </svg>
-      <span
-        aria-hidden
-        className="absolute right-2 top-2 h-2 w-2 rounded-full bg-white ring-2 ring-brand-blue"
-      />
-    </button>
   )
 }
 

@@ -9,10 +9,9 @@ import { createAdminClient } from '@/lib/supabase/admin'
 // Endpoint público (la página /afiliarse es anon). Read-only. Sin
 // parámetros sensibles. No requiere autenticación.
 
-// Cache en build: 1 hora. El padrón se carga mensualmente; un cache
-// agresivo está OK y reduce carga sobre Supabase. Vercel sirve la
-// respuesta cacheada hasta que se regenere.
-export const revalidate = 3600
+// Endpoint dinámico (consulta Supabase con admin client). No
+// pre-renderizar en build. Cache via fetch tags / CDN si hace falta.
+export const dynamic = 'force-dynamic'
 
 type Row = {
   lugar_trabajo_padron: string | null

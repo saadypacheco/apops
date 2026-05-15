@@ -6,6 +6,11 @@ export const metadata: Metadata = {
   title: 'Solicitud enviada',
 }
 
+// Force dynamic: la página lee searchParams.id y consulta DB con el
+// admin client. Sin esto, next build intenta pre-renderizar como
+// estática y revienta porque no hay request context.
+export const dynamic = 'force-dynamic'
+
 interface PageProps {
   searchParams?: { id?: string }
 }

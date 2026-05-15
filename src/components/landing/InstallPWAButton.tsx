@@ -9,7 +9,14 @@ type BeforeInstallPromptEvent = Event & {
 
 type Platform = 'ios' | 'android' | 'desktop' | 'other'
 
-type Variant = 'primary' | 'onBlue' | 'ghost' | 'compact' | 'fab' | 'fab-stacked'
+type Variant =
+  | 'primary'
+  | 'onBlue'
+  | 'ghost'
+  | 'compact'
+  | 'fab'
+  | 'fab-stacked'
+  | 'header'
 
 const VARIANT_CLASS: Record<Variant, string> = {
   primary:
@@ -26,10 +33,18 @@ const VARIANT_CLASS: Record<Variant, string> = {
   // FAB apilado encima del FAB de contacto (en AppShell): bottom-36
   'fab-stacked':
     'fixed bottom-36 right-4 z-30 inline-flex h-14 w-14 items-center justify-center rounded-full bg-emerald-600 text-white shadow-cardHover ring-4 ring-white/30 transition hover:scale-105 hover:bg-emerald-700 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-emerald-500/40',
+  // Botón en el header del landing (sobre fondo azul): pill blanco
+  // semi-transparente con borde, invita a instalar la app
+  header:
+    'inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-white ring-1 ring-white/30 backdrop-blur-sm transition hover:bg-white/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white',
 }
 
 function isFabVariant(v: Variant): boolean {
   return v === 'fab' || v === 'fab-stacked'
+}
+
+function isHeaderVariant(v: Variant): boolean {
+  return v === 'header'
 }
 
 export function InstallPWAButton({
@@ -92,6 +107,7 @@ export function InstallPWAButton({
   }, [])
 
   const fab = isFabVariant(variant)
+  const header = isHeaderVariant(variant)
 
   // SSR / pre-hydration: render placeholder neutral para evitar layout shift
   if (!mounted) {
@@ -109,7 +125,7 @@ export function InstallPWAButton({
 
   if (installed && hideWhenInstalled) return null
   if (installed) {
-    if (fab) return null
+    if (fab || header) return null
     return (
       <span
         className={`inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-3 py-1.5 text-xs font-semibold text-emerald-800 ${className ?? ''}`}
