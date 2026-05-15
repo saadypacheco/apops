@@ -74,7 +74,7 @@ export function LoginForm({ registrado = false }: { registrado?: boolean }) {
 
       <SubmitButton />
 
-      <div className="flex items-center justify-center gap-2 text-center text-[11px]">
+      <div className="flex items-center justify-center gap-3 text-center text-xs">
         <Link
           href="/recuperar-clave"
           className="font-semibold text-brand-blue hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:ring-offset-2"
@@ -87,13 +87,6 @@ export function LoginForm({ registrado = false }: { registrado?: boolean }) {
           className="font-semibold text-brand-blue hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:ring-offset-2"
         >
           Registrate
-        </Link>
-        <span aria-hidden className="text-brand-muted/40">·</span>
-        <Link
-          href="/afiliarse"
-          className="font-semibold text-brand-blue hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:ring-offset-2"
-        >
-          Afiliarme
         </Link>
       </div>
     </form>

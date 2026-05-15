@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation'
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { homeForRol } from '@/lib/auth/role'
@@ -86,19 +87,36 @@ export default async function LandingPage({
           <LoginForm registrado={registrado} />
         </section>
 
-        {/* Footer */}
-        <footer className="relative z-10 mt-1 px-5 pb-1">
-          <div className="rounded-2xl bg-white/85 px-3 py-1 text-center text-[10px] leading-tight text-brand-ink shadow-card backdrop-blur-sm">
-            <p className="font-medium">
-              Viamonte 1654, CABA · (011) 5544-8300 ·{' '}
-              <a
-                href="mailto:apops@apops.org.ar"
-                className="font-medium text-brand-ink hover:underline"
+        {/* CTA: aún no afiliado — card clickeable entera */}
+        <div className="relative z-10 px-5 pt-1.5">
+          <Link
+            href="/afiliarse"
+            className="group flex items-center justify-between gap-3 rounded-2xl bg-white/90 px-4 py-2 shadow-card backdrop-blur-sm transition hover:bg-white hover:shadow-cardHover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+          >
+            <span className="text-sm font-medium text-brand-ink">
+              ¿Aún no estás afiliado/a?
+            </span>
+            <span className="inline-flex items-center gap-1 rounded-full bg-brand-blue px-3 py-1 text-xs font-bold uppercase tracking-wider text-white">
+              Afiliate
+              <span
+                aria-hidden
+                className="transition-transform group-hover:translate-x-0.5"
               >
-                apops@apops.org.ar
-              </a>
-            </p>
-          </div>
+                →
+              </span>
+            </span>
+          </Link>
+        </div>
+
+        {/* Footer institucional */}
+        <footer className="relative z-10 mt-auto px-5 pb-3 pt-3 text-center text-[11px] leading-relaxed text-white/85">
+          <p className="font-semibold">
+            © {new Date().getFullYear()} APOPS — Asociación del Personal de los
+            Organismos de Previsión Social.
+          </p>
+          <p className="mt-0.5 text-white/70">
+            Viamonte Nº 1654. Código Postal 1055. Buenos Aires, Argentina.
+          </p>
         </footer>
       </div>
 
