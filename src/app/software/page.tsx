@@ -1187,6 +1187,12 @@ function DashboardCapturas() {
       caption: 'Delegados y eventos',
       desc: 'Mandatos por vencer, edificios sin delegado, eventos APOPS del mes.',
     },
+    {
+      src: '/imagenes para software/dashboard4.PNG',
+      alt: 'Panel del delegado — vista del edificio con buscador',
+      caption: 'Vista del delegado',
+      desc: 'Todas las personas del edificio con buscador y filtros por gremio (APOPS, otros, sin gremio).',
+    },
   ]
   return (
     <section className="bg-neutral-50 px-5 py-16">
@@ -1196,15 +1202,14 @@ function DashboardCapturas() {
             Pantallas reales
           </span>
           <h2 className="mt-3 text-3xl font-bold leading-tight text-brand-ink md:text-4xl">
-            El Dashboard CD en vivo.
+            Capturas del panel en vivo.
           </h2>
           <p className="mt-3 text-base text-brand-muted">
-            Capturas del panel de Comisión Directiva en funcionamiento, con
-            datos del padrón ANSES real.
+            Comisión Directiva y delegados, con datos del padrón ANSES real.
           </p>
         </header>
 
-        <div className="grid gap-6 md:grid-cols-3">
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
           {shots.map((s) => (
             <figure
               key={s.src}
