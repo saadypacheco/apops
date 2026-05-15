@@ -3,7 +3,6 @@ import { headers } from 'next/headers'
 import { requireRole } from '@/lib/auth/role'
 import { AppShell } from '@/components/app/AppShell'
 import { CredencialCarousel } from '@/components/credencial/CredencialCarousel'
-import { ConsultasWidget } from '@/components/feed/ConsultasWidget'
 import { getCredencialesParaTitular } from '@/lib/credencial/queries'
 
 export const metadata: Metadata = {
@@ -44,8 +43,6 @@ export default async function FeedPage() {
             baseUrl={baseUrl}
           />
         </section>
-
-        <ConsultasWidget nombre={session.nombre} />
       </div>
     </AppShell>
   )

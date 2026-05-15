@@ -20,10 +20,20 @@ const phoneSchema = z
   .min(6, 'Teléfono muy corto.')
   .max(30, 'Teléfono muy largo.')
 
+const optionalPhone = z
+  .union([z.literal(''), phoneSchema])
+  .optional()
+  .transform((v) => (v === '' ? undefined : v))
+
 const optionalEmail = z
   .union([z.literal(''), emailSchema])
   .optional()
   .transform((v) => (v === '' ? undefined : v))
+
+const legajoSchema = z
+  .string()
+  .trim()
+  .regex(/^[0-9]{4,10}$/, 'Legajo inválido. Solo números, 4 a 10 dígitos.')
 
 const optionalString = z
   .string()
@@ -60,11 +70,15 @@ export const conyugeSchema = z
   .optional()
 
 export const afiliacionSchema = z.object({
-  // Datos personales
+  // Datos personales — obligatorios (paso 1)
   apellidoNombre: z.string().trim().min(3, 'Tu apellido y nombre completos.').max(200),
-  tipoDocumento: z.enum(['DNI', 'LE', 'LC', 'CI', 'PASAPORTE']),
+  tipoDocumento: z.enum(['DNI', 'LE', 'LC', 'CI', 'PASAPORTE']).default('DNI'),
   numeroDocumento: dniSchema,
-  fechaNacimiento: z.string().min(1, 'Fecha de nacimiento requerida.'),
+  // fechaNacimiento pasa a opcional: si falta sale del padrón al matchear
+  fechaNacimiento: z
+    .union([z.literal(''), z.string().min(1)])
+    .optional()
+    .transform((v) => (v === '' ? undefined : v)),
   estadoCivil: z
     .enum(['soltero', 'casado', 'conviviente', 'divorciado', 'viudo', 'otro'])
     .optional(),
@@ -78,14 +92,14 @@ export const afiliacionSchema = z.object({
   domicilioProvincia: optionalString,
   domicilioCp: optionalString,
 
-  // Contacto
-  telefono: phoneSchema,
+  // Contacto — telefono pasa a opcional (sólo celular obligatorio)
+  telefono: optionalPhone,
   celular: phoneSchema,
   email: emailSchema,
   cbu: cbuSchema,
 
-  // Lugar de trabajo
-  numeroLegajo: z.string().trim().min(2, 'Legajo requerido.').max(20),
+  // Lugar de trabajo — legajo obligatorio (numérico), resto opcional
+  numeroLegajo: legajoSchema,
   edificioUdai: optionalString,
   trabajoLocalidad: optionalString,
   trabajoDomicilio: optionalString,
@@ -95,9 +109,8 @@ export const afiliacionSchema = z.object({
   areaUdai: optionalString,
   cargoFuncion: optionalString,
   categoria: optionalString,
-  tipoPlanta: z.enum(['permanente', 'transitoria'], {
-    errorMap: () => ({ message: 'Indicá tipo de planta.' }),
-  }),
+  // tipoPlanta pasa a opcional: el admin lo completa desde padrón
+  tipoPlanta: z.enum(['permanente', 'transitoria']).optional(),
 
   // Familia
   conyuge: conyugeSchema,

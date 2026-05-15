@@ -1,7 +1,7 @@
 'use client'
 
 import { useFormState, useFormStatus } from 'react-dom'
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { submitAfiliacion } from '@/lib/auth/actions-afiliacion'
 import type { AfiliacionFormState } from '@/types/afiliacion'
 import { Button } from '@/components/ui/Button'
@@ -13,36 +13,52 @@ const initial: AfiliacionFormState = {}
 
 const STEP_LABELS: [string, string, string] = [
   'Tus datos',
-  'Trabajo y familia',
+  'Más datos',
   'Confirmar',
 ]
 
-// Campos required que se validan cuando el usuario clickea "Siguiente".
-// El paso 3 deja al server hacer la validación final con Zod.
-const REQUIRED_PER_STEP: Record<1 | 2, string[]> = {
-  1: [
-    'apellidoNombre',
-    'tipoDocumento',
-    'numeroDocumento',
-    'fechaNacimiento',
-    'telefono',
-    'celular',
-    'email',
-  ],
-  2: ['numeroLegajo', 'tipoPlanta'],
-}
+// Único listado de obligatorios: lo mínimo para procesar la solicitud.
+// El admin completa el resto matcheando contra padrón ANSES.
+const REQUIRED_STEP_1 = [
+  'apellidoNombre',
+  'numeroDocumento',
+  'numeroLegajo',
+  'celular',
+  'email',
+]
 
-// Labels legibles para los mensajes de error.
 const FIELD_LABELS: Record<string, string> = {
   apellidoNombre: 'Apellido y Nombre',
   tipoDocumento: 'Tipo de documento',
-  numeroDocumento: 'Nº de documento',
+  numeroDocumento: 'DNI',
   fechaNacimiento: 'Fecha de nacimiento',
+  estadoCivil: 'Estado civil',
   telefono: 'Teléfono',
   celular: 'Celular',
   email: 'Correo electrónico',
-  numeroLegajo: 'Nº de legajo',
+  cbu: 'CBU',
+  numeroLegajo: 'Legajo',
+  edificioUdai: 'Edificio / UDAI',
+  areaUdai: 'Área',
+  gerencia: 'Gerencia',
+  cargoFuncion: 'Cargo o función',
+  categoria: 'Categoría',
   tipoPlanta: 'Tipo de planta',
+  domicilioCalle: 'Calle',
+  domicilioNumero: 'Número',
+  domicilioLocalidad: 'Localidad',
+  domicilioProvincia: 'Provincia',
+  domicilioCp: 'Código postal',
+  aceptaDescuento: 'Autorización de descuento',
+  firmaPng: 'Firma',
+}
+
+// Mapeo campo → paso al que pertenece. Usado para auto-saltar al paso con
+// el primer error cuando el server devuelve fieldErrors.
+function stepOfField(name: string): 1 | 2 | 3 {
+  if (REQUIRED_STEP_1.includes(name)) return 1
+  if (name === 'aceptaDescuento' || name === 'firmaPng') return 3
+  return 2
 }
 
 type Step = 1 | 2 | 3
@@ -53,43 +69,39 @@ export function AfiliacionForm() {
   const [step, setStep] = useState<Step>(1)
   const [stepError, setStepError] = useState<string | null>(null)
   const [familiares, setFamiliares] = useState<number[]>([])
+  const [resumen, setResumen] = useState<Record<string, string>>({})
   const formRef = useRef<HTMLFormElement>(null)
   const errors = (state.fieldErrors ?? {}) as FieldErrors
 
-  function validateStep(currentStep: 1 | 2): boolean {
+  // Si el server devuelve errores (post-submit), saltar al primer paso
+  // con problemas para que el usuario vea los campos marcados.
+  useEffect(() => {
+    const keys = Object.keys(errors).filter((k) => errors[k])
+    if (keys.length === 0) return
+    const firstStep = keys
+      .map((k) => stepOfField(k))
+      .sort((a, b) => a - b)[0]
+    if (firstStep && firstStep !== step) {
+      setStep(firstStep)
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    }
+  }, [state]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  function validateStep1(): boolean {
     if (!formRef.current) return false
-    const required = REQUIRED_PER_STEP[currentStep]
     const missing: string[] = []
 
-    for (const name of required) {
-      const els = formRef.current.querySelectorAll<
-        HTMLInputElement | HTMLSelectElement
-      >(`[name="${name}"]`)
-
-      if (els.length === 0) {
-        missing.push(name)
-        continue
-      }
-
-      const first = els[0]!
-      const isRadio =
-        first instanceof HTMLInputElement && first.type === 'radio'
-
-      if (isRadio) {
-        const anyChecked = Array.from(els).some(
-          (el) => el instanceof HTMLInputElement && el.checked,
-        )
-        if (!anyChecked) missing.push(name)
-      } else {
-        const value = (first.value ?? '').trim()
-        if (!value) missing.push(name)
-      }
+    for (const name of REQUIRED_STEP_1) {
+      const el = formRef.current.querySelector<HTMLInputElement>(
+        `[name="${name}"]`,
+      )
+      const value = (el?.value ?? '').trim()
+      if (!value) missing.push(name)
     }
 
     if (missing.length > 0) {
       const labels = missing.map((n) => FIELD_LABELS[n] ?? n).join(', ')
-      setStepError(`Faltan completar: ${labels}.`)
-      // Foco al primero para llevar al usuario al campo
+      setStepError(`Te falta completar: ${labels}.`)
       const focusEl = formRef.current.querySelector<HTMLElement>(
         `[name="${missing[0]}"]`,
       )
@@ -101,8 +113,26 @@ export function AfiliacionForm() {
     return true
   }
 
+  function snapshotForm(): Record<string, string> {
+    if (!formRef.current) return {}
+    const fd = new FormData(formRef.current)
+    const out: Record<string, string> = {}
+    fd.forEach((value, key) => {
+      if (key === 'firmaPng') return // no incluir base64 en resumen
+      const s = value.toString().trim()
+      if (s) out[key] = s
+    })
+    return out
+  }
+
   function goNext() {
-    if (step < 3 && validateStep(step as 1 | 2)) {
+    if (step === 1) {
+      if (!validateStep1()) return
+    }
+    if (step === 2) {
+      setResumen(snapshotForm())
+    }
+    if (step < 3) {
       setStep(((step as number) + 1) as Step)
       setStepError(null)
       window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -124,6 +154,19 @@ export function AfiliacionForm() {
     setFamiliares((arr) => arr.filter((i) => i !== idx))
   }
 
+  // Lista de campos con error del server, con su paso, para mostrar arriba
+  // un summary tipo "Corregí: X (Paso 1), Y (Paso 2)".
+  const serverErrorKeys = Object.keys(errors).filter((k) => errors[k])
+  const serverErrorSummary = serverErrorKeys.length > 0
+    ? serverErrorKeys
+        .map((k) => {
+          const label = FIELD_LABELS[k] ?? k
+          const s = stepOfField(k)
+          return `${label} (paso ${s})`
+        })
+        .join(', ')
+    : null
+
   return (
     <form ref={formRef} action={action} className="flex flex-col gap-6" noValidate>
       <div className="rounded-xl bg-white p-4 shadow-card">
@@ -133,12 +176,20 @@ export function AfiliacionForm() {
         </p>
       </div>
 
-      {state.error && <ErrorMessage>{state.error}</ErrorMessage>}
+      {serverErrorSummary && (
+        <ErrorMessage>
+          Revisá estos campos: {serverErrorSummary}.
+        </ErrorMessage>
+      )}
+      {!serverErrorSummary && state.error && <ErrorMessage>{state.error}</ErrorMessage>}
       {stepError && <ErrorMessage>{stepError}</ErrorMessage>}
 
-      {/* PASO 1 — DATOS PERSONALES + DOMICILIO + CONTACTO */}
+      {/* PASO 1 — SOLO OBLIGATORIOS */}
       <div className={step === 1 ? '' : 'hidden'}>
-        <Section title="Datos personales" subtitle="Tus datos como afiliado/a">
+        <Section
+          title="Tus datos"
+          subtitle="Lo mínimo para procesar tu afiliación. El resto lo agregás después o lo completa la CD."
+        >
           <Field
             name="apellidoNombre"
             label="Apellido y Nombre"
@@ -150,7 +201,6 @@ export function AfiliacionForm() {
             <Select
               name="tipoDocumento"
               label="Tipo de documento"
-              required
               defaultValue="DNI"
               options={[
                 ['DNI', 'DNI'],
@@ -163,19 +213,63 @@ export function AfiliacionForm() {
             />
             <Field
               name="numeroDocumento"
-              label="Nº de documento"
+              label="Nº de DNI"
               inputMode="numeric"
               placeholder="30000000"
               required
               error={errors['numeroDocumento']}
             />
           </Row>
+          <Field
+            name="numeroLegajo"
+            label="Nº de legajo"
+            inputMode="numeric"
+            placeholder="983928"
+            required
+            error={errors['numeroLegajo']}
+            hint="El número que figura en tu recibo de sueldo (sin letras)."
+          />
+          <Field
+            name="celular"
+            label="Celular"
+            type="tel"
+            placeholder="11 5555-1234"
+            required
+            error={errors['celular']}
+          />
+          <Field
+            name="email"
+            label="Correo electrónico"
+            type="email"
+            placeholder="tu@email.com"
+            autoComplete="email"
+            required
+            error={errors['email']}
+          />
+        </Section>
+      </div>
+
+      {/* PASO 2 — TODO OPCIONAL, AGRUPADO EN <details> */}
+      <div className={step === 2 ? '' : 'hidden'}>
+        <div className="rounded-xl border-2 border-dashed border-brand-blue/30 bg-brand-blue/5 p-4">
+          <p className="text-sm text-brand-ink">
+            <strong>Todo lo de este paso es opcional.</strong> Si lo
+            completás ahora la CD nos ahorra trabajo, pero también podés
+            saltarlo y procesamos tu solicitud igual.
+          </p>
+        </div>
+
+        <SectionGap />
+
+        <OptionalDetails
+          summary="Datos personales adicionales"
+          hint="Fecha de nacimiento, estado civil"
+        >
           <Row>
             <Field
               name="fechaNacimiento"
               label="Fecha de nacimiento"
               type="date"
-              required
               error={errors['fechaNacimiento']}
             />
             <Select
@@ -193,11 +287,11 @@ export function AfiliacionForm() {
               error={errors['estadoCivil']}
             />
           </Row>
-        </Section>
+        </OptionalDetails>
 
         <SectionGap />
 
-        <Section title="Domicilio" subtitle="Opcional, pero recomendado">
+        <OptionalDetails summary="Domicilio" hint="Dónde vivís">
           <Row>
             <Field name="domicilioCalle" label="Calle" placeholder="Av. Corrientes" error={errors['domicilioCalle']} />
             <Field name="domicilioNumero" label="Número" inputMode="numeric" placeholder="1234" error={errors['domicilioNumero']} />
@@ -211,67 +305,26 @@ export function AfiliacionForm() {
             <Field name="domicilioCp" label="Código postal" inputMode="numeric" error={errors['domicilioCp']} />
           </Row>
           <Field name="domicilioProvincia" label="Provincia" error={errors['domicilioProvincia']} />
-        </Section>
+        </OptionalDetails>
 
         <SectionGap />
 
-        <Section title="Contacto" subtitle="Cómo nos comunicamos con vos">
+        <OptionalDetails
+          summary="Lugar de trabajo"
+          hint="Edificio, planta, categoría — la CD lo completa desde el padrón si no lo cargás"
+        >
           <Row>
-            <Field
-              name="telefono"
-              label="Teléfono"
-              type="tel"
-              placeholder="011 4444-5555"
-              required
-              error={errors['telefono']}
-            />
-            <Field
-              name="celular"
-              label="Celular"
-              type="tel"
-              placeholder="11 5555-1234"
-              required
-              error={errors['celular']}
-            />
-          </Row>
-          <Field
-            name="email"
-            label="Correo electrónico"
-            type="email"
-            placeholder="tu@email.com"
-            autoComplete="email"
-            required
-            error={errors['email']}
-          />
-          <Field
-            name="cbu"
-            label="CBU (opcional)"
-            inputMode="numeric"
-            placeholder="22 dígitos"
-            hint="Para acreditar beneficios. Podés agregarlo después."
-            error={errors['cbu']}
-          />
-        </Section>
-      </div>
-
-      {/* PASO 2 — TRABAJO + FAMILIA */}
-      <div className={step === 2 ? '' : 'hidden'}>
-        <Section title="Lugar de trabajo" subtitle="Tu situación en ANSES">
-          <Row>
-            <Field name="numeroLegajo" label="Nº de legajo" placeholder="L-0000" required error={errors['numeroLegajo']} />
             <Field name="categoria" label="Categoría" error={errors['categoria']} />
-          </Row>
-          <Row>
             <Field name="edificioUdai" label="Edificio / UDAI" error={errors['edificioUdai']} />
-            <Field name="areaUdai" label="Área" error={errors['areaUdai']} />
           </Row>
           <Row>
+            <Field name="areaUdai" label="Área" error={errors['areaUdai']} />
             <Field name="gerencia" label="Gerencia" error={errors['gerencia']} />
-            <Field name="cargoFuncion" label="Cargo o función" error={errors['cargoFuncion']} />
           </Row>
+          <Field name="cargoFuncion" label="Cargo o función" error={errors['cargoFuncion']} />
           <fieldset className="flex flex-col gap-2">
             <legend className="text-sm font-medium text-brand-ink">
-              Tipo de planta <span className="text-red-600">*</span>
+              Tipo de planta
             </legend>
             <div className="flex flex-col gap-2 sm:flex-row">
               <RadioPill name="tipoPlanta" value="permanente" label="Planta permanente" />
@@ -279,24 +332,20 @@ export function AfiliacionForm() {
             </div>
             {errors['tipoPlanta'] && <p role="alert" className="text-sm text-red-600">{errors['tipoPlanta']}</p>}
           </fieldset>
-          <details className="rounded-md border border-neutral-200 bg-neutral-50 p-3">
-            <summary className="cursor-pointer text-sm font-medium text-brand-ink">
-              Datos del lugar de trabajo (opcional)
-            </summary>
-            <div className="mt-3 flex flex-col gap-3">
-              <Field name="trabajoDomicilio" label="Domicilio del trabajo" error={errors['trabajoDomicilio']} />
-              <Row>
-                <Field name="trabajoLocalidad" label="Localidad" error={errors['trabajoLocalidad']} />
-                <Field name="trabajoTelefono" label="Teléfono" type="tel" error={errors['trabajoTelefono']} />
-              </Row>
-              <Field name="trabajoEmail" label="Email institucional" type="email" error={errors['trabajoEmail']} />
-            </div>
-          </details>
-        </Section>
+          <Field name="trabajoDomicilio" label="Domicilio del trabajo" error={errors['trabajoDomicilio']} />
+          <Row>
+            <Field name="trabajoLocalidad" label="Localidad" error={errors['trabajoLocalidad']} />
+            <Field name="trabajoTelefono" label="Teléfono" type="tel" error={errors['trabajoTelefono']} />
+          </Row>
+          <Field name="trabajoEmail" label="Email institucional" type="email" error={errors['trabajoEmail']} />
+        </OptionalDetails>
 
         <SectionGap />
 
-        <Section title="Datos familiares" subtitle="Opcional — podés cargarlo después">
+        <OptionalDetails
+          summary="Datos familiares"
+          hint="Cónyuge y otros familiares"
+        >
           <details className="rounded-md border border-neutral-200 bg-neutral-50 p-3">
             <summary className="cursor-pointer text-sm font-medium text-brand-ink">
               Cónyuge / conviviente
@@ -371,16 +420,36 @@ export function AfiliacionForm() {
               </div>
             ))}
           </div>
-        </Section>
+        </OptionalDetails>
+
+        <SectionGap />
+
+        <OptionalDetails summary="CBU" hint="Para acreditar beneficios">
+          <Field
+            name="cbu"
+            label="CBU"
+            inputMode="numeric"
+            placeholder="22 dígitos"
+            error={errors['cbu']}
+          />
+        </OptionalDetails>
       </div>
 
-      {/* PASO 3 — CONFIRMACIÓN + FIRMA */}
+      {/* PASO 3 — RESUMEN + FIRMA + ENVIAR */}
       <div className={step === 3 ? '' : 'hidden'}>
-        <Section title="Confirmar y enviar" subtitle="Revisá y autorizá el descuento">
-          <p className="text-sm text-brand-muted">
-            Al enviar, tu solicitud queda registrada y la Comisión Directiva te
-            contacta por email cuando esté procesada.
+        <Section
+          title="Revisá tus datos"
+          subtitle="Confirmá que está todo bien antes de firmar."
+        >
+          <ResumenView resumen={resumen} familiares={familiares} />
+          <p className="text-xs text-brand-muted">
+            Si algo está mal, volvé atrás con el botón de abajo y corregilo.
           </p>
+        </Section>
+
+        <SectionGap />
+
+        <Section title="Autorización" subtitle="Necesaria para descontar la cuota">
           <label className="flex items-start gap-3 rounded-md border border-neutral-200 bg-neutral-50 p-3">
             <input
               type="checkbox"
@@ -426,7 +495,7 @@ export function AfiliacionForm() {
 
         {step < 3 ? (
           <Button type="button" onClick={goNext}>
-            Siguiente →
+            {step === 1 ? 'Siguiente →' : 'Ir al resumen →'}
           </Button>
         ) : (
           <SubmitButton />
@@ -442,6 +511,109 @@ function SubmitButton() {
     <Button type="submit" disabled={pending} aria-busy={pending}>
       {pending ? 'Enviando…' : 'Enviar solicitud'}
     </Button>
+  )
+}
+
+// ─── resumen ──────────────────────────────────────────────────────────
+
+const RESUMEN_GROUPS: Array<{ title: string; fields: Array<[string, string]> }> = [
+  {
+    title: 'Datos personales',
+    fields: [
+      ['apellidoNombre', 'Apellido y Nombre'],
+      ['tipoDocumento', 'Tipo de doc.'],
+      ['numeroDocumento', 'Nº de DNI'],
+      ['fechaNacimiento', 'Fecha de nacimiento'],
+      ['estadoCivil', 'Estado civil'],
+    ],
+  },
+  {
+    title: 'Contacto',
+    fields: [
+      ['celular', 'Celular'],
+      ['telefono', 'Teléfono'],
+      ['email', 'Email'],
+      ['cbu', 'CBU'],
+    ],
+  },
+  {
+    title: 'Domicilio',
+    fields: [
+      ['domicilioCalle', 'Calle'],
+      ['domicilioNumero', 'Número'],
+      ['domicilioPiso', 'Piso'],
+      ['domicilioDepto', 'Depto'],
+      ['domicilioLocalidad', 'Localidad'],
+      ['domicilioProvincia', 'Provincia'],
+      ['domicilioCp', 'CP'],
+    ],
+  },
+  {
+    title: 'Trabajo',
+    fields: [
+      ['numeroLegajo', 'Legajo'],
+      ['categoria', 'Categoría'],
+      ['tipoPlanta', 'Planta'],
+      ['edificioUdai', 'Edificio'],
+      ['areaUdai', 'Área'],
+      ['gerencia', 'Gerencia'],
+      ['cargoFuncion', 'Cargo'],
+    ],
+  },
+]
+
+function ResumenView({
+  resumen,
+  familiares,
+}: {
+  resumen: Record<string, string>
+  familiares: number[]
+}) {
+  return (
+    <div className="flex flex-col gap-3">
+      {RESUMEN_GROUPS.map((group) => {
+        const filled = group.fields.filter(([k]) => resumen[k])
+        if (filled.length === 0) return null
+        return (
+          <div
+            key={group.title}
+            className="flex flex-col gap-1 rounded-md border border-neutral-200 bg-white p-3"
+          >
+            <h4 className="text-xs font-semibold uppercase tracking-wide text-brand-muted">
+              {group.title}
+            </h4>
+            <dl className="grid grid-cols-1 gap-x-3 gap-y-1 sm:grid-cols-2">
+              {filled.map(([k, label]) => (
+                <div key={k} className="flex items-baseline justify-between gap-2">
+                  <dt className="text-xs text-brand-muted">{label}:</dt>
+                  <dd className="text-right text-sm font-medium text-brand-ink">
+                    {resumen[k]}
+                  </dd>
+                </div>
+              ))}
+            </dl>
+          </div>
+        )
+      })}
+
+      {familiares.length > 0 && (
+        <div className="rounded-md border border-neutral-200 bg-white p-3">
+          <h4 className="text-xs font-semibold uppercase tracking-wide text-brand-muted">
+            Familiares cargados
+          </h4>
+          <p className="text-sm text-brand-ink">
+            {familiares.length} familiar{familiares.length > 1 ? 'es' : ''}
+          </p>
+        </div>
+      )}
+
+      {Object.keys(resumen).length === 0 && (
+        <p className="text-sm text-brand-muted">
+          No cargaste datos opcionales. Vamos a procesar tu solicitud con lo
+          obligatorio nomás.
+        </p>
+      )}
+    </div>
   )
 }
 
@@ -468,6 +640,36 @@ function Section({
       </header>
       <div className="flex flex-col gap-3">{children}</div>
     </section>
+  )
+}
+
+function OptionalDetails({
+  summary,
+  hint,
+  children,
+}: {
+  summary: string
+  hint?: string
+  children: React.ReactNode
+}) {
+  return (
+    <details className="rounded-xl bg-white p-4 shadow-card">
+      <summary className="flex cursor-pointer items-center justify-between gap-3 list-none">
+        <div className="flex flex-col gap-0.5">
+          <span className="text-base font-semibold text-brand-ink">
+            {summary}{' '}
+            <span className="ml-1 rounded-full bg-neutral-100 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-brand-muted">
+              Opcional
+            </span>
+          </span>
+          {hint && <span className="text-xs text-brand-muted">{hint}</span>}
+        </div>
+        <span className="text-brand-muted transition group-open:rotate-180" aria-hidden>
+          ▾
+        </span>
+      </summary>
+      <div className="mt-4 flex flex-col gap-3">{children}</div>
+    </details>
   )
 }
 

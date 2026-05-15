@@ -642,7 +642,7 @@ export type Database = {
           estado: string
           estado_civil: string | null
           familiares: Json | null
-          fecha_nacimiento: string
+          fecha_nacimiento: string | null
           firma_png: string
           gerencia: string | null
           id: string
@@ -652,9 +652,9 @@ export type Database = {
           numero_legajo: string
           procesado_at: string | null
           procesado_por: string | null
-          telefono: string
+          telefono: string | null
           tipo_documento: string
-          tipo_planta: string
+          tipo_planta: string | null
           trabajo_domicilio: string | null
           trabajo_email: string | null
           trabajo_localidad: string | null
@@ -683,7 +683,7 @@ export type Database = {
           estado?: string
           estado_civil?: string | null
           familiares?: Json | null
-          fecha_nacimiento: string
+          fecha_nacimiento?: string | null
           firma_png: string
           gerencia?: string | null
           id?: string
@@ -693,9 +693,9 @@ export type Database = {
           numero_legajo: string
           procesado_at?: string | null
           procesado_por?: string | null
-          telefono: string
+          telefono?: string | null
           tipo_documento: string
-          tipo_planta: string
+          tipo_planta?: string | null
           trabajo_domicilio?: string | null
           trabajo_email?: string | null
           trabajo_localidad?: string | null
@@ -724,7 +724,7 @@ export type Database = {
           estado?: string
           estado_civil?: string | null
           familiares?: Json | null
-          fecha_nacimiento?: string
+          fecha_nacimiento?: string | null
           firma_png?: string
           gerencia?: string | null
           id?: string
@@ -734,9 +734,9 @@ export type Database = {
           numero_legajo?: string
           procesado_at?: string | null
           procesado_por?: string | null
-          telefono?: string
+          telefono?: string | null
           tipo_documento?: string
-          tipo_planta?: string
+          tipo_planta?: string | null
           trabajo_domicilio?: string | null
           trabajo_email?: string | null
           trabajo_localidad?: string | null

@@ -42,7 +42,7 @@ function parseFormData(formData: FormData) {
     apellidoNombre: (formData.get('apellidoNombre')?.toString() ?? '').trim(),
     tipoDocumento: (formData.get('tipoDocumento')?.toString() ?? 'DNI') as 'DNI',
     numeroDocumento: (formData.get('numeroDocumento')?.toString() ?? '').trim(),
-    fechaNacimiento: formData.get('fechaNacimiento')?.toString() ?? '',
+    fechaNacimiento: (formData.get('fechaNacimiento')?.toString() ?? '').trim(),
     estadoCivil: (formData.get('estadoCivil')?.toString() || undefined) as
       | 'soltero'
       | undefined,
@@ -70,7 +70,10 @@ function parseFormData(formData: FormData) {
     areaUdai: formData.get('areaUdai')?.toString() ?? '',
     cargoFuncion: formData.get('cargoFuncion')?.toString() ?? '',
     categoria: formData.get('categoria')?.toString() ?? '',
-    tipoPlanta: (formData.get('tipoPlanta')?.toString() ?? '') as 'permanente',
+    tipoPlanta: (formData.get('tipoPlanta')?.toString() || undefined) as
+      | 'permanente'
+      | 'transitoria'
+      | undefined,
 
     conyuge,
     familiares: familiares.length > 0 ? familiares : undefined,
@@ -113,7 +116,7 @@ export async function submitAfiliacion(
       apellido_nombre: data.apellidoNombre,
       tipo_documento: data.tipoDocumento,
       numero_documento: data.numeroDocumento,
-      fecha_nacimiento: data.fechaNacimiento,
+      fecha_nacimiento: data.fechaNacimiento ?? null,
       estado_civil: data.estadoCivil,
       domicilio_calle: data.domicilioCalle ?? null,
       domicilio_numero: data.domicilioNumero ?? null,
@@ -122,7 +125,7 @@ export async function submitAfiliacion(
       domicilio_localidad: data.domicilioLocalidad ?? null,
       domicilio_provincia: data.domicilioProvincia ?? null,
       domicilio_cp: data.domicilioCp ?? null,
-      telefono: data.telefono,
+      telefono: data.telefono ?? null,
       celular: data.celular,
       email: data.email,
       cbu: data.cbu ?? null,
@@ -136,7 +139,7 @@ export async function submitAfiliacion(
       area_udai: data.areaUdai ?? null,
       cargo_funcion: data.cargoFuncion ?? null,
       categoria: data.categoria ?? null,
-      tipo_planta: data.tipoPlanta,
+      tipo_planta: data.tipoPlanta ?? null,
       conyuge: data.conyuge ?? null,
       familiares: data.familiares ?? null,
       acepta_descuento: data.aceptaDescuento,
