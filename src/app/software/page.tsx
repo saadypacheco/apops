@@ -453,10 +453,34 @@ function Capturas() {
             <MockAdmin />
           </MockCard>
           <MockCard
-            label="Dashboard CD"
-            desc="Mapa de Argentina + KPIs + evolución del padrón mes a mes."
+            label="Dashboard CD — Resumen"
+            desc="KPIs vs objetivos, delta mes anterior, donut de gremios."
           >
             <MockDashboard />
+          </MockCard>
+          <MockCard
+            label="Padrón en mapa"
+            desc="Cotizantes por provincia con choropleth + heatmap edificios × dimensiones."
+          >
+            <MockMapaPadron />
+          </MockCard>
+          <MockCard
+            label="Evolución por gremio"
+            desc="Línea por gremio en los últimos meses + tabla de altas/bajas APOPS."
+          >
+            <MockEvolucion />
+          </MockCard>
+          <MockCard
+            label="Eventos del mes"
+            desc="Cumpleaños y aniversarios APOPS con plantillas WhatsApp listas para enviar."
+          >
+            <MockEventos />
+          </MockCard>
+          <MockCard
+            label="Carga del padrón ANSES"
+            desc="Subís el Excel mensual, se procesa con dedup, auto-baja y notif a delegados."
+          >
+            <MockCargaPadron />
           </MockCard>
           <MockCard
             label="Panel de delegados"
@@ -903,6 +927,327 @@ function MockDashboard() {
             />
           ))}
         </div>
+      </div>
+    </div>
+  )
+}
+
+// Mock 7 — Dashboard tab Padrón: mapa Argentina + heatmap
+function MockMapaPadron() {
+  // Provincias top con choropleth — coordenadas y valores hardcoded
+  const provincias = [
+    { x: 38, y: 18, r: 10, label: 'BA' },
+    { x: 44, y: 28, r: 14, label: 'CABA' },
+    { x: 30, y: 38, r: 8, label: 'CB' },
+    { x: 50, y: 30, r: 6, label: 'SF' },
+    { x: 25, y: 50, r: 7, label: 'MZ' },
+    { x: 36, y: 55, r: 5, label: 'NQN' },
+    { x: 60, y: 22, r: 4, label: 'MIS' },
+  ]
+  return (
+    <div className="flex h-full flex-col gap-1 text-[10px] text-brand-ink">
+      <div className="-mx-3 -mt-3 bg-brand-gradient px-3 pb-2 pt-3 text-white">
+        <p className="text-[8px] uppercase tracking-widest text-white/80">
+          APOPS · CD · Padrón
+        </p>
+        <p className="text-sm font-bold leading-tight">15 558 cotizantes</p>
+        <p className="text-[8px] text-white/80">Distribución geográfica</p>
+      </div>
+
+      {/* Mapa abstracto de Argentina */}
+      <div className="relative flex-1 rounded-md bg-gradient-to-b from-sky-50 to-emerald-50 ring-1 ring-neutral-200">
+        <svg
+          viewBox="0 0 100 100"
+          className="absolute inset-0 h-full w-full"
+          preserveAspectRatio="xMidYMid meet"
+          aria-hidden
+        >
+          {/* Silueta abstracta Argentina */}
+          <path
+            d="M40 5 L52 8 L58 14 L62 22 L60 32 L65 42 L58 55 L52 68 L48 78 L42 88 L36 92 L32 88 L28 78 L26 65 L22 55 L24 45 L28 35 L32 22 L36 12 Z"
+            fill="rgba(99, 179, 237, 0.2)"
+            stroke="rgba(99, 179, 237, 0.5)"
+            strokeWidth="0.4"
+          />
+          {provincias.map((p) => (
+            <g key={p.label}>
+              <circle
+                cx={p.x}
+                cy={p.y}
+                r={p.r / 2.5}
+                fill="rgba(31, 114, 184, 0.85)"
+                stroke="white"
+                strokeWidth="0.4"
+              />
+              <text
+                x={p.x}
+                y={p.y + p.r / 6}
+                fill="white"
+                fontSize="2.5"
+                fontWeight="bold"
+                textAnchor="middle"
+              >
+                {p.label}
+              </text>
+            </g>
+          ))}
+        </svg>
+      </div>
+
+      {/* Heatmap mini */}
+      <div className="rounded-md bg-white p-1.5 ring-1 ring-neutral-200">
+        <p className="text-[7px] font-bold uppercase tracking-wide text-brand-muted">
+          Edificios × dimensiones
+        </p>
+        <div className="mt-1 grid grid-cols-5 gap-0.5">
+          {Array.from({ length: 25 }).map((_, i) => {
+            const v = (i * 37) % 10
+            const bg =
+              v < 3
+                ? 'bg-red-300'
+                : v < 6
+                  ? 'bg-amber-300'
+                  : 'bg-emerald-400'
+            return <div key={i} className={`h-2 rounded-sm ${bg}`} />
+          })}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// Mock 8 — Dashboard tab Evolución: line chart por gremio
+function MockEvolucion() {
+  return (
+    <div className="flex h-full flex-col gap-1.5 text-[10px] text-brand-ink">
+      <div className="-mx-3 -mt-3 bg-brand-gradient px-3 pb-2 pt-3 text-white">
+        <p className="text-[8px] uppercase tracking-widest text-white/80">
+          APOPS · CD · Evolución
+        </p>
+        <p className="text-sm font-bold leading-tight">Padrón mes a mes</p>
+      </div>
+
+      {/* Chart */}
+      <div className="rounded-md bg-white p-2 ring-1 ring-neutral-200">
+        <svg viewBox="0 0 100 50" className="h-16 w-full" aria-hidden>
+          <line x1="0" y1="50" x2="100" y2="50" stroke="#e5e7eb" strokeWidth="0.5" />
+          <line x1="0" y1="35" x2="100" y2="35" stroke="#e5e7eb" strokeWidth="0.3" />
+          <line x1="0" y1="20" x2="100" y2="20" stroke="#e5e7eb" strokeWidth="0.3" />
+          {/* APOPS */}
+          <polyline
+            points="0,30 25,28 50,25 75,22 100,18"
+            fill="none"
+            stroke="#1f72b8"
+            strokeWidth="1.2"
+            strokeLinecap="round"
+          />
+          {/* ATE */}
+          <polyline
+            points="0,38 25,36 50,37 75,35 100,34"
+            fill="none"
+            stroke="#10b981"
+            strokeWidth="1"
+            strokeLinecap="round"
+            strokeDasharray="2,1"
+          />
+          {/* UPCN */}
+          <polyline
+            points="0,42 25,42 50,41 75,42 100,43"
+            fill="none"
+            stroke="#f59e0b"
+            strokeWidth="1"
+            strokeLinecap="round"
+            strokeDasharray="1,1"
+          />
+        </svg>
+        <div className="mt-1 flex flex-wrap gap-2 text-[7px]">
+          <span className="inline-flex items-center gap-1">
+            <span className="h-1 w-2 bg-brand-blue" /> APOPS
+          </span>
+          <span className="inline-flex items-center gap-1">
+            <span className="h-1 w-2 bg-emerald-500" /> ATE
+          </span>
+          <span className="inline-flex items-center gap-1">
+            <span className="h-1 w-2 bg-amber-500" /> UPCN
+          </span>
+        </div>
+      </div>
+
+      {/* Mini tabla altas/bajas */}
+      <div className="mt-auto rounded-md bg-white p-1.5 ring-1 ring-neutral-200">
+        <p className="text-[7px] font-bold uppercase tracking-wide text-brand-muted">
+          APOPS — últimos meses
+        </p>
+        <table className="mt-1 w-full text-[8px]">
+          <thead>
+            <tr className="text-brand-muted">
+              <th className="text-left font-medium">Mes</th>
+              <th className="text-right font-medium">▲</th>
+              <th className="text-right font-medium">▼</th>
+              <th className="text-right font-medium">Neto</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Mar</td>
+              <td className="text-right text-emerald-700">+18</td>
+              <td className="text-right text-red-600">−4</td>
+              <td className="text-right font-bold">+14</td>
+            </tr>
+            <tr>
+              <td>Abr</td>
+              <td className="text-right text-emerald-700">+22</td>
+              <td className="text-right text-red-600">−6</td>
+              <td className="text-right font-bold">+16</td>
+            </tr>
+            <tr>
+              <td>May</td>
+              <td className="text-right text-emerald-700">+27</td>
+              <td className="text-right text-red-600">−5</td>
+              <td className="text-right font-bold">+22</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
+}
+
+// Mock 9 — Dashboard tab Eventos: cumpleaños del mes + plantilla WhatsApp
+function MockEventos() {
+  return (
+    <div className="flex h-full flex-col gap-1.5 text-[10px] text-brand-ink">
+      <div className="-mx-3 -mt-3 bg-brand-gradient px-3 pb-2 pt-3 text-white">
+        <p className="text-[8px] uppercase tracking-widest text-white/80">
+          APOPS · CD · Eventos
+        </p>
+        <p className="text-sm font-bold leading-tight">🎂 Mayo 2026</p>
+      </div>
+
+      {/* Cumpleaños */}
+      <p className="text-[7px] font-bold uppercase tracking-wide text-brand-muted">
+        Cumpleaños · 12
+      </p>
+      <div className="flex items-center justify-between rounded-md bg-white p-1.5 ring-1 ring-neutral-200">
+        <div className="flex items-center gap-1.5">
+          <span className="text-base">🎂</span>
+          <div className="flex flex-col leading-tight">
+            <span className="text-[9px] font-bold">Pérez, María Ana</span>
+            <span className="text-[7px] text-brand-muted">14 may · UDAI Once</span>
+          </div>
+        </div>
+        <button className="rounded-full bg-[#25D366] px-1.5 py-0.5 text-[7px] font-bold text-white">
+          WhatsApp
+        </button>
+      </div>
+      <div className="flex items-center justify-between rounded-md bg-white p-1.5 ring-1 ring-neutral-200">
+        <div className="flex items-center gap-1.5">
+          <span className="text-base">🎂</span>
+          <div className="flex flex-col leading-tight">
+            <span className="text-[9px] font-bold">Rojas, Esteban</span>
+            <span className="text-[7px] text-brand-muted">19 may · CABA Centro</span>
+          </div>
+        </div>
+        <button className="rounded-full bg-[#25D366] px-1.5 py-0.5 text-[7px] font-bold text-white">
+          WhatsApp
+        </button>
+      </div>
+
+      {/* Aniversarios */}
+      <p className="mt-1 text-[7px] font-bold uppercase tracking-wide text-brand-muted">
+        Aniversarios APOPS · 4
+      </p>
+      <div className="flex items-center justify-between rounded-md bg-white p-1.5 ring-1 ring-neutral-200">
+        <div className="flex items-center gap-1.5">
+          <span className="text-base">🎉</span>
+          <div className="flex flex-col leading-tight">
+            <span className="text-[9px] font-bold">García, Lucía</span>
+            <span className="text-[7px] text-brand-muted">10 años · 22 may</span>
+          </div>
+        </div>
+        <button className="rounded-full bg-[#25D366] px-1.5 py-0.5 text-[7px] font-bold text-white">
+          WhatsApp
+        </button>
+      </div>
+
+      {/* Plantilla preview */}
+      <div className="mt-auto rounded-md bg-emerald-50 p-1.5 ring-1 ring-emerald-200">
+        <p className="text-[7px] font-bold text-emerald-900">
+          Plantilla precargada
+        </p>
+        <p className="mt-0.5 text-[8px] leading-snug text-emerald-900">
+          ¡Feliz cumpleaños, María! Te saluda la Comisión Directiva de APOPS…
+        </p>
+      </div>
+    </div>
+  )
+}
+
+// Mock 10 — Carga del padrón ANSES (upload Excel + stats)
+function MockCargaPadron() {
+  return (
+    <div className="flex h-full flex-col gap-1.5 text-[10px] text-brand-ink">
+      <div className="-mx-3 -mt-3 bg-brand-gradient px-3 pb-2 pt-3 text-white">
+        <p className="text-[8px] uppercase tracking-widest text-white/80">
+          APOPS · Admin
+        </p>
+        <p className="text-sm font-bold leading-tight">Padrón ANSES</p>
+      </div>
+
+      {/* Upload box */}
+      <div className="rounded-md border-2 border-dashed border-brand-blue/40 bg-brand-blue/5 p-2 text-center">
+        <p className="text-base">📤</p>
+        <p className="mt-0.5 text-[8px] font-bold text-brand-blue">
+          Subí el Excel mensual
+        </p>
+        <p className="text-[7px] text-brand-muted">XLSX / hoja única</p>
+      </div>
+
+      {/* Resumen carga */}
+      <div className="rounded-md bg-emerald-50 p-1.5 ring-1 ring-emerald-200">
+        <p className="text-[7px] font-bold text-emerald-900">
+          ✓ Última carga: Mayo 2026
+        </p>
+        <div className="mt-1 grid grid-cols-3 gap-1 text-center">
+          <div>
+            <p className="text-[10px] font-bold text-emerald-900">15 558</p>
+            <p className="text-[6px] uppercase text-emerald-800">filas</p>
+          </div>
+          <div>
+            <p className="text-[10px] font-bold text-emerald-900">+27</p>
+            <p className="text-[6px] uppercase text-emerald-800">altas</p>
+          </div>
+          <div>
+            <p className="text-[10px] font-bold text-emerald-900">−5</p>
+            <p className="text-[6px] uppercase text-emerald-800">bajas</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Historial snapshots */}
+      <p className="text-[7px] font-bold uppercase tracking-wide text-brand-muted">
+        Snapshots
+      </p>
+      <div className="flex flex-col gap-0.5">
+        {['May 2026', 'Abr 2026', 'Mar 2026', 'Feb 2026'].map((mes, i) => (
+          <div
+            key={mes}
+            className="flex items-center justify-between rounded bg-white px-1.5 py-0.5 text-[8px] ring-1 ring-neutral-200"
+          >
+            <span className="font-medium">{mes}</span>
+            <span className="text-brand-muted">
+              {i === 0 ? '15 558' : i === 1 ? '15 536' : i === 2 ? '15 520' : '15 502'}
+            </span>
+          </div>
+        ))}
+      </div>
+
+      {/* Notif auto */}
+      <div className="mt-auto rounded-md bg-amber-50 p-1.5 ring-1 ring-amber-200">
+        <p className="text-[7px] leading-snug text-amber-900">
+          🔔 38 delegados notificados automáticamente de altas/bajas en sus
+          edificios.
+        </p>
       </div>
     </div>
   )
