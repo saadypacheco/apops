@@ -1,6 +1,6 @@
 # Retomar trabajo — APOPS Siempre
 
-> Doc de handoff entre sesiones. Última actualización: 2026-05-15.
+> Doc de handoff entre sesiones. Última actualización: 2026-05-15 (sesión tarde).
 > Branch activa: `main`. Trabajo en producción en `https://apops.vercel.app`.
 
 ## Estado al cerrar la sesión
@@ -101,22 +101,71 @@ Búsqueda por nombre / legajo / DNI exacto, filtros gremio + planta, paginación
 - Migration 0029 (legajo primary) consolidada con Excel real.
 - Fix lint que estaba bloqueando deploys de Vercel.
 
-## ⚠️ PENDIENTE — turno del user antes de validar push
+### I — Refactor de afiliación + envío por mail (sesión tarde 2026-05-15)
 
-Para que las notificaciones push reales lleguen al celular:
+Tres commits productivos sobre el flujo `/afiliarse`:
 
-1. **Generar VAPID keys**:
-   ```
-   npx web-push generate-vapid-keys
-   ```
-2. **Pegar 3 env vars en Vercel** (Production + Preview + Development):
-   - `NEXT_PUBLIC_VAPID_PUBLIC_KEY` = Public Key
-   - `VAPID_PRIVATE_KEY` = Private Key (secreto, sin prefijo NEXT_PUBLIC_)
+**`16d3508` — Wizard 3 pasos + FAB contacto**
+- Migration 0032: afloja NOT NULL en `telefono`, `fecha_nacimiento`, `tipo_planta` (pasan a opcionales en DB).
+- Reduce required del form a 5 campos: legajo, apellido y nombre, DNI, celular, email. Quita `telefono` del UI (queda solo celular).
+- Wizard refactorizado: paso 1 obligatorios; paso 2 todo opcional con `<details>` y banner; paso 3 resumen + firma + enviar.
+- Auto-salto al primer paso con error cuando el server devuelve `fieldErrors` (arregla bug "Revisá los campos marcados" sin pista visual).
+- Legajo numérico: placeholder `983928`, regex `^[0-9]{4,10}$`.
+- FAB contacto: para afiliado abre menú expandible WhatsApp/Email/Llamar a APOPS; admin/delegado mantienen FAB ad-hoc actual.
+- Quita `ConsultasWidget` del home (duplicado con FAB).
+
+**`8d558fe` — Envío de PDF firmado por mail**
+- Migration 0033: columnas tracking en `solicitudes_afiliacion` (`email_aspirante_enviado_at`, `email_apops_enviado_at`, `email_delegado_enviado_at`, `email_delegado_destinos`, `email_error`).
+- `src/lib/email/send.ts`: wrapper de Resend (REST API directo). Fail gracefully si `RESEND_API_KEY` o `EMAIL_FROM` no están — return `{ ok: false, skipped: true }` y la solicitud igual queda en DB.
+- `src/lib/afiliacion/pdf.ts`: genera PDF con `pdf-lib` — header, datos agrupados por sección, autorización del 3%, firma embedida desde base64 del SignaturePad.
+- `src/lib/afiliacion/delegados-lookup.ts`: cruza `padron.representante` (filtrado por edificio) con `afiliados.rol='delegado'` para encontrar emails de delegados a notificar.
+- Endpoint `GET /api/edificios`: lista única de `lugar_trabajo_padron` del snapshot actual, `revalidate: 3600`. Alimenta el combo del form.
+- Server action `submitAfiliacion`: post-insert ejecuta `dispatchAfiliacionEmails()` que dispara 3 mails en paralelo (aspirante + apops + delegado(s)) y actualiza columnas de tracking.
+- `/afiliarse/exito` ahora consulta la fila por id y muestra explícitamente a quién se mandó copia (con ícono por canal) o banner amber si fallaron todos los envíos.
+
+**`0d63107` — FAB instalar + landing compacta + edificio obligatorio**
+- `InstallPWAButton`: 2 variants nuevos `fab` (bottom-20) y `fab-stacked` (bottom-36) para apilarse encima del FAB de contacto. Auto-oculto si la PWA ya está instalada.
+- Sacado el botón inline de "Instalar app" de landing (duplicado con el FAB). FAB también sumado a `/software` y al `AppShell` (todas las páginas autenticadas).
+- LoginForm: gap entre "¿Olvidaste tu clave?" y "¿Primera vez? Registrate" reducido de `1.5` a `0` (más pegados).
+- NoticiasCarousel: quitado el título "Últimas novedades"; queda solo "Ver todas →" a la derecha. Compactados paddings del landing (objetivo: que entre todo en una pantalla mobile).
+- Wizard `/afiliarse`: edificio pasa a ser el **primer campo obligatorio del paso 1** (dispara el lookup de delegados). Zod: `edificioUdai` con `min(2)`. `EdificioCombo` recibe props `required` + `error`.
+
+## ⚠️ PENDIENTE — turno del user antes de validar push y email
+
+### A) Web Push (VAPID) — código deployado, env vars sin configurar en Vercel
+
+Las VAPID keys ya están generadas y en `.env.local` (formato corregido en sesión tarde). Falta:
+
+1. **Pegar 3 env vars en Vercel** (Production + Preview + Development):
+   - `NEXT_PUBLIC_VAPID_PUBLIC_KEY` = (mismo valor que .env.local)
+   - `VAPID_PRIVATE_KEY` = (secreto, sin prefijo `NEXT_PUBLIC_`)
    - `VAPID_SUBJECT` = `mailto:apops@apops.org.ar`
-3. **Redeploy** desde Vercel (con "Use existing Build Cache" desactivado).
-4. **Probar**: instalar PWA en celular → entrar como García Lucía → Perfil → "Activar notificaciones" → mandar desde otra cuenta o desde el mismo usuario → verificar que llega al SO.
+2. **Redeploy** desde Vercel (con "Use existing Build Cache" desactivado).
+3. **Probar**: instalar PWA → /perfil → "Activar notificaciones" → mandar desde otra cuenta → verificar que llega al SO.
 
-Sin las keys el botón en /perfil dice "Notificaciones push no configuradas" en amber, y las notif in-app siguen funcionando como antes.
+Sin las keys el botón en /perfil dice "Notificaciones push no configuradas" en amber, las notif in-app siguen funcionando.
+
+### B) Email transaccional (Resend) — DECIDIDO POSPONER
+
+Decisión 2026-05-15 (sesión tarde): el código de envío de mail con PDF firmado está deployado pero **el setup de Resend queda pendiente para más adelante**. Mientras tanto:
+
+- La solicitud `/afiliarse` se guarda OK en DB.
+- En `/afiliarse/exito` aparece banner amber: "La solicitud quedó guardada, pero no pudimos mandar el mail de confirmación".
+- El admin la ve igual que siempre en `/admin` y la procesa manualmente.
+- El PDF se genera del lado servidor pero no se envía a ningún lado (los 3 envíos hacen `skipped: 'no_resend_config'`).
+
+Cuando se quiera activar:
+
+1. **Crear cuenta en https://resend.com** (free tier: 3k mails/mes con dominio verificado, 100/día sin verificar).
+2. **Verificar dominio `apops.org.ar`** en el dashboard de Resend (te da unos TXT + DKIM para agregar al DNS donde está hosteado el dominio).
+3. **Generar API key** en Resend (Dashboard → API Keys → Create).
+4. **2 env vars en Vercel** (Production + Preview + Development):
+   - `RESEND_API_KEY` = `re_xxx...`
+   - `EMAIL_FROM` = `APOPS Siempre <noreply@apops.org.ar>` (cualquier alias del dominio verificado).
+5. **Redeploy** desde Vercel.
+6. **Probar**: enviar `/afiliarse` con un email propio → debería llegar PDF al aspirante, a `apops@apops.org.ar` y a los delegados del edificio declarado (si hay match en padrón).
+
+Verificar el dominio puede llevar minutos u horas según el proveedor DNS. Mientras no esté verificado, Resend solo permite enviar a la dirección owner de la cuenta (modo sandbox — útil para test inicial).
 
 ## Próxima sesión — Testing y mejoras
 
@@ -205,6 +254,9 @@ El protocolo de bootstrap está en [CLAUDE.md](CLAUDE.md). Cuando digas "retomá
 ## Commits clave de esta sesión
 
 ```
+0d63107 feat(ux): FAB instalar app + landing compacta + edificio obligatorio paso 1
+8d558fe feat(afiliacion): envío de PDF firmado por mail al recibir solicitud
+16d3508 feat(afiliacion+fab): wizard 3 pasos minimizando required + FAB contacto APOPS
 811966e feat(push): Web Push real con VAPID — infra + UI + hooks
 ed9b991 feat(adherentes): fix duplicados notif + seed demo + flujo de carga
 4cbd8b5 feat(pwa): screenshots para Richer PWA Install UI
