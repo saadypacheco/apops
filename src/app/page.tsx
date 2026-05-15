@@ -116,7 +116,7 @@ export default async function LandingPage({
             </p>
             <a
               href="mailto:apops@apops.org.ar"
-              className="text-brand-blue hover:underline"
+              className="font-medium text-brand-ink hover:underline"
             >
               apops@apops.org.ar
             </a>

@@ -74,14 +74,15 @@ export function LoginForm({ registrado = false }: { registrado?: boolean }) {
 
       <SubmitButton />
 
-      <div className="flex flex-col items-center gap-0 text-center">
+      <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-center text-xs">
         <Link
           href="/recuperar-clave"
-          className="text-sm font-semibold text-brand-blue hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:ring-offset-2"
+          className="font-semibold text-brand-blue hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:ring-offset-2"
         >
           ¿Olvidaste tu clave?
         </Link>
-        <p className="text-xs text-brand-muted">
+        <span aria-hidden className="text-brand-muted/50">·</span>
+        <span className="text-brand-muted">
           ¿Primera vez?{' '}
           <Link
             href="/registrarse"
@@ -89,7 +90,7 @@ export function LoginForm({ registrado = false }: { registrado?: boolean }) {
           >
             Registrate
           </Link>
-        </p>
+        </span>
       </div>
     </form>
   )
