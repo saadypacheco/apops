@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/Button'
 import { ErrorMessage } from '@/components/ui/ErrorMessage'
 import { StepIndicator } from './StepIndicator'
 import { SignaturePad } from './SignaturePad'
+import { EdificioCombo } from './EdificioCombo'
 
 const initial: AfiliacionFormState = {}
 
@@ -261,6 +262,17 @@ export function AfiliacionForm() {
 
         <SectionGap />
 
+        {/* Edificio destacado: si lo cargás, te identificamos en padrón y
+            avisamos a tu delegado/a. No está dentro de <details>. */}
+        <Section
+          title="¿Dónde trabajás?"
+          subtitle="Elegilo del listado del padrón ANSES. Si lo cargás, le avisamos a tu delegado/a del sector."
+        >
+          <EdificioCombo />
+        </Section>
+
+        <SectionGap />
+
         <OptionalDetails
           summary="Datos personales adicionales"
           hint="Fecha de nacimiento, estado civil"
@@ -310,17 +322,14 @@ export function AfiliacionForm() {
         <SectionGap />
 
         <OptionalDetails
-          summary="Lugar de trabajo"
-          hint="Edificio, planta, categoría — la CD lo completa desde el padrón si no lo cargás"
+          summary="Más datos del trabajo"
+          hint="Categoría, planta, área, gerencia — la CD lo completa desde el padrón si no lo cargás"
         >
           <Row>
             <Field name="categoria" label="Categoría" error={errors['categoria']} />
-            <Field name="edificioUdai" label="Edificio / UDAI" error={errors['edificioUdai']} />
-          </Row>
-          <Row>
             <Field name="areaUdai" label="Área" error={errors['areaUdai']} />
-            <Field name="gerencia" label="Gerencia" error={errors['gerencia']} />
           </Row>
+          <Field name="gerencia" label="Gerencia" error={errors['gerencia']} />
           <Field name="cargoFuncion" label="Cargo o función" error={errors['cargoFuncion']} />
           <fieldset className="flex flex-col gap-2">
             <legend className="text-sm font-medium text-brand-ink">

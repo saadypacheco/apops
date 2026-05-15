@@ -6,8 +6,14 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import {
   afiliacionSchema,
   type AfiliacionFormState,
+  type AfiliacionInput,
   type Familiar,
 } from '@/types/afiliacion'
+import { generateAfiliacionPdf } from '@/lib/afiliacion/pdf'
+import { lookupDelegadoEmailsByEdificio } from '@/lib/afiliacion/delegados-lookup'
+import { sendMail } from '@/lib/email/send'
+
+const APOPS_EMAIL = 'apops@apops.org.ar'
 
 // Server Action: persiste la ficha de afiliación con anon (RLS permite
 // INSERT). Después redirige a /afiliarse/exito con el id (para que la
@@ -158,5 +164,182 @@ export async function submitAfiliacion(
     }
   }
 
+  // Envío de mail con PDF firmado: aspirante (acuse) + APOPS (gestión) +
+  // delegado(s) del edificio declarado (FYI). Fire-and-forget conceptual:
+  // si Resend falla o no está configurado, la solicitud igual quedó
+  // guardada. Loggeamos y registramos en columnas de tracking.
+  await dispatchAfiliacionEmails(inserted.id, data)
+
   redirect(`/afiliarse/exito?id=${inserted.id}`)
+}
+
+// ─── envío de mails post-insert ─────────────────────────────────────
+
+async function dispatchAfiliacionEmails(
+  solicitudId: string,
+  data: AfiliacionInput,
+): Promise<void> {
+  const admin = createAdminClient()
+  const ref = solicitudId.slice(0, 8).toUpperCase()
+
+  let pdfBase64 = ''
+  try {
+    const pdfBytes = await generateAfiliacionPdf(data, { solicitudId })
+    pdfBase64 = Buffer.from(pdfBytes).toString('base64')
+  } catch (err) {
+    console.error('[dispatchAfiliacionEmails] PDF generation failed', err)
+    await admin
+      .from('solicitudes_afiliacion')
+      .update({ email_error: `pdf_gen_failed: ${asString(err)}` })
+      .eq('id', solicitudId)
+    return
+  }
+
+  const pdfFilename = `ficha-afiliacion-${data.numeroDocumento}.pdf`
+
+  // Aspirante: acuse de recibo con copia del PDF
+  const aspirantePromise = sendMail({
+    to: data.email,
+    subject: 'Recibimos tu ficha de afiliación — APOPS',
+    html: htmlAspirante(data, ref),
+    pdfBase64,
+    pdfFilename,
+    replyTo: APOPS_EMAIL,
+  })
+
+  // APOPS: solicitud completa para gestión
+  const apopsPromise = sendMail({
+    to: APOPS_EMAIL,
+    subject: `Nueva afiliación: ${data.apellidoNombre} (${data.numeroDocumento})`,
+    html: htmlApops(data, ref),
+    pdfBase64,
+    pdfFilename,
+    replyTo: data.email,
+  })
+
+  // Delegado(s) del edificio declarado, si hay y match
+  const delegadoEmails = data.edificioUdai
+    ? await lookupDelegadoEmailsByEdificio(data.edificioUdai).catch(() => [])
+    : []
+  const delegadoPromise =
+    delegadoEmails.length > 0
+      ? sendMail({
+          to: delegadoEmails,
+          subject: `Nueva afiliación en tu edificio: ${data.apellidoNombre}`,
+          html: htmlDelegado(data, ref),
+          pdfBase64,
+          pdfFilename,
+          replyTo: APOPS_EMAIL,
+        })
+      : Promise.resolve(null)
+
+  const [aspRes, apopsRes, delRes] = await Promise.all([
+    aspirantePromise,
+    apopsPromise,
+    delegadoPromise,
+  ])
+
+  const now = new Date().toISOString()
+  const errors: string[] = []
+  const update: {
+    email_aspirante_enviado_at?: string
+    email_apops_enviado_at?: string
+    email_delegado_enviado_at?: string
+    email_delegado_destinos?: string[]
+    email_error?: string
+  } = {}
+  if (aspRes && aspRes.ok) update.email_aspirante_enviado_at = now
+  else if (aspRes && !aspRes.ok && !aspRes.skipped) errors.push(`aspirante: ${aspRes.error}`)
+  if (apopsRes && apopsRes.ok) update.email_apops_enviado_at = now
+  else if (apopsRes && !apopsRes.ok && !apopsRes.skipped) errors.push(`apops: ${apopsRes.error}`)
+  if (delRes && delRes.ok) {
+    update.email_delegado_enviado_at = now
+    update.email_delegado_destinos = delegadoEmails
+  } else if (delRes && !delRes.ok && !delRes.skipped) {
+    errors.push(`delegado: ${delRes.error}`)
+  }
+  if (errors.length > 0) update.email_error = errors.join(' | ')
+
+  if (Object.keys(update).length > 0) {
+    await admin
+      .from('solicitudes_afiliacion')
+      .update(update)
+      .eq('id', solicitudId)
+  }
+}
+
+function asString(v: unknown): string {
+  if (v instanceof Error) return v.message
+  return typeof v === 'string' ? v : JSON.stringify(v).slice(0, 200)
+}
+
+// ─── plantillas HTML de mail ────────────────────────────────────────
+
+function escapeHtml(s: string | undefined | null): string {
+  if (!s) return ''
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+}
+
+function htmlAspirante(d: AfiliacionInput, ref: string): string {
+  return `
+    <div style="font-family: -apple-system, system-ui, sans-serif; max-width: 560px; margin: 0 auto; color: #222;">
+      <h2 style="color: #1f72b8; margin-bottom: 8px;">¡Recibimos tu ficha, ${escapeHtml(firstName(d.apellidoNombre))}!</h2>
+      <p>Tu solicitud de afiliación a <strong>APOPS Siempre</strong> quedó registrada.
+        Adjunto encontrás el PDF con todos los datos que cargaste, firmado.</p>
+      <p>Un administrador la va a revisar y vas a recibir un email cuando esté procesada.</p>
+      <table style="border-collapse: collapse; font-size: 14px; margin: 16px 0;">
+        <tr><td style="padding: 4px 12px 4px 0; color: #777;">Referencia:</td><td><strong>${ref}</strong></td></tr>
+        <tr><td style="padding: 4px 12px 4px 0; color: #777;">Documento:</td><td>${escapeHtml(d.tipoDocumento)} ${escapeHtml(d.numeroDocumento)}</td></tr>
+        <tr><td style="padding: 4px 12px 4px 0; color: #777;">Legajo:</td><td>${escapeHtml(d.numeroLegajo)}</td></tr>
+      </table>
+      <p style="color: #777; font-size: 13px;">Si tenés cualquier consulta, respondé este email o escribinos a <a href="mailto:${APOPS_EMAIL}">${APOPS_EMAIL}</a>.</p>
+    </div>
+  `.trim()
+}
+
+function htmlApops(d: AfiliacionInput, ref: string): string {
+  return `
+    <div style="font-family: -apple-system, system-ui, sans-serif; max-width: 600px; color: #222;">
+      <h2 style="color: #1f72b8; margin-bottom: 8px;">Nueva solicitud de afiliación</h2>
+      <p>Llegó una nueva ficha. PDF adjunto. Entrar a <a href="https://apops.vercel.app/admin">apops.vercel.app/admin</a> para procesar.</p>
+      <table style="border-collapse: collapse; font-size: 14px; margin: 16px 0;">
+        <tr><td style="padding: 4px 12px 4px 0; color: #777;">Referencia:</td><td><strong>${ref}</strong></td></tr>
+        <tr><td style="padding: 4px 12px 4px 0; color: #777;">Aspirante:</td><td>${escapeHtml(d.apellidoNombre)}</td></tr>
+        <tr><td style="padding: 4px 12px 4px 0; color: #777;">Documento:</td><td>${escapeHtml(d.tipoDocumento)} ${escapeHtml(d.numeroDocumento)}</td></tr>
+        <tr><td style="padding: 4px 12px 4px 0; color: #777;">Legajo:</td><td>${escapeHtml(d.numeroLegajo)}</td></tr>
+        <tr><td style="padding: 4px 12px 4px 0; color: #777;">Edificio:</td><td>${escapeHtml(d.edificioUdai) || '<em>no declarado</em>'}</td></tr>
+        <tr><td style="padding: 4px 12px 4px 0; color: #777;">Email:</td><td><a href="mailto:${escapeHtml(d.email)}">${escapeHtml(d.email)}</a></td></tr>
+        <tr><td style="padding: 4px 12px 4px 0; color: #777;">Celular:</td><td>${escapeHtml(d.celular)}</td></tr>
+      </table>
+    </div>
+  `.trim()
+}
+
+function htmlDelegado(d: AfiliacionInput, ref: string): string {
+  return `
+    <div style="font-family: -apple-system, system-ui, sans-serif; max-width: 560px; color: #222;">
+      <h2 style="color: #1f72b8; margin-bottom: 8px;">Nueva afiliación en tu edificio</h2>
+      <p>Una persona de tu sector envió su solicitud de afiliación a APOPS. Te mandamos copia para que estés en conocimiento. La gestión la hace la CD desde el panel admin.</p>
+      <table style="border-collapse: collapse; font-size: 14px; margin: 16px 0;">
+        <tr><td style="padding: 4px 12px 4px 0; color: #777;">Aspirante:</td><td>${escapeHtml(d.apellidoNombre)}</td></tr>
+        <tr><td style="padding: 4px 12px 4px 0; color: #777;">Legajo:</td><td>${escapeHtml(d.numeroLegajo)}</td></tr>
+        <tr><td style="padding: 4px 12px 4px 0; color: #777;">Edificio:</td><td>${escapeHtml(d.edificioUdai)}</td></tr>
+        <tr><td style="padding: 4px 12px 4px 0; color: #777;">Referencia:</td><td><strong>${ref}</strong></td></tr>
+      </table>
+      <p style="color: #777; font-size: 13px;">PDF de la ficha completa adjunto.</p>
+    </div>
+  `.trim()
+}
+
+function firstName(apellidoNombre: string): string {
+  const parts = apellidoNombre.split(',')
+  if (parts.length === 2) {
+    const nombres = parts[1]?.trim().split(/\s+/) ?? []
+    return nombres[0] ?? apellidoNombre
+  }
+  return apellidoNombre.split(/\s+/)[0] ?? apellidoNombre
 }

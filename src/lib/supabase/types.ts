@@ -639,6 +639,11 @@ export type Database = {
           domicilio_provincia: string | null
           edificio_udai: string | null
           email: string
+          email_apops_enviado_at: string | null
+          email_aspirante_enviado_at: string | null
+          email_delegado_destinos: string[] | null
+          email_delegado_enviado_at: string | null
+          email_error: string | null
           estado: string
           estado_civil: string | null
           familiares: Json | null
@@ -680,6 +685,11 @@ export type Database = {
           domicilio_provincia?: string | null
           edificio_udai?: string | null
           email: string
+          email_apops_enviado_at?: string | null
+          email_aspirante_enviado_at?: string | null
+          email_delegado_destinos?: string[] | null
+          email_delegado_enviado_at?: string | null
+          email_error?: string | null
           estado?: string
           estado_civil?: string | null
           familiares?: Json | null
@@ -721,6 +731,11 @@ export type Database = {
           domicilio_provincia?: string | null
           edificio_udai?: string | null
           email?: string
+          email_apops_enviado_at?: string | null
+          email_aspirante_enviado_at?: string | null
+          email_delegado_destinos?: string[] | null
+          email_delegado_enviado_at?: string | null
+          email_error?: string | null
           estado?: string
           estado_civil?: string | null
           familiares?: Json | null
