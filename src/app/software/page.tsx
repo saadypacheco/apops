@@ -26,6 +26,7 @@ export default function SoftwarePage() {
       <Funcionalidades />
       <ComoFunciona />
       <Capturas />
+      <DashboardCapturas />
       <ComoInstalar />
       <CTAFinal />
       <Faq />
@@ -457,12 +458,6 @@ function Capturas() {
             desc="KPIs vs objetivos, delta mes anterior, donut de gremios."
           >
             <MockDashboard />
-          </MockCard>
-          <MockCard
-            label="Padrón en mapa"
-            desc="Cotizantes por provincia con choropleth + heatmap edificios × dimensiones."
-          >
-            <MockMapaPadron />
           </MockCard>
           <MockCard
             label="Evolución por gremio"
@@ -932,91 +927,7 @@ function MockDashboard() {
   )
 }
 
-// Mock 7 — Dashboard tab Padrón: mapa Argentina + heatmap
-function MockMapaPadron() {
-  // Provincias top con choropleth — coordenadas y valores hardcoded
-  const provincias = [
-    { x: 38, y: 18, r: 10, label: 'BA' },
-    { x: 44, y: 28, r: 14, label: 'CABA' },
-    { x: 30, y: 38, r: 8, label: 'CB' },
-    { x: 50, y: 30, r: 6, label: 'SF' },
-    { x: 25, y: 50, r: 7, label: 'MZ' },
-    { x: 36, y: 55, r: 5, label: 'NQN' },
-    { x: 60, y: 22, r: 4, label: 'MIS' },
-  ]
-  return (
-    <div className="flex h-full flex-col gap-1 text-[10px] text-brand-ink">
-      <div className="-mx-3 -mt-3 bg-brand-gradient px-3 pb-2 pt-3 text-white">
-        <p className="text-[8px] uppercase tracking-widest text-white/80">
-          APOPS · CD · Padrón
-        </p>
-        <p className="text-sm font-bold leading-tight">15 558 cotizantes</p>
-        <p className="text-[8px] text-white/80">Distribución geográfica</p>
-      </div>
-
-      {/* Mapa abstracto de Argentina */}
-      <div className="relative flex-1 rounded-md bg-gradient-to-b from-sky-50 to-emerald-50 ring-1 ring-neutral-200">
-        <svg
-          viewBox="0 0 100 100"
-          className="absolute inset-0 h-full w-full"
-          preserveAspectRatio="xMidYMid meet"
-          aria-hidden
-        >
-          {/* Silueta abstracta Argentina */}
-          <path
-            d="M40 5 L52 8 L58 14 L62 22 L60 32 L65 42 L58 55 L52 68 L48 78 L42 88 L36 92 L32 88 L28 78 L26 65 L22 55 L24 45 L28 35 L32 22 L36 12 Z"
-            fill="rgba(99, 179, 237, 0.2)"
-            stroke="rgba(99, 179, 237, 0.5)"
-            strokeWidth="0.4"
-          />
-          {provincias.map((p) => (
-            <g key={p.label}>
-              <circle
-                cx={p.x}
-                cy={p.y}
-                r={p.r / 2.5}
-                fill="rgba(31, 114, 184, 0.85)"
-                stroke="white"
-                strokeWidth="0.4"
-              />
-              <text
-                x={p.x}
-                y={p.y + p.r / 6}
-                fill="white"
-                fontSize="2.5"
-                fontWeight="bold"
-                textAnchor="middle"
-              >
-                {p.label}
-              </text>
-            </g>
-          ))}
-        </svg>
-      </div>
-
-      {/* Heatmap mini */}
-      <div className="rounded-md bg-white p-1.5 ring-1 ring-neutral-200">
-        <p className="text-[7px] font-bold uppercase tracking-wide text-brand-muted">
-          Edificios × dimensiones
-        </p>
-        <div className="mt-1 grid grid-cols-5 gap-0.5">
-          {Array.from({ length: 25 }).map((_, i) => {
-            const v = (i * 37) % 10
-            const bg =
-              v < 3
-                ? 'bg-red-300'
-                : v < 6
-                  ? 'bg-amber-300'
-                  : 'bg-emerald-400'
-            return <div key={i} className={`h-2 rounded-sm ${bg}`} />
-          })}
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// Mock 8 — Dashboard tab Evolución: line chart por gremio
+// Mock — Dashboard tab Evolución: line chart por gremio
 function MockEvolucion() {
   return (
     <div className="flex h-full flex-col gap-1.5 text-[10px] text-brand-ink">
@@ -1250,6 +1161,77 @@ function MockCargaPadron() {
         </p>
       </div>
     </div>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Capturas reales del Dashboard CD (screenshots de producción)
+// ─────────────────────────────────────────────────────────────────────────
+function DashboardCapturas() {
+  const shots = [
+    {
+      src: '/imagenes para software/dashboard1.PNG',
+      alt: 'Dashboard CD — vista del padrón en mapa',
+      caption: 'Padrón en mapa',
+      desc: 'Distribución geográfica con choropleth + heatmap edificios × dimensiones.',
+    },
+    {
+      src: '/imagenes para software/dashboard2.PNG',
+      alt: 'Dashboard CD — vista de evolución y métricas',
+      caption: 'Evolución y métricas',
+      desc: 'Series por gremio, KPIs vs objetivos y delta mes anterior.',
+    },
+    {
+      src: '/imagenes para software/dashboard3.PNG',
+      alt: 'Dashboard CD — vista de delegados y eventos',
+      caption: 'Delegados y eventos',
+      desc: 'Mandatos por vencer, edificios sin delegado, eventos APOPS del mes.',
+    },
+  ]
+  return (
+    <section className="bg-neutral-50 px-5 py-16">
+      <div className="mx-auto w-full max-w-6xl">
+        <header className="mx-auto mb-10 max-w-2xl text-center">
+          <span className="text-xs font-bold uppercase tracking-widest text-brand-blue">
+            Pantallas reales
+          </span>
+          <h2 className="mt-3 text-3xl font-bold leading-tight text-brand-ink md:text-4xl">
+            El Dashboard CD en vivo.
+          </h2>
+          <p className="mt-3 text-base text-brand-muted">
+            Capturas del panel de Comisión Directiva en funcionamiento, con
+            datos del padrón ANSES real.
+          </p>
+        </header>
+
+        <div className="grid gap-6 md:grid-cols-3">
+          {shots.map((s) => (
+            <figure
+              key={s.src}
+              className="flex flex-col overflow-hidden rounded-2xl bg-white shadow-card transition hover:shadow-cardHover"
+            >
+              <div className="relative aspect-[16/10] overflow-hidden bg-neutral-100">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={s.src}
+                  alt={s.alt}
+                  className="h-full w-full object-cover"
+                  loading="lazy"
+                />
+              </div>
+              <figcaption className="flex flex-col gap-1 p-4">
+                <h3 className="text-base font-bold text-brand-ink">
+                  {s.caption}
+                </h3>
+                <p className="text-sm leading-relaxed text-brand-muted">
+                  {s.desc}
+                </p>
+              </figcaption>
+            </figure>
+          ))}
+        </div>
+      </div>
+    </section>
   )
 }
 
