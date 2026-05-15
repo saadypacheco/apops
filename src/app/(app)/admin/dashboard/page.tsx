@@ -38,6 +38,16 @@ import {
   type HeatmapEdificioRow,
   type SnapshotMeta,
 } from '@/lib/admin/dashboard-queries'
+import {
+  getAdopcionGlobal,
+  getComunicacionCD,
+  getComunicacionEntrante,
+  getDelegadosEngagement,
+  type AdopcionGlobal,
+  type ComunicacionCD,
+  type ComunicacionEntrante,
+  type DelegadosEngagement,
+} from '@/lib/admin/uso-queries'
 
 export const metadata: Metadata = {
   title: 'Dashboard CD',
@@ -152,7 +162,8 @@ export default async function DashboardPage({
   // si la tab no la usa.
   const needsDistribucion = activeTab === 'padron' || activeTab === 'resumen'
   const needsCD = activeTab === 'delegados' || activeTab === 'resumen'
-  const needsApp = activeTab === 'app' || activeTab === 'resumen'
+  const needsApp = activeTab === 'uso' || activeTab === 'resumen'
+  const needsUso = activeTab === 'uso'
   const needsEvolucion = activeTab === 'evolucion' || activeTab === 'resumen'
   const needsAltasBajas = activeTab === 'altas-bajas'
   const needsEventos = activeTab === 'eventos'
@@ -164,6 +175,10 @@ export default async function DashboardPage({
     distribucion,
     cd,
     app,
+    adopcion,
+    comunicacionCD,
+    delegadosEngagement,
+    comunicacionEntrante,
     evolucion,
     altasBajas,
     eventos,
@@ -178,6 +193,12 @@ export default async function DashboardPage({
       needsApp
         ? getAppVsPadron(admin, current.id, current.total_apops)
         : Promise.resolve(null),
+      needsUso
+        ? getAdopcionGlobal(admin, current.total_apops)
+        : Promise.resolve(null),
+      needsUso ? getComunicacionCD(admin, 30) : Promise.resolve(null),
+      needsUso ? getDelegadosEngagement(admin, 30) : Promise.resolve(null),
+      needsUso ? getComunicacionEntrante(admin, 30) : Promise.resolve(null),
       needsEvolucion && previous
         ? getEvolucion(admin, current.id, previous.id)
         : Promise.resolve(null),
@@ -284,7 +305,18 @@ export default async function DashboardPage({
             />
           )}
           {activeTab === 'delegados' && cd && <DelegadosTab cd={cd} />}
-          {activeTab === 'app' && app && <AppTab app={app} />}
+          {activeTab === 'uso' &&
+            adopcion &&
+            comunicacionCD &&
+            delegadosEngagement &&
+            comunicacionEntrante && (
+              <UsoTab
+                adopcion={adopcion}
+                comunicacionCD={comunicacionCD}
+                delegados={delegadosEngagement}
+                entrante={comunicacionEntrante}
+              />
+            )}
           {activeTab === 'altas-bajas' && (
             <AltasBajasTab
               altasBajas={altasBajas}
@@ -971,49 +1003,338 @@ function DelegadosTab({ cd }: { cd: ComisionDirectiva }) {
   )
 }
 
-function AppTab({ app }: { app: AppVsPadron }) {
-  const engagementPct =
-    app.totalActivos > 0
-      ? Math.round((app.engaged30d / app.totalActivos) * 100)
-      : 0
+function UsoTab({
+  adopcion,
+  comunicacionCD,
+  delegados,
+  entrante,
+}: {
+  adopcion: AdopcionGlobal
+  comunicacionCD: ComunicacionCD
+  delegados: DelegadosEngagement
+  entrante: ComunicacionEntrante
+}) {
   return (
-    <Block titulo="App APOPS vs padrón">
+    <div className="flex flex-col gap-5">
+      <BloqueAdopcion adopcion={adopcion} />
+      <BloqueComunicacionCD comunicacion={comunicacionCD} />
+      <BloqueDelegados delegados={delegados} />
+      <BloqueEntrante entrante={entrante} />
+    </div>
+  )
+}
+
+function BloqueAdopcion({ adopcion }: { adopcion: AdopcionGlobal }) {
+  const pctPushSobreActivos =
+    adopcion.cuentasActivas > 0
+      ? Math.round((adopcion.pushActivo / adopcion.cuentasActivas) * 100)
+      : 0
+  // Embudo: padrón APOPS → con cuenta → MAU → uso real
+  const pasos = [
+    {
+      label: 'En padrón APOPS',
+      value: adopcion.cotizantesApops,
+      pct: 100,
+    },
+    {
+      label: 'Con cuenta en la app',
+      value: adopcion.cuentasCreadas,
+      pct:
+        adopcion.cotizantesApops > 0
+          ? Math.round((adopcion.cuentasCreadas / adopcion.cotizantesApops) * 100)
+          : 0,
+    },
+    {
+      label: 'Activos 30d',
+      value: adopcion.mau,
+      pct:
+        adopcion.cotizantesApops > 0
+          ? Math.round((adopcion.mau / adopcion.cotizantesApops) * 100)
+          : 0,
+    },
+    {
+      label: 'Activos + recibieron notif 30d',
+      value: adopcion.usoReal30d,
+      pct:
+        adopcion.cotizantesApops > 0
+          ? Math.round((adopcion.usoReal30d / adopcion.cotizantesApops) * 100)
+          : 0,
+    },
+  ]
+  return (
+    <Block titulo="Adopción global">
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <BigStat
-          label="Registrados app"
-          value={app.totalAfiliadosApp}
-          primary
-        />
-        <BigStat label="Activos" value={app.totalActivos} />
-        <BigStat
           label="% Adopción"
-          value={app.porcentajeAdopcion}
+          value={adopcion.porcentajeAdopcion}
           suffix="%"
-          hint={`sobre ${numero(app.totalApopsEnPadron)} APOPS`}
+          hint={`${numero(adopcion.cuentasCreadas)} de ${numero(adopcion.cotizantesApops)} APOPS`}
           objetivo="70%"
           objetivoMin={70}
+          primary
         />
         <BigStat
-          label="Engagement 30d"
-          value={engagementPct}
-          suffix="%"
-          hint={`${numero(app.engaged30d)} de ${numero(app.totalActivos)} activos`}
-          objetivo="50%"
-          objetivoMin={50}
+          label="Activos 24h"
+          value={adopcion.dau}
+          hint="DAU"
+        />
+        <BigStat
+          label="Activos 7d"
+          value={adopcion.wau}
+          hint="WAU"
+        />
+        <BigStat
+          label="Activos 30d"
+          value={adopcion.mau}
+          hint="MAU"
         />
       </div>
       <div className="mt-4 grid grid-cols-2 gap-3">
         <SmallStat
-          label="Solicitudes de acceso pendientes"
-          value={app.pendientesAcceso}
-          warn={app.pendientesAcceso > 0}
+          label="Notificaciones push activas"
+          value={adopcion.pushActivo}
+          hint={`${pctPushSobreActivos}% de los activos`}
         />
         <SmallStat
-          label="Afiliaciones online pendientes"
-          value={app.pendientesAfiliacion}
-          warn={app.pendientesAfiliacion > 0}
+          label="Uso real (30d, con notif recibida)"
+          value={adopcion.usoReal30d}
+          hint="Login + al menos 1 notif"
         />
       </div>
+
+      {/* Embudo */}
+      <div className="mt-5">
+        <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-brand-muted">
+          Embudo de adopción
+        </h4>
+        <div className="flex flex-col gap-1.5">
+          {pasos.map((p, i) => (
+            <div key={i} className="flex items-center gap-2">
+              <div
+                className="h-7 rounded-md bg-brand-blue/15 transition"
+                style={{ width: `${p.pct}%` }}
+                aria-hidden
+              />
+              <div className="flex min-w-0 flex-1 items-baseline justify-between gap-2">
+                <span className="truncate text-xs text-brand-ink">
+                  {p.label}
+                </span>
+                <span className="shrink-0 text-xs font-semibold text-brand-ink">
+                  {numero(p.value)}{' '}
+                  <span className="text-brand-muted">({p.pct}%)</span>
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </Block>
+  )
+}
+
+function BloqueComunicacionCD({
+  comunicacion,
+}: {
+  comunicacion: ComunicacionCD
+}) {
+  return (
+    <Block titulo="Comunicación CD → afiliados y delegados (últimos 30 días)">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <BigStat
+          label="Notif a afiliados"
+          value={comunicacion.notifAfiliadosTotal}
+          hint={`${numero(comunicacion.notifAfiliadosLeidas)} leídas`}
+        />
+        <BigStat
+          label="Tasa lectura afiliados"
+          value={comunicacion.tasaLecturaAfiliados}
+          suffix="%"
+          objetivo="60%"
+          objetivoMin={60}
+        />
+        <BigStat
+          label="Notif a delegados"
+          value={comunicacion.notifDelegadosTotal}
+          hint={`${numero(comunicacion.notifDelegadosLeidas)} leídas`}
+        />
+        <BigStat
+          label="Tasa lectura delegados"
+          value={comunicacion.tasaLecturaDelegados}
+          suffix="%"
+          objetivo="80%"
+          objetivoMin={80}
+        />
+      </div>
+      {comunicacion.tiempoMedioLecturaHs !== null && (
+        <p className="mt-3 text-xs text-brand-muted">
+          Tiempo medio entre envío y lectura:{' '}
+          <strong className="text-brand-ink">
+            {comunicacion.tiempoMedioLecturaHs}h
+          </strong>
+        </p>
+      )}
+      {comunicacion.notifAfiliadosTotal +
+        comunicacion.notifDelegadosTotal ===
+        0 && (
+        <p className="mt-3 text-sm text-brand-muted">
+          No se mandaron notificaciones desde la CD en los últimos 30 días.
+        </p>
+      )}
+    </Block>
+  )
+}
+
+function BloqueDelegados({ delegados }: { delegados: DelegadosEngagement }) {
+  const pctActivos =
+    delegados.totalDelegadosRegistrados > 0
+      ? Math.round(
+          (delegados.delegadosActivos30d /
+            delegados.totalDelegadosRegistrados) *
+            100,
+        )
+      : 0
+  const pctLeyeron =
+    delegados.totalDelegadosRegistrados > 0
+      ? Math.round(
+          (delegados.delegadosLeyeronCD30d /
+            delegados.totalDelegadosRegistrados) *
+            100,
+        )
+      : 0
+  return (
+    <Block titulo="Delegados — ¿usan la app y leen lo que les mandan?">
+      <div className="grid grid-cols-3 gap-3">
+        <BigStat
+          label="Registrados"
+          value={delegados.totalDelegadosRegistrados}
+          primary
+        />
+        <BigStat
+          label="Activos 30d"
+          value={delegados.delegadosActivos30d}
+          suffix=""
+          hint={`${pctActivos}%`}
+        />
+        <BigStat
+          label="Leyeron CD 30d"
+          value={delegados.delegadosLeyeronCD30d}
+          hint={`${pctLeyeron}%`}
+        />
+      </div>
+
+      {delegados.top.length > 0 && (
+        <details className="mt-4" open>
+          <summary className="cursor-pointer text-sm font-semibold text-brand-blue">
+            Top delegados por actividad
+          </summary>
+          <ul className="mt-2 flex flex-col gap-1">
+            {delegados.top.map((d) => (
+              <li
+                key={d.id}
+                className="flex items-center justify-between rounded-md bg-white p-2 text-sm ring-1 ring-neutral-200"
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-medium text-brand-ink">
+                    {d.nombre}
+                  </p>
+                  <p className="text-xs text-brand-muted">
+                    {d.ultimoLogin
+                      ? `Último login: ${new Date(d.ultimoLogin).toLocaleDateString('es-AR')}`
+                      : 'Nunca entró'}
+                  </p>
+                </div>
+                <div className="shrink-0 text-right text-xs">
+                  <p>
+                    📥 {d.notifLeidas}/{d.notifRecibidas}
+                  </p>
+                  <p>✉️ {d.hilosAbiertos}</p>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
+
+      {delegados.inactivos.length > 0 && (
+        <details className="mt-3">
+          <summary className="cursor-pointer text-sm font-semibold text-amber-700">
+            Delegados inactivos (no entran hace 30+ días) —{' '}
+            {delegados.inactivos.length}
+          </summary>
+          <ul className="mt-2 flex flex-col gap-1">
+            {delegados.inactivos.map((d) => (
+              <li
+                key={d.id}
+                className="flex items-center justify-between rounded-md bg-amber-50 p-2 text-sm ring-1 ring-amber-200"
+              >
+                <span className="font-medium text-brand-ink">{d.nombre}</span>
+                <span className="text-xs text-brand-muted">
+                  {d.ultimoLogin
+                    ? new Date(d.ultimoLogin).toLocaleDateString('es-AR')
+                    : 'Nunca entró'}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
+    </Block>
+  )
+}
+
+function BloqueEntrante({ entrante }: { entrante: ComunicacionEntrante }) {
+  return (
+    <Block titulo="Llega a la CD — ¿qué nos escriben?">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <BigStat
+          label="Mensajes de delegados 30d"
+          value={entrante.hilosDeDelegados30d}
+        />
+        <BigStat
+          label="Mensajes de afiliados 30d"
+          value={entrante.hilosDeAfiliados30d}
+        />
+        <BigStat
+          label="Sin leer por CD"
+          value={entrante.hilosNoLeidosPorAdmin}
+          warn={entrante.hilosNoLeidosPorAdmin > 0}
+        />
+        <BigStat
+          label="Afiliaciones online 30d"
+          value={
+            entrante.afiliaciones.aprobadas30d +
+            entrante.afiliaciones.rechazadas30d +
+            entrante.afiliaciones.pendientes +
+            entrante.afiliaciones.enRevision
+          }
+          hint={`${entrante.afiliaciones.pendientes + entrante.afiliaciones.enRevision} pendientes`}
+        />
+      </div>
+      <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <SmallStat
+          label="Solicitudes pendientes"
+          value={entrante.afiliaciones.pendientes}
+          warn={entrante.afiliaciones.pendientes > 0}
+        />
+        <SmallStat
+          label="En revisión"
+          value={entrante.afiliaciones.enRevision}
+        />
+        <SmallStat
+          label="Aprobadas 30d"
+          value={entrante.afiliaciones.aprobadas30d}
+        />
+        <SmallStat
+          label="Rechazadas 30d"
+          value={entrante.afiliaciones.rechazadas30d}
+        />
+      </div>
+      {entrante.mensajesDelegadoViejoNoLeidos > 0 && (
+        <p className="mt-3 text-xs text-amber-700">
+          ⚠ Sistema viejo de mensajes de delegado tiene{' '}
+          {entrante.mensajesDelegadoViejoNoLeidos} sin leer. Considerá migrar.
+        </p>
+      )}
     </Block>
   )
 }
@@ -1391,11 +1712,13 @@ function SmallStat({
   value,
   of,
   warn,
+  hint,
 }: {
   label: string
   value: number
   of?: number
   warn?: boolean
+  hint?: string
 }) {
   return (
     <div className="flex flex-col rounded-lg bg-neutral-50 p-3">
@@ -1414,6 +1737,7 @@ function SmallStat({
           </span>
         )}
       </span>
+      {hint && <span className="mt-0.5 text-[11px] text-brand-muted">{hint}</span>}
     </div>
   )
 }

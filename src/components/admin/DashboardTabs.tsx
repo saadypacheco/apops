@@ -9,7 +9,7 @@ export const DASHBOARD_TABS = [
   { key: 'evolucion', label: 'Evolución' },
   { key: 'eventos', label: 'Eventos del mes' },
   { key: 'delegados', label: 'Delegados' },
-  { key: 'app', label: 'Aplicación' },
+  { key: 'uso', label: 'Uso' },
   { key: 'altas-bajas', label: 'Altas / Bajas' },
 ] as const
 
