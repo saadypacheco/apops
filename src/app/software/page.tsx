@@ -93,9 +93,10 @@ function Hero() {
           Tu gremio en el bolsillo de cada afiliado.
         </h1>
         <p className="mt-5 max-w-2xl text-base leading-relaxed text-white/90 md:text-lg">
-          Credencial digital, novedades, consultas y trámites — todo en un solo
-          lugar, accesible desde cualquier celular o computadora, sin instalar
-          nada.
+          Credencial digital, novedades, comunicación bidireccional, afiliación
+          online con firma y PDF por mail, dashboard de Comisión Directiva con
+          el padrón de ANSES vivo. Todo en una app accesible desde cualquier
+          dispositivo, sin pasar por la Play Store ni App Store.
         </p>
         <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
           <InstallPWAButton variant="onBlue" label="📱 Instalar la app" />
@@ -202,10 +203,10 @@ function InstallStep({
 // ─────────────────────────────────────────────────────────────────────────
 function StatsBar() {
   const stats = [
-    { value: '100%', label: 'Web — sin instalación' },
-    { value: '< 3s', label: 'Tiempo de respuesta' },
-    { value: 'RLS', label: 'Datos protegidos por rol' },
-    { value: 'PWA', label: 'Pantalla de inicio en celulares' },
+    { value: 'PWA', label: 'Instalable sin Play Store ni App Store' },
+    { value: '15k+', label: 'Cotizantes del padrón ANSES gestionados' },
+    { value: 'RLS', label: 'Datos blindados con reglas por rol' },
+    { value: 'Push', label: 'Notificaciones reales al celular' },
   ]
   return (
     <section className="border-y border-neutral-100 bg-white">
@@ -267,11 +268,33 @@ function Funcionalidades() {
       icon: <PanelIcon />,
       title: 'Panel para CD y delegados',
       desc:
-        'Gestión profesional: solicitudes de afiliación con firma digital, novedades publicables, cotizantes por sector, mensajería interna.',
+        'Gestión profesional: solicitudes con firma digital, novedades publicables, cotizantes por sector, mensajería interna entre admin, delegados y afiliados.',
       bullets: [
         'Aprobación de afiliaciones online con auditoría',
         'Delegados ven sus cotizantes y mandan mensajes a CD',
-        'Toda acción crítica queda registrada',
+        'Hilos de comunicación bidireccionales 1-a-1',
+      ],
+    },
+    {
+      icon: <SignatureIcon />,
+      title: 'Afiliación online con PDF firmado',
+      desc:
+        'Aspirantes completan una ficha guiada en 3 pasos, firman digital con el dedo o el mouse, y reciben el PDF por mail. APOPS y el delegado del edificio reciben copia automática.',
+      bullets: [
+        'Wizard 3 pasos: obligatorios → opcionales → resumen + firma',
+        'PDF generado server-side con los datos + firma embedida',
+        'Notificación automática al delegado del edificio declarado',
+      ],
+    },
+    {
+      icon: <DashboardIcon />,
+      title: 'Dashboard de Comisión Directiva',
+      desc:
+        'Métricas vivas del gremio: cotizantes por edificio, gremio, provincia, planta. Evolución mes a mes, altas y bajas accionables, eventos del mes (cumpleaños / aniversarios).',
+      bullets: [
+        'Carga mensual del padrón ANSES desde Excel, histórico preservado',
+        'Mapa de Argentina con choropleth + heatmap edificios × dimensiones',
+        'KPIs vs objetivos + delta mes anterior',
       ],
     },
   ]
@@ -404,12 +427,18 @@ function Capturas() {
           </p>
         </header>
 
-        <div className="grid gap-6 lg:grid-cols-4 md:grid-cols-2">
+        <div className="grid gap-6 lg:grid-cols-3 md:grid-cols-2">
           <MockCard
             label="Credencial digital"
             desc="El afiliado ve su credencial al instante. Tabs por miembro de la familia."
           >
             <MockFeed />
+          </MockCard>
+          <MockCard
+            label="Afiliación online con firma"
+            desc="Wizard 3 pasos: obligatorios, opcionales colapsados, resumen + firma."
+          >
+            <MockAfiliacion />
           </MockCard>
           <MockCard
             label="Compartir por WhatsApp"
@@ -419,9 +448,15 @@ function Capturas() {
           </MockCard>
           <MockCard
             label="Panel de administración"
-            desc="Solicitudes de afiliación con firma digital. Aprobar/rechazar auditado."
+            desc="Solicitudes con firma digital. Aprobar / rechazar auditado."
           >
             <MockAdmin />
+          </MockCard>
+          <MockCard
+            label="Dashboard CD"
+            desc="Mapa de Argentina + KPIs + evolución del padrón mes a mes."
+          >
+            <MockDashboard />
           </MockCard>
           <MockCard
             label="Panel de delegados"
@@ -728,6 +763,151 @@ function MockDelegados() {
   )
 }
 
+// Mock 5 — Wizard de afiliación online
+function MockAfiliacion() {
+  return (
+    <div className="flex h-full flex-col gap-1.5 text-[10px] text-brand-ink">
+      <div className="-mx-3 -mt-3 bg-brand-gradient px-3 pb-2 pt-3 text-white">
+        <p className="text-[8px] uppercase tracking-widest text-white/80">
+          APOPS · Afiliate
+        </p>
+        <p className="text-sm font-bold leading-tight">Ficha de afiliación</p>
+      </div>
+
+      {/* Stepper */}
+      <div className="flex items-center gap-1 px-0.5">
+        <span className="flex h-4 w-4 items-center justify-center rounded-full bg-brand-blue text-[8px] font-bold text-white">
+          1
+        </span>
+        <span className="h-px flex-1 bg-brand-blue" />
+        <span className="flex h-4 w-4 items-center justify-center rounded-full bg-brand-blue text-[8px] font-bold text-white">
+          2
+        </span>
+        <span className="h-px flex-1 bg-neutral-300" />
+        <span className="flex h-4 w-4 items-center justify-center rounded-full bg-neutral-200 text-[8px] font-bold text-brand-muted">
+          3
+        </span>
+      </div>
+      <p className="text-center text-[8px] font-bold uppercase tracking-wider text-brand-muted">
+        Paso 2 de 3 · Más datos
+      </p>
+
+      {/* Banner "todo opcional" */}
+      <div className="rounded-md border border-dashed border-brand-blue/40 bg-brand-blue/5 p-1.5 text-[8px] leading-tight text-brand-ink">
+        <strong>Todo lo de este paso es opcional.</strong> La CD lo completa
+        desde el padrón si lo dejás vacío.
+      </div>
+
+      {/* Details colapsables */}
+      <div className="rounded-md bg-white p-1.5 ring-1 ring-neutral-200">
+        <div className="flex items-center justify-between text-[9px]">
+          <span className="font-semibold">Datos personales adicionales</span>
+          <span className="text-brand-muted">▾</span>
+        </div>
+      </div>
+      <div className="rounded-md bg-white p-1.5 ring-1 ring-neutral-200">
+        <div className="flex items-center justify-between text-[9px]">
+          <span className="font-semibold">Domicilio</span>
+          <span className="text-brand-muted">▾</span>
+        </div>
+      </div>
+      <div className="rounded-md bg-white p-1.5 ring-1 ring-neutral-200">
+        <div className="flex items-center justify-between text-[9px]">
+          <span className="font-semibold">Datos familiares</span>
+          <span className="rounded-full bg-neutral-100 px-1.5 text-[7px] uppercase tracking-wide text-brand-muted">
+            Opcional
+          </span>
+        </div>
+      </div>
+
+      {/* Nav */}
+      <div className="mt-auto flex items-center justify-between gap-1">
+        <button className="rounded border border-brand-blue/40 px-2 py-1 text-[8px] font-bold text-brand-blue">
+          ← Atrás
+        </button>
+        <button className="rounded bg-brand-blue px-2 py-1 text-[8px] font-bold text-white">
+          Ir al resumen →
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// Mock 6 — Dashboard CD
+function MockDashboard() {
+  return (
+    <div className="flex h-full flex-col gap-1.5 text-[10px] text-brand-ink">
+      <div className="-mx-3 -mt-3 bg-brand-gradient px-3 pb-2 pt-3 text-white">
+        <p className="text-[8px] uppercase tracking-widest text-white/80">
+          APOPS · CD
+        </p>
+        <p className="text-sm font-bold leading-tight">Dashboard</p>
+      </div>
+
+      {/* Tabs */}
+      <div className="flex gap-1 px-0.5">
+        <span className="rounded bg-brand-blue px-1.5 py-0.5 text-[7px] font-bold text-white">
+          Resumen
+        </span>
+        <span className="rounded bg-white px-1.5 py-0.5 text-[7px] font-medium text-brand-ink ring-1 ring-neutral-200">
+          Padrón
+        </span>
+        <span className="rounded bg-white px-1.5 py-0.5 text-[7px] font-medium text-brand-ink ring-1 ring-neutral-200">
+          Evolución
+        </span>
+      </div>
+
+      {/* KPI cards 2x2 */}
+      <div className="grid grid-cols-2 gap-1">
+        <div className="rounded-md bg-white p-1.5 ring-1 ring-neutral-200">
+          <p className="text-[7px] text-brand-muted">Cotizantes</p>
+          <p className="text-sm font-bold text-brand-ink">4 631</p>
+          <p className="text-[7px] font-semibold text-emerald-700">
+            ▲ 1.2% vs abr
+          </p>
+        </div>
+        <div className="rounded-md bg-white p-1.5 ring-1 ring-neutral-200">
+          <p className="text-[7px] text-brand-muted">APOPS</p>
+          <p className="text-sm font-bold text-brand-ink">2 184</p>
+          <p className="text-[7px] font-semibold text-emerald-700">
+            ▲ 0.8% vs abr
+          </p>
+        </div>
+        <div className="rounded-md bg-white p-1.5 ring-1 ring-neutral-200">
+          <p className="text-[7px] text-brand-muted">Delegados</p>
+          <p className="text-sm font-bold text-brand-ink">38</p>
+          <p className="text-[7px] font-semibold text-amber-700">
+            5 mandatos por vencer
+          </p>
+        </div>
+        <div className="rounded-md bg-white p-1.5 ring-1 ring-neutral-200">
+          <p className="text-[7px] text-brand-muted">Adopción app</p>
+          <p className="text-sm font-bold text-brand-ink">62%</p>
+          <p className="text-[7px] font-semibold text-brand-blue">
+            Objetivo 70%
+          </p>
+        </div>
+      </div>
+
+      {/* Mini bar chart */}
+      <div className="mt-auto rounded-md bg-white p-1.5 ring-1 ring-neutral-200">
+        <p className="text-[7px] font-bold uppercase tracking-wide text-brand-muted">
+          Altas / Bajas (mes)
+        </p>
+        <div className="mt-1 flex items-end gap-0.5 h-6">
+          {[3, 5, 4, 7, 6, 8, 5].map((h, i) => (
+            <div
+              key={i}
+              className="flex-1 rounded-t bg-brand-blue/70"
+              style={{ height: `${h * 12}%` }}
+            />
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ─────────────────────────────────────────────────────────────────────────
 // CTA final
 // ─────────────────────────────────────────────────────────────────────────
@@ -790,6 +970,14 @@ function Faq() {
     {
       q: '¿Qué pasa si no estoy en el padrón?',
       a: 'La app te ofrece dos caminos claros: solicitar acceso (si sos afiliado/a pero hubo un desfasaje administrativo) o iniciar la afiliación online completa, con firma digital incluida.',
+    },
+    {
+      q: '¿Cómo es la afiliación online?',
+      a: 'Es un wizard de 3 pasos. Paso 1 son los datos mínimos obligatorios (legajo, apellido y nombre, DNI, celular, email, edificio donde trabajás). Paso 2 son datos opcionales agrupados en secciones colapsables (domicilio, datos familiares, etc.). Paso 3 muestra un resumen de todo lo cargado, te pide la autorización del 3% y firmás digital con el dedo o el mouse.',
+    },
+    {
+      q: '¿Llega algo por mail después de afiliarme?',
+      a: 'Sí. Al enviar, el sistema genera un PDF con todos tus datos y tu firma embedida, y lo manda automáticamente a tres destinatarios: a vos (acuse de recibo + comprobante para tus registros), a apops@apops.org.ar (para que la Comisión Directiva lo procese) y a el/los delegado(s) del edificio que declaraste (para que estén en conocimiento). Todo en el mismo momento del envío.',
     },
   ]
   return (
@@ -933,6 +1121,25 @@ function PanelIcon() {
       <rect x="14" y="3" width="7" height="5" rx="1" />
       <rect x="14" y="12" width="7" height="9" rx="1" />
       <rect x="3" y="16" width="7" height="5" rx="1" />
+    </svg>
+  )
+}
+
+function SignatureIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-6 w-6" aria-hidden>
+      <path d="M3 17c4-1 6-7 9-7s2 5 5 5 4-2 4-2" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M5 21h14" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+function DashboardIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-6 w-6" aria-hidden>
+      <path d="M3 3v18h18" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M7 14l4-4 4 4 5-5" strokeLinecap="round" strokeLinejoin="round" />
+      <circle cx="11" cy="10" r="0.5" fill="currentColor" />
     </svg>
   )
 }
