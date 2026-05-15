@@ -5,6 +5,7 @@ import { AppShell } from '@/components/app/AppShell'
 import { AltasBajasList } from '@/components/admin/AltasBajasList'
 import { EventosList } from '@/components/admin/EventosList'
 import { MensajeForm } from '@/components/delegados/MensajeForm'
+import { CotizantesEdificioBuscador } from '@/components/delegados/CotizantesEdificioBuscador'
 import {
   getAltasYBajas,
   getEventosDelMes,
@@ -12,47 +13,11 @@ import {
 } from '@/lib/admin/dashboard-queries'
 import {
   getCotizantesRepresentados,
-  type CotizanteResumido,
+  getCotizantesDeLosEdificios,
 } from '@/lib/delegados/queries'
 
 export const metadata: Metadata = {
   title: 'Panel delegados',
-}
-
-type GremioBadge = {
-  label: string
-  className: string
-}
-
-function gremioBadge(c: CotizanteResumido): GremioBadge {
-  if (c.afiliado_apops) {
-    return {
-      label: 'APOPS',
-      className: 'bg-emerald-100 text-emerald-800',
-    }
-  }
-  if (c.cotiza_papel) {
-    return {
-      label: 'Cotiza papel',
-      className: 'bg-cyan-100 text-cyan-800',
-    }
-  }
-  if (c.afiliado_ate) {
-    return { label: 'ATE', className: 'bg-red-100 text-red-800' }
-  }
-  if (c.afiliado_upcn) {
-    return { label: 'UPCN', className: 'bg-orange-100 text-orange-800' }
-  }
-  if (c.afiliado_sec) {
-    return { label: 'SEC', className: 'bg-purple-100 text-purple-800' }
-  }
-  if (c.afiliado_secasfpi) {
-    return { label: 'SECASFPI', className: 'bg-purple-100 text-purple-800' }
-  }
-  return {
-    label: 'Sin gremio',
-    className: 'bg-neutral-200 text-brand-muted',
-  }
 }
 
 function formatRelative(iso: string): string {
@@ -76,9 +41,20 @@ type MensajeEnviado = {
 export default async function DelegadosPage() {
   const session = await requireRole('delegado')
 
-  const { cotizantes, stats } = await getCotizantesRepresentados(
+  // Representados directos (los que tienen al delegado como `representante`
+  // en padrón). Se usa para filtrar eventos APOPS del mes a su sector.
+  const { cotizantes: representados } = await getCotizantesRepresentados(
     session.nombre,
   )
+
+  // Vista completa del/los edificio(s) del delegado: TODOS los cotizantes,
+  // incluyendo otros gremios y sin gremio. Es lo que muestra el listado
+  // principal con buscador y filtros.
+  const {
+    cotizantes: todosDelEdificio,
+    edificios: misEdificios,
+    stats,
+  } = await getCotizantesDeLosEdificios(session.nombre)
 
   const admin = createAdminClient()
   const { data: misMensajes } = await admin
@@ -105,12 +81,13 @@ export default async function DelegadosPage() {
       }
     | null
 
-  // Eventos del mes filtrados a mis representados (APOPS solamente)
+  // Eventos del mes filtrados a mis representados APOPS (saludos
+  // cumpleaños/aniversarios solo tiene sentido para APOPS).
   const snapshots = await getSnapshots(admin)
   const currentSnapshot = snapshots[0] ?? null
   const previousSnapshot = snapshots[1] ?? null
   const legajosRepresentados = new Set(
-    cotizantes.map((c) => c.legajo).filter((l): l is string => !!l),
+    representados.map((c) => c.legajo).filter((l): l is string => !!l),
   )
   const eventos = currentSnapshot
     ? await getEventosDelMes(
@@ -122,24 +99,19 @@ export default async function DelegadosPage() {
     : null
 
   // Altas/bajas en mis edificios (todos los gremios, no solo APOPS)
-  // Edificios = union de lugar_trabajo de mis cotizantes
-  const misEdificios = new Set(
-    cotizantes
-      .map((c) => c.lugar_trabajo)
-      .filter((e): e is string => !!e),
-  )
+  const edificiosSet = new Set(misEdificios)
   const altasBajasRaw =
     currentSnapshot && previousSnapshot
       ? await getAltasYBajas(admin, currentSnapshot.id, previousSnapshot.id)
       : null
   const altasMiEdificio = altasBajasRaw
     ? altasBajasRaw.altas.filter(
-        (p) => p.edificio && misEdificios.has(p.edificio),
+        (p) => p.edificio && edificiosSet.has(p.edificio),
       )
     : []
   const bajasMiEdificio = altasBajasRaw
     ? altasBajasRaw.bajas.filter(
-        (p) => p.edificio && misEdificios.has(p.edificio),
+        (p) => p.edificio && edificiosSet.has(p.edificio),
       )
     : []
 
@@ -148,17 +120,17 @@ export default async function DelegadosPage() {
       <div className="flex flex-col gap-5">
         <header className="rounded-xl bg-white p-4 shadow-card">
           <h1 className="text-lg font-semibold text-brand-ink">
-            Mis cotizantes
+            Mi edificio
           </h1>
           <p className="mt-1 text-sm text-brand-muted">
-            Personas del padrón que figuran con vos como representante.
+            Todas las personas del padrón ANSES que trabajan en{' '}
+            {misEdificios.length === 0
+              ? 'tu sector'
+              : misEdificios.length === 1
+                ? misEdificios[0]
+                : `tus ${misEdificios.length} edificios`}
+            : afiliadas a APOPS, a otros gremios, sin gremio, etc.
           </p>
-          {cotizantes.length > 0 && (
-            <p className="mt-2 text-xs text-brand-muted">
-              ⚠ El cruce con el padrón se hace por nombre. Si ves cotizantes
-              que faltan o sobran, avisanos.
-            </p>
-          )}
         </header>
 
         {/* Alerta de mandato si vence en 30 días */}
@@ -191,7 +163,7 @@ export default async function DelegadosPage() {
             className="grid grid-cols-2 gap-3"
           >
             <StatCard
-              label="Cotizantes totales"
+              label="Personas en mi edificio"
               value={stats.total}
               tone="neutral"
             />
@@ -201,15 +173,16 @@ export default async function DelegadosPage() {
               tone="success"
             />
             <StatCard
-              label="No afiliados APOPS"
-              value={stats.noAfiliadosApops}
+              label="Otros gremios"
+              value={stats.otrosGremios}
               tone="warn"
-              hint="Oportunidades de afiliación"
+              hint="ATE / UPCN / SEC / SECASFPI"
             />
             <StatCard
-              label="Cotizan en papel"
-              value={stats.cotizaPapel}
+              label="Sin gremio"
+              value={stats.sinGremio}
               tone="info"
+              hint="Oportunidades de afiliación"
             />
           </section>
         )}
@@ -258,72 +231,22 @@ export default async function DelegadosPage() {
             </section>
           )}
 
-        {/* Listado */}
-        {cotizantes.length === 0 ? (
+        {/* Listado con buscador + filtros por gremio */}
+        {todosDelEdificio.length === 0 ? (
           <div className="rounded-xl border border-dashed border-neutral-300 bg-white p-8 text-center text-sm text-brand-muted">
             <p className="text-base font-medium text-brand-ink">
-              No encontramos cotizantes asignados a tu nombre.
+              No encontramos personas en tu edificio.
             </p>
             <p className="mt-2">
-              Si creés que es un error, contactá a la administración del
-              gremio para revisar la asignación en el padrón.
+              El cruce contra el padrón se hace por nombre. Si creés que es un
+              error, contactá a la administración del gremio.
             </p>
           </div>
         ) : (
-          <ul className="flex flex-col gap-2">
-            {cotizantes.map((c) => {
-              const badge = gremioBadge(c)
-              return (
-                <li
-                  key={c.id}
-                  className="flex flex-col gap-1.5 rounded-xl bg-white p-3 shadow-card"
-                >
-                  <header className="flex items-start justify-between gap-3">
-                    <div className="min-w-0 flex-1">
-                      <h3 className="truncate text-sm font-semibold text-brand-ink">
-                        {c.nombre}
-                      </h3>
-                      <p className="text-xs text-brand-muted">
-                        DNI {c.dni}
-                        {c.legajo ? ` · L-${c.legajo.replace(/^L-?/, '')}` : ''}
-                      </p>
-                    </div>
-                    <span
-                      className={
-                        'shrink-0 rounded-full px-2 py-0.5 text-[11px] font-bold ' +
-                        badge.className
-                      }
-                    >
-                      {badge.label}
-                    </span>
-                  </header>
-
-                  {(c.lugar_trabajo || c.provincia || c.regional) && (
-                    <p className="text-xs text-brand-muted">
-                      {[c.lugar_trabajo, c.regional, c.provincia]
-                        .filter(Boolean)
-                        .join(' · ')}
-                    </p>
-                  )}
-
-                  {(c.tipo_planta || c.vence_mandato_30dias) && (
-                    <div className="flex flex-wrap gap-2 text-[11px]">
-                      {c.tipo_planta && (
-                        <span className="text-brand-muted">
-                          Planta: {c.tipo_planta.toLowerCase()}
-                        </span>
-                      )}
-                      {c.vence_mandato_30dias && (
-                        <span className="rounded-full bg-amber-100 px-2 py-0.5 font-semibold text-amber-900">
-                          Vence mandato &lt; 30 días
-                        </span>
-                      )}
-                    </div>
-                  )}
-                </li>
-              )
-            })}
-          </ul>
+          <CotizantesEdificioBuscador
+            cotizantes={todosDelEdificio}
+            edificios={misEdificios}
+          />
         )}
 
         {/* ============================================================
