@@ -18,9 +18,10 @@ const STEP_LABELS: [string, string, string] = [
   'Confirmar',
 ]
 
-// Único listado de obligatorios: lo mínimo para procesar la solicitud.
-// El admin completa el resto matcheando contra padrón ANSES.
+// Único listado de obligatorios. El edificio va primero porque dispara
+// el lookup de delegados a notificar cuando se procesa la solicitud.
 const REQUIRED_STEP_1 = [
+  'edificioUdai',
   'apellidoNombre',
   'numeroDocumento',
   'numeroLegajo',
@@ -191,6 +192,7 @@ export function AfiliacionForm() {
           title="Tus datos"
           subtitle="Lo mínimo para procesar tu afiliación. El resto lo agregás después o lo completa la CD."
         >
+          <EdificioCombo required error={errors['edificioUdai']} />
           <Field
             name="apellidoNombre"
             label="Apellido y Nombre"
@@ -259,17 +261,6 @@ export function AfiliacionForm() {
             saltarlo y procesamos tu solicitud igual.
           </p>
         </div>
-
-        <SectionGap />
-
-        {/* Edificio destacado: si lo cargás, te identificamos en padrón y
-            avisamos a tu delegado/a. No está dentro de <details>. */}
-        <Section
-          title="¿Dónde trabajás?"
-          subtitle="Elegilo del listado del padrón ANSES. Si lo cargás, le avisamos a tu delegado/a del sector."
-        >
-          <EdificioCombo />
-        </Section>
 
         <SectionGap />
 

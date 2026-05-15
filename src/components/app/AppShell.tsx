@@ -4,6 +4,7 @@ import { RoleSwitcherSlot } from './RoleSwitcherSlot'
 import { WhatsAppFab } from './WhatsAppFab'
 import { CampanaSlot } from './CampanaSlot'
 import { NavBadgeNotif } from './NavBadgeNotif'
+import { InstallPWAButton } from '@/components/landing/InstallPWAButton'
 
 // Layout común para las pantallas autenticadas: header con saludo + nav
 // inferior con accesos rápidos. Mobile-first.
@@ -121,6 +122,7 @@ export function AppShell({ children, nombre, rol, current, wide }: Props) {
       </nav>
 
       <WhatsAppFab nombre={nombre} rol={rol} />
+      <InstallPWAButton variant="fab-stacked" />
     </div>
   )
 }

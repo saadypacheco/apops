@@ -70,14 +70,14 @@ export default async function LandingPage({
         />
 
         {/* Header: logo a la izquierda + campana a la derecha */}
-        <header className="relative z-10 flex w-full items-center justify-between gap-3 px-5 pb-0.5 pt-2">
+        <header className="relative z-10 flex w-full items-center justify-between gap-3 px-5 pb-0 pt-1.5">
           <Logo as="onBlue" priority />
           <BellButton />
         </header>
 
         {/* Carousel de noticias */}
         {noticias.length > 0 && (
-          <div className="relative z-10 pb-1.5">
+          <div className="relative z-10 pb-0.5">
             <NoticiasCarousel noticias={noticias} />
           </div>
         )}
@@ -88,8 +88,8 @@ export default async function LandingPage({
         </section>
 
         {/* CTA: afiliarse */}
-        <div className="relative z-10 px-5 pt-1.5">
-          <div className="flex items-center gap-3 rounded-2xl bg-white p-2.5 shadow-card">
+        <div className="relative z-10 px-5 pt-1">
+          <div className="flex items-center gap-3 rounded-2xl bg-white p-2 shadow-card">
             <span
               aria-hidden
               className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-blue/10 text-brand-blue"
@@ -108,14 +108,9 @@ export default async function LandingPage({
           </div>
         </div>
 
-        {/* Instalar PWA */}
-        <div className="relative z-10 flex justify-center px-5 pt-1.5">
-          <InstallPWAButton variant="onBlue" label="📱 Instalar app" />
-        </div>
-
         {/* Footer */}
-        <footer className="relative z-10 mt-1.5 px-5 pb-2">
-          <div className="flex flex-col items-center gap-0.5 rounded-2xl bg-white/85 px-4 py-2 text-center text-[11px] text-brand-ink shadow-card backdrop-blur-sm">
+        <footer className="relative z-10 mt-1 px-5 pb-1.5">
+          <div className="flex flex-col items-center gap-0 rounded-2xl bg-white/85 px-4 py-1.5 text-center text-[11px] text-brand-ink shadow-card backdrop-blur-sm">
             <p className="font-medium">
               Viamonte 1654, CABA · (011) 5544-8300
             </p>
@@ -130,6 +125,7 @@ export default async function LandingPage({
       </div>
 
       <HelpButton />
+      <InstallPWAButton variant="fab" />
     </main>
   )
 }

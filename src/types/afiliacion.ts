@@ -98,9 +98,13 @@ export const afiliacionSchema = z.object({
   email: emailSchema,
   cbu: cbuSchema,
 
-  // Lugar de trabajo — legajo obligatorio (numérico), resto opcional
+  // Lugar de trabajo — legajo + edificio obligatorios, resto opcional.
+  // El edificio dispara el lookup de delegados a notificar.
   numeroLegajo: legajoSchema,
-  edificioUdai: optionalString,
+  edificioUdai: z
+    .string()
+    .trim()
+    .min(2, 'Indicá dónde trabajás. Si no aparece en el listado, escribilo.'),
   trabajoLocalidad: optionalString,
   trabajoDomicilio: optionalString,
   trabajoTelefono: optionalString,

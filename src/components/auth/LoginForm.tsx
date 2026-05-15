@@ -74,7 +74,7 @@ export function LoginForm({ registrado = false }: { registrado?: boolean }) {
 
       <SubmitButton />
 
-      <div className="flex flex-col items-center gap-1.5 text-center">
+      <div className="flex flex-col items-center gap-0 text-center">
         <Link
           href="/recuperar-clave"
           className="text-sm font-semibold text-brand-blue hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:ring-offset-2"

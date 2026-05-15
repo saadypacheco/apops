@@ -30,6 +30,7 @@ export default function SoftwarePage() {
       <CTAFinal />
       <Faq />
       <FooterSec />
+      <InstallPWAButton variant="fab" />
     </main>
   )
 }

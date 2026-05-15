@@ -89,18 +89,15 @@ export function NoticiasCarousel({ noticias }: { noticias: Noticia[] }) {
   return (
     <section
       aria-label="Últimas noticias del gremio"
-      className="flex flex-col gap-1.5"
+      className="flex flex-col gap-0.5"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
       onTouchStart={() => setPaused(true)}
     >
-      <header className="flex items-center justify-between px-5">
-        <h2 className="text-xs font-bold uppercase tracking-widest text-white">
-          Últimas novedades
-        </h2>
+      <header className="flex items-center justify-end px-5">
         <Link
           href="/noticias"
-          className="text-sm font-semibold text-white underline-offset-4 transition hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+          className="text-xs font-semibold text-white/90 underline-offset-4 transition hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
         >
           Ver todas →
         </Link>

@@ -16,15 +16,19 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 type Props = {
   name?: string
   defaultValue?: string
+  required?: boolean
+  error?: string
 }
 
 export function EdificioCombo({
   name = 'edificioUdai',
   defaultValue = '',
+  required = false,
+  error,
 }: Props) {
   const [edificios, setEdificios] = useState<string[] | null>(null)
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(false)
+  const [loadError, setLoadError] = useState(false)
   const listId = useRef(`edificios-${Math.random().toString(36).slice(2)}`).current
 
   useEffect(() => {
@@ -38,7 +42,7 @@ export function EdificioCombo({
       })
       .catch(() => {
         if (cancelled) return
-        setError(true)
+        setLoadError(true)
         setLoading(false)
       })
     return () => {
@@ -48,12 +52,12 @@ export function EdificioCombo({
 
   const hint = useMemo(() => {
     if (loading) return 'Cargando edificios del padrón…'
-    if (error) return 'No pudimos cargar el listado. Escribilo a mano.'
+    if (loadError) return 'No pudimos cargar el listado. Escribilo a mano.'
     const n = edificios?.length ?? 0
     return n > 0
       ? `Empezá a escribir para filtrar entre ${n} edificios. Si el tuyo no aparece, escribilo igual.`
       : 'Escribí el nombre de tu edificio.'
-  }, [loading, error, edificios])
+  }, [loading, loadError, edificios])
 
   return (
     <div className="flex flex-col gap-1">
@@ -61,7 +65,8 @@ export function EdificioCombo({
         htmlFor={`f-${name}`}
         className="text-sm font-medium text-brand-ink"
       >
-        Edificio / UDAI donde trabajás
+        Edificio / UDAI donde trabajás{' '}
+        {required && <span className="text-red-600">*</span>}
       </label>
       <input
         id={`f-${name}`}
@@ -71,7 +76,13 @@ export function EdificioCombo({
         defaultValue={defaultValue}
         placeholder={loading ? 'Cargando…' : 'Ej: UDAI Once'}
         autoComplete="off"
-        className="w-full min-h-touch rounded-md border border-neutral-300 bg-white px-3 py-2 text-base placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-brand-blue focus:ring-offset-1"
+        aria-invalid={error ? 'true' : undefined}
+        className={
+          'w-full min-h-touch rounded-md border bg-white px-3 py-2 text-base placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-offset-1 ' +
+          (error
+            ? 'border-red-500 focus:ring-red-500'
+            : 'border-neutral-300 focus:ring-brand-blue')
+        }
       />
       {edificios && edificios.length > 0 && (
         <datalist id={listId}>
@@ -80,7 +91,8 @@ export function EdificioCombo({
           ))}
         </datalist>
       )}
-      <p className="text-xs text-brand-muted">{hint}</p>
+      {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
+      {!error && <p className="text-xs text-brand-muted">{hint}</p>}
     </div>
   )
 }

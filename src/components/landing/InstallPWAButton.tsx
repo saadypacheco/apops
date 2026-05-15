@@ -9,7 +9,7 @@ type BeforeInstallPromptEvent = Event & {
 
 type Platform = 'ios' | 'android' | 'desktop' | 'other'
 
-type Variant = 'primary' | 'onBlue' | 'ghost' | 'compact'
+type Variant = 'primary' | 'onBlue' | 'ghost' | 'compact' | 'fab' | 'fab-stacked'
 
 const VARIANT_CLASS: Record<Variant, string> = {
   primary:
@@ -20,6 +20,16 @@ const VARIANT_CLASS: Record<Variant, string> = {
     'inline-flex min-h-[2.5rem] items-center justify-center gap-2 rounded-full border-2 border-brand-blue px-4 text-sm font-bold uppercase tracking-wider text-brand-blue transition hover:bg-brand-blue hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue',
   compact:
     'inline-flex items-center gap-1.5 rounded-full bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700',
+  // FAB solo (páginas sin otro FAB): bottom-20, mismo nivel que un FAB típico
+  fab:
+    'fixed bottom-20 right-4 z-30 inline-flex h-14 w-14 items-center justify-center rounded-full bg-emerald-600 text-white shadow-cardHover ring-4 ring-white/30 transition hover:scale-105 hover:bg-emerald-700 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-emerald-500/40',
+  // FAB apilado encima del FAB de contacto (en AppShell): bottom-36
+  'fab-stacked':
+    'fixed bottom-36 right-4 z-30 inline-flex h-14 w-14 items-center justify-center rounded-full bg-emerald-600 text-white shadow-cardHover ring-4 ring-white/30 transition hover:scale-105 hover:bg-emerald-700 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-emerald-500/40',
+}
+
+function isFabVariant(v: Variant): boolean {
+  return v === 'fab' || v === 'fab-stacked'
 }
 
 export function InstallPWAButton({
@@ -81,6 +91,8 @@ export function InstallPWAButton({
     }
   }, [])
 
+  const fab = isFabVariant(variant)
+
   // SSR / pre-hydration: render placeholder neutral para evitar layout shift
   if (!mounted) {
     return (
@@ -90,14 +102,14 @@ export function InstallPWAButton({
         className={`${VARIANT_CLASS[variant]} ${className ?? ''} opacity-0`}
         aria-hidden
       >
-        <DownloadIcon />
-        {label}
+        {fab ? <DownloadIconLarge /> : <><DownloadIcon />{label}</>}
       </button>
     )
   }
 
   if (installed && hideWhenInstalled) return null
   if (installed) {
+    if (fab) return null
     return (
       <span
         className={`inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-3 py-1.5 text-xs font-semibold text-emerald-800 ${className ?? ''}`}
@@ -130,10 +142,11 @@ export function InstallPWAButton({
       <button
         type="button"
         onClick={handleClick}
+        aria-label={fab ? 'Instalar app' : undefined}
+        title={fab ? 'Instalar app' : undefined}
         className={`${VARIANT_CLASS[variant]} ${className ?? ''}`}
       >
-        <DownloadIcon />
-        {label}
+        {fab ? <DownloadIconLarge /> : <><DownloadIcon />{label}</>}
       </button>
       {showInstructions && (
         <InstallInstructionsModal
@@ -154,6 +167,22 @@ function DownloadIcon() {
       stroke="currentColor"
       strokeWidth={2.5}
       className="h-4 w-4"
+    >
+      <path d="M12 3v12m0 0l-4-4m4 4l4-4" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+function DownloadIconLarge() {
+  return (
+    <svg
+      aria-hidden
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2.2}
+      className="h-7 w-7"
     >
       <path d="M12 3v12m0 0l-4-4m4 4l4-4" strokeLinecap="round" strokeLinejoin="round" />
       <path d="M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2" strokeLinecap="round" />
