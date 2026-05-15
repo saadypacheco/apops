@@ -22,7 +22,6 @@ export default function SoftwarePage() {
     <main className="min-h-[100dvh] w-full overflow-x-hidden bg-white">
       <NavTop />
       <Hero />
-      <StatsBar />
       <Funcionalidades />
       <ComoFunciona />
       <Capturas />
@@ -51,9 +50,6 @@ function NavTop() {
           </a>
           <a href="#como-funciona" className="hover:text-brand-blue">
             Cómo funciona
-          </a>
-          <a href="#testimonios" className="hover:text-brand-blue">
-            Testimonios
           </a>
           <a href="#faq" className="hover:text-brand-blue">
             Preguntas
@@ -88,7 +84,7 @@ function Hero() {
       />
       <div className="relative mx-auto flex w-full max-w-5xl flex-col items-center text-center">
         <span className="rounded-full bg-white/15 px-4 py-1 text-xs font-bold uppercase tracking-widest text-white/90 ring-1 ring-white/25 backdrop-blur-sm">
-          APOPS Siempre · PWA
+          APOPS Siempre
         </span>
         <h1 className="mt-5 max-w-3xl text-4xl font-bold leading-tight md:text-5xl lg:text-6xl">
           Tu gremio en el bolsillo de cada afiliado.
@@ -196,34 +192,6 @@ function InstallStep({
       <h3 className="mt-4 text-lg font-semibold text-brand-ink">{titulo}</h3>
       <p className="mt-2 text-sm text-brand-muted">{descripcion}</p>
     </div>
-  )
-}
-
-// ─────────────────────────────────────────────────────────────────────────
-// Stats bar
-// ─────────────────────────────────────────────────────────────────────────
-function StatsBar() {
-  const stats = [
-    { value: 'PWA', label: 'Instalable sin Play Store ni App Store' },
-    { value: '15k+', label: 'Cotizantes del padrón ANSES gestionados' },
-    { value: 'RLS', label: 'Datos blindados con reglas por rol' },
-    { value: 'Push', label: 'Notificaciones reales al celular' },
-  ]
-  return (
-    <section className="border-y border-neutral-100 bg-white">
-      <div className="mx-auto grid w-full max-w-5xl grid-cols-2 gap-3 px-5 py-8 md:grid-cols-4">
-        {stats.map((s) => (
-          <div key={s.label} className="flex flex-col items-center text-center">
-            <p className="text-2xl font-bold text-brand-blue md:text-3xl">
-              {s.value}
-            </p>
-            <p className="mt-1 text-[11px] font-medium uppercase tracking-wider text-brand-muted">
-              {s.label}
-            </p>
-          </div>
-        ))}
-      </div>
-    </section>
   )
 }
 
@@ -1170,6 +1138,18 @@ function MockCargaPadron() {
 function DashboardCapturas() {
   const shots = [
     {
+      src: '/imagenes para software/dashboard5.PNG',
+      alt: 'Login de la app — pantalla de acceso',
+      caption: 'Acceso a la app',
+      desc: 'La pantalla que ve cualquier afiliado al entrar: noticias, ingreso con DNI o legajo, instalación en un toque.',
+    },
+    {
+      src: '/imagenes para software/dashboard4.PNG',
+      alt: 'Panel del delegado — vista del edificio con buscador',
+      caption: 'Vista del delegado',
+      desc: 'Todas las personas del edificio con buscador y filtros por gremio (APOPS, otros, sin gremio).',
+    },
+    {
       src: '/imagenes para software/dashboard1.PNG',
       alt: 'Dashboard CD — vista del padrón en mapa',
       caption: 'Padrón en mapa',
@@ -1187,12 +1167,6 @@ function DashboardCapturas() {
       caption: 'Delegados y eventos',
       desc: 'Mandatos por vencer, edificios sin delegado, eventos APOPS del mes.',
     },
-    {
-      src: '/imagenes para software/dashboard4.PNG',
-      alt: 'Panel del delegado — vista del edificio con buscador',
-      caption: 'Vista del delegado',
-      desc: 'Todas las personas del edificio con buscador y filtros por gremio (APOPS, otros, sin gremio).',
-    },
   ]
   return (
     <section className="bg-neutral-50 px-5 py-16">
@@ -1202,14 +1176,15 @@ function DashboardCapturas() {
             Pantallas reales
           </span>
           <h2 className="mt-3 text-3xl font-bold leading-tight text-brand-ink md:text-4xl">
-            Capturas del panel en vivo.
+            Capturas del producto en vivo.
           </h2>
           <p className="mt-3 text-base text-brand-muted">
-            Comisión Directiva y delegados, con datos del padrón ANSES real.
+            Desde el login del afiliado hasta el dashboard de Comisión
+            Directiva, con datos del padrón ANSES real.
           </p>
         </header>
 
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {shots.map((s) => (
             <figure
               key={s.src}
@@ -1280,20 +1255,8 @@ function CTAFinal() {
 function Faq() {
   const items = [
     {
-      q: '¿Tengo que descargar algo?',
-      a: 'No. Es una PWA — funciona en cualquier navegador (Chrome, Safari, Firefox). Si querés, podés "instalarla" desde el botón de la página y queda como un ícono de app en tu home screen, pero no pasa por Play Store ni App Store.',
-    },
-    {
-      q: '¿Cómo se instala en mi celular?',
-      a: 'En Android (Chrome) tocás "Instalar app" y se instala automáticamente. En iPhone (Safari) tocás Compartir → Agregar a pantalla de inicio. En cualquier caso el botón "📱 Instalar app" de esta página te guía.',
-    },
-    {
       q: '¿Y si me olvido la clave?',
       a: 'Con un click pedís un magic link a tu email y entrás sin clave. Después podés crear una nueva desde Mi perfil.',
-    },
-    {
-      q: '¿Cómo se actualiza?',
-      a: 'Sola. Cada vez que abrís la app, automáticamente carga la última versión. No hay que esperar updates ni hacer nada.',
     },
     {
       q: '¿Mis datos están seguros?',
@@ -1310,6 +1273,14 @@ function Faq() {
     {
       q: '¿Llega algo por mail después de afiliarme?',
       a: 'Sí. Al enviar, el sistema genera un PDF con todos tus datos y tu firma embedida, y lo manda automáticamente a tres destinatarios: a vos (acuse de recibo + comprobante para tus registros), a apops@apops.org.ar (para que la Comisión Directiva lo procese) y a el/los delegado(s) del edificio que declaraste (para que estén en conocimiento). Todo en el mismo momento del envío.',
+    },
+    {
+      q: '¿Cómo se actualiza la app?',
+      a: 'Sola. Cada vez que abrís la app, automáticamente carga la última versión. No hay que esperar updates ni hacer nada.',
+    },
+    {
+      q: '¿Cómo se instala en mi celular?',
+      a: 'En Android (Chrome) tocás "Instalar app" y se instala automáticamente. En iPhone (Safari) tocás Compartir → Agregar a pantalla de inicio. En cualquier caso el botón "📱 Instalar app" de esta página te guía. No pasa por Play Store ni App Store — queda como un ícono más en tu pantalla de inicio.',
     },
   ]
   return (
