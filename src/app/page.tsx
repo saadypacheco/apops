@@ -87,39 +87,18 @@ export default async function LandingPage({
           <LoginForm registrado={registrado} />
         </section>
 
-        {/* CTA: afiliarse */}
-        <div className="relative z-10 px-5 pt-1">
-          <div className="flex items-center gap-3 rounded-2xl bg-white p-2 shadow-card">
-            <span
-              aria-hidden
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-blue/10 text-brand-blue"
-            >
-              <PeopleIcon />
-            </span>
-            <p className="flex-1 text-sm text-brand-muted">
-              ¿Todavía no sos afiliado/a?
-            </p>
-            <Link
-              href="/afiliarse"
-              className="inline-flex shrink-0 items-center justify-center rounded-xl border-2 border-brand-blue px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-brand-blue transition hover:bg-brand-blue hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:ring-offset-2"
-            >
-              Afiliate
-            </Link>
-          </div>
-        </div>
-
         {/* Footer */}
-        <footer className="relative z-10 mt-1 px-5 pb-1.5">
-          <div className="flex flex-col items-center gap-0 rounded-2xl bg-white/85 px-4 py-1.5 text-center text-[11px] text-brand-ink shadow-card backdrop-blur-sm">
+        <footer className="relative z-10 mt-1 px-5 pb-1">
+          <div className="rounded-2xl bg-white/85 px-3 py-1 text-center text-[10px] leading-tight text-brand-ink shadow-card backdrop-blur-sm">
             <p className="font-medium">
-              Viamonte 1654, CABA · (011) 5544-8300
+              Viamonte 1654, CABA · (011) 5544-8300 ·{' '}
+              <a
+                href="mailto:apops@apops.org.ar"
+                className="font-medium text-brand-ink hover:underline"
+              >
+                apops@apops.org.ar
+              </a>
             </p>
-            <a
-              href="mailto:apops@apops.org.ar"
-              className="font-medium text-brand-ink hover:underline"
-            >
-              apops@apops.org.ar
-            </a>
           </div>
         </footer>
       </div>
@@ -155,24 +134,6 @@ function BellButton() {
         className="absolute right-2 top-2 h-2 w-2 rounded-full bg-white ring-2 ring-brand-blue"
       />
     </button>
-  )
-}
-
-function PeopleIcon() {
-  return (
-    <svg
-      aria-hidden
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      className="h-5 w-5"
-    >
-      <circle cx="9" cy="8" r="3" />
-      <path d="M2 20c0-3 3-5 7-5s7 2 7 5" strokeLinecap="round" />
-      <circle cx="17" cy="9" r="2.5" />
-      <path d="M14 14c2 0 8 1 8 5" strokeLinecap="round" />
-    </svg>
   )
 }
 

@@ -74,23 +74,27 @@ export function LoginForm({ registrado = false }: { registrado?: boolean }) {
 
       <SubmitButton />
 
-      <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-center text-xs">
+      <div className="flex items-center justify-center gap-2 text-center text-[11px]">
         <Link
           href="/recuperar-clave"
           className="font-semibold text-brand-blue hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:ring-offset-2"
         >
-          ¿Olvidaste tu clave?
+          Olvidé mi clave
         </Link>
-        <span aria-hidden className="text-brand-muted/50">·</span>
-        <span className="text-brand-muted">
-          ¿Primera vez?{' '}
-          <Link
-            href="/registrarse"
-            className="font-semibold text-brand-blue hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:ring-offset-2"
-          >
-            Registrate
-          </Link>
-        </span>
+        <span aria-hidden className="text-brand-muted/40">·</span>
+        <Link
+          href="/registrarse"
+          className="font-semibold text-brand-blue hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:ring-offset-2"
+        >
+          Registrate
+        </Link>
+        <span aria-hidden className="text-brand-muted/40">·</span>
+        <Link
+          href="/afiliarse"
+          className="font-semibold text-brand-blue hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:ring-offset-2"
+        >
+          Afiliarme
+        </Link>
       </div>
     </form>
   )
