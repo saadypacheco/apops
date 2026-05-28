@@ -143,6 +143,12 @@ function PersonaCard({
   persona: PersonaPadron
   tipo: 'alta' | 'baja'
 }) {
+  const esApops = persona.gremios.includes('APOPS')
+  // Bienvenida APOPS: solo si la persona es afiliada APOPS. Si entró al
+  // organismo pero está en otro gremio (ATE/UPCN/SEC) o sin gremio,
+  // no corresponde mandarle una bienvenida APOPS — es invitación, no
+  // bienvenida, y eso es un mensaje distinto.
+  const mostrarBotonMensaje = tipo === 'baja' || esApops
   const mensaje =
     tipo === 'alta' ? templateBienvenida(persona) : templateDespedida(persona)
   const waUrl = `https://wa.me/?text=${encodeURIComponent(mensaje)}`
@@ -207,16 +213,22 @@ function PersonaCard({
         </p>
       )}
 
-      <div className="flex flex-wrap gap-2 pt-1">
-        <a
-          href={waUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-1 rounded-md bg-emerald-600 px-3 py-1 text-xs font-semibold text-white hover:bg-emerald-700"
-        >
-          <WhatsAppIcon />
-          {tipo === 'alta' ? 'Mensaje bienvenida' : 'Mensaje despedida'}
-        </a>
+      <div className="flex flex-wrap items-center gap-2 pt-1">
+        {mostrarBotonMensaje ? (
+          <a
+            href={waUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 rounded-md bg-emerald-600 px-3 py-1 text-xs font-semibold text-white hover:bg-emerald-700"
+          >
+            <WhatsAppIcon />
+            {tipo === 'alta' ? 'Mensaje bienvenida' : 'Mensaje despedida'}
+          </a>
+        ) : (
+          <span className="text-[11px] italic text-brand-muted">
+            No es afiliado/a APOPS — sin mensaje de bienvenida automático
+          </span>
+        )}
         {mailto && (
           <a
             href={mailto}
