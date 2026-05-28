@@ -210,7 +210,7 @@ describe('RLS — afiliado autenticado solo accede a lo suyo', () => {
     // Solo debería ver 1 fila — la suya
     expect(data).not.toBeNull()
     expect(data!.length).toBe(1)
-    expect(data![0].email).toBe(CUENTAS_DEMO.delegadoNorte.email)
+    expect(data![0]!.email).toBe(CUENTAS_DEMO.delegadoNorte.email)
   })
 
   it('NO ve datos de otro afiliado conocido por id', async () => {

@@ -94,10 +94,13 @@ export function NoticiasCarousel({ noticias }: { noticias: Noticia[] }) {
       onMouseLeave={() => setPaused(false)}
       onTouchStart={() => setPaused(true)}
     >
-      <header className="flex items-center justify-end px-5">
+      <header className="flex items-center justify-between gap-3 px-5">
+        <span className="text-[10px] font-medium uppercase tracking-wider text-white/75">
+          Noticias del gremio · abiertas a toda ANSES
+        </span>
         <Link
           href="/noticias"
-          className="text-xs font-semibold text-white/90 underline-offset-4 transition hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+          className="shrink-0 text-xs font-semibold text-white/90 underline-offset-4 transition hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
         >
           Ver todas →
         </Link>
