@@ -90,10 +90,11 @@ function Hero() {
           Tu gremio en el bolsillo de cada afiliado.
         </h1>
         <p className="mt-5 max-w-2xl text-base leading-relaxed text-white/90 md:text-lg">
-          Credencial digital, novedades, comunicación bidireccional, afiliación
-          online con firma y PDF por mail, dashboard de Comisión Directiva con
-          el padrón de ANSES vivo. Todo en una app accesible desde cualquier
-          dispositivo, sin pasar por la Play Store ni App Store.
+          Credencial digital, comunicación bidireccional, afiliación online con
+          firma, dashboard de Comisión Directiva con el padrón ANSES vivo.
+          Pensada para servir a dos públicos: los <strong>afiliados APOPS</strong> con
+          login completo, y <strong>toda la comunidad ANSES</strong> con
+          noticias del gremio y afiliación online — todo público, sin barrera.
         </p>
         <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
           <InstallPWAButton variant="onBlue" label="📱 Instalar la app" />
@@ -239,8 +240,8 @@ function Funcionalidades() {
       desc:
         'Gestión profesional: solicitudes con firma digital, novedades publicables, cotizantes por sector, mensajería interna entre admin, delegados y afiliados.',
       bullets: [
-        'Aprobación de afiliaciones online con auditoría',
-        'Delegados ven sus cotizantes y mandan mensajes a CD',
+        'Delegado: vista completa del edificio con buscador y filtros por gremio',
+        'Identificación inmediata de no-afiliados para invitarlos',
         'Hilos de comunicación bidireccionales 1-a-1',
       ],
     },
@@ -264,6 +265,17 @@ function Funcionalidades() {
         'Carga mensual del padrón ANSES desde Excel, histórico preservado',
         'Mapa de Argentina con choropleth + heatmap edificios × dimensiones',
         'KPIs vs objetivos + delta mes anterior',
+      ],
+    },
+    {
+      icon: <MetricsIcon />,
+      title: 'Termómetro del gremio (Tab Uso)',
+      desc:
+        'Tablero de adopción y comunicación en vivo. Saben quién usa la app, qué tasa de lectura tienen las notificaciones que mandan, qué delegados están comprometidos y cuántos no entran hace un mes. Decisiones con datos, no con intuición.',
+      bullets: [
+        'Embudo de adopción: padrón → cuenta → activo → activo + recibió notif',
+        'Tasa de lectura de notificaciones (afiliados y delegados, por separado)',
+        'Top delegados activos + lista accionable de inactivos a contactar',
       ],
     },
   ]
@@ -1443,6 +1455,15 @@ function DashboardIcon() {
       <path d="M3 3v18h18" strokeLinecap="round" strokeLinejoin="round" />
       <path d="M7 14l4-4 4 4 5-5" strokeLinecap="round" strokeLinejoin="round" />
       <circle cx="11" cy="10" r="0.5" fill="currentColor" />
+    </svg>
+  )
+}
+
+function MetricsIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-6 w-6" aria-hidden>
+      <circle cx="12" cy="12" r="10" />
+      <path d="M12 6v6l4 2" strokeLinecap="round" />
     </svg>
   )
 }
