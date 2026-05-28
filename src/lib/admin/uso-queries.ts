@@ -485,7 +485,7 @@ export async function getComunicacionEntrante(
 
   // Clasifico autor por rol
   const autoresIds = Array.from(new Set(hilos.map((h) => h.autor_id)))
-  let rolPorId = new Map<string, string>()
+  const rolPorId = new Map<string, string>()
   if (autoresIds.length > 0) {
     type AfilRow = { id: string; rol: string }
     const { data } = (await admin
