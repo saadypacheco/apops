@@ -1,7 +1,12 @@
 # Retomar trabajo — APOPS Siempre
 
-> Doc de handoff entre sesiones. Última actualización: 2026-05-16 (suite RLS).
+> Doc de handoff entre sesiones. Última actualización: 2026-05-29 (handoff pre-rollout cliente).
 > Branch activa: `main`. Trabajo en producción en `https://apops.vercel.app`.
+>
+> **🚨 PRÓXIMA SESIÓN: arrancar rollout al cliente real.** Leer
+> [INSTALACION-NUEVO-CLIENTE.md](INSTALACION-NUEVO-CLIENTE.md) primero —
+> tiene el playbook completo (servidor nuevo + Supabase nuevo + datos
+> reales + checklist pre go-live).
 
 ## Estado al cerrar la sesión
 
@@ -167,6 +172,56 @@ Cuando se quiera activar:
 
 Verificar el dominio puede llevar minutos u horas según el proveedor DNS. Mientras no esté verificado, Resend solo permite enviar a la dirección owner de la cuenta (modo sandbox — útil para test inicial).
 
+### K — Pre-demo cliente + Sesión rollout (2026-05-28 → 2026-05-29)
+
+Sesión orientada a preparar la presentación al cliente real y dejar
+todo listo para el rollout.
+
+**Material para la demo** (todos commiteados):
+- `Propuesta-APOPS-Siempre.docx` (commit `e854698`): documento Word
+  con la propuesta completa siguiendo el template provisto por el user.
+  9 secciones, tabla comparativa, cita de cierre. Reusable: editar
+  `scripts/generar-propuesta-docx.ts` y volver a correr.
+- `Presentacion-APOPS-Siempre.pptx` (commit `07cae4d`): 19 slides
+  inspirados en el modelo Looker Pro del cliente, mejorados. Paleta
+  navy + azul brand + amber. Reusable con `scripts/generar-presentacion-pptx.ts`.
+- `INSTALACION-NUEVO-CLIENTE.md` (commit `___`): playbook completo
+  para el rollout — cuentas, dominios, Supabase nuevo, env vars,
+  checklist pre go-live, costos estimados.
+
+**Cambios funcionales menores** (todos para la demo):
+- Botón "Mensaje bienvenida" en altas/bajas solo si la persona es APOPS
+  (commit `f03f37a`). Si es de otro gremio, muestra "No es afiliado/a
+  APOPS — sin mensaje de bienvenida automático".
+- Fix autor de noticia "Pacheco, Saady (Demo)" → "Comisión Directiva"
+  (commit `0a3ac3d`).
+- Seed de 10 hilos de notificaciones realistas entre las 3 cuentas
+  demo, para que el tab Uso muestre tasas vivas (60% lectura
+  delegados) — script `seed-demo-notificaciones.ts`.
+- Copy "Noticias del gremio · abiertas a toda ANSES" en header del
+  carousel (commit `d9b5732`).
+- Tab Uso del dashboard sumado a `/software` como funcionalidad nueva
+  con su ícono dedicado.
+
+**Fixes de build de Vercel** (lecciones para protocolar):
+- `npm run build` local atrapa cosas que `tsc` + `lint` NO (ESLint
+  en build mode es más estricto: `prefer-const`, `no-unused-vars` →
+  error en lugar de warning).
+- Excluir `scripts/**/*` del `tsconfig.json` cuando los scripts
+  importan libs instaladas con `--no-save` (commit `d423591`).
+
+**Tema interrumpido** — sistema de encuestas:
+El user planteó un sistema de encuestas simples (preguntas sí/no +
+comentario opcional) para que admin pueda medir clima de afiliados
+y delegados, y ver agregados. Diseño propuesto:
+- 4 tablas relacionales: `encuestas`, `preguntas_encuesta`,
+  `respuestas_encuesta`, `respuestas_pregunta`.
+- Audiencia configurable (afiliado / delegado / todos).
+- Identificada en DB, agregada en UI (admin solo ve %s).
+- Banner en /feed y /delegados cuando hay encuesta activa sin responder.
+La conversación se interrumpió antes de codear — queda como feature
+pendiente para próxima sesión si el cliente lo prioriza.
+
 ### J — Tab "Uso" del dashboard CD + Suite RLS (sesión 2026-05-16)
 
 **Tab Uso** (commit `e2d95e4`): renombra `?tab=app` → `?tab=uso` y suma
@@ -233,9 +288,58 @@ Identificados en charla con el user 2026-05-16:
    edificio)` o columna `region` en padrón. Ver con el cliente cómo
    vienen las regiones del Ministerio.
 
-## Próxima sesión — Testing y mejoras
+## 🚀 Próxima sesión — Rollout al cliente
 
-Objetivo de la próxima sesión: **suite de tests + refinamientos**.
+**Objetivo principal**: pasar de demo a producto operativo para el cliente real.
+
+📖 **Documento de referencia**: [INSTALACION-NUEVO-CLIENTE.md](INSTALACION-NUEVO-CLIENTE.md) tiene el playbook completo paso a paso.
+
+### Orden sugerido de tareas
+
+1. **Validar que el cliente tenga listo**:
+   - Dominio (idealmente `app.apops.org.ar`).
+   - Cuentas técnicas creadas: GitHub org, Vercel, Supabase, Resend.
+   - Lista de admins reales + lista de delegados reales (con sus emails).
+   - Excel del padrón ANSES del mes corriente.
+
+2. **Setup del entorno nuevo**:
+   - Clonar repo a la org del cliente.
+   - Crear proyecto Supabase nuevo + aplicar 36 migrations.
+   - Cargar padrón real del cliente.
+   - Crear cuentas iniciales reales.
+   - Configurar Vercel con env vars apuntando al nuevo Supabase.
+
+3. **Configuraciones avanzadas**:
+   - VAPID keys (push real).
+   - Resend + verificación de dominio (email transaccional).
+   - Dominio personalizado.
+
+4. **Validación final**:
+   - Suite RLS contra el nuevo cloud.
+   - Pre-flight checklist completo.
+   - Capacitación a admins reales.
+
+### Features pendientes (post-rollout o si el cliente prioriza)
+
+- **Sistema de encuestas** (tema interrumpido en sesión 2026-05-28): 4 tablas + admin para crear/ver resultados + banner para responder. Diseño en sección K de este doc.
+- **Rol "Publicador de noticias"**.
+- **Rol "Delegado regional"**.
+- **INSERT anon en `solicitudes_afiliacion`**: investigar trigger oculto que rechaza (test RLS skipped).
+- **Tests E2E con Playwright**.
+- **Tracking por pantalla** (qué mira cada perfil).
+
+### ⚠️ Protocolo build (lecciones aprendidas)
+
+ANTES de pushear cambios estructurales (nuevos archivos, nuevas libs, refactors), correr `npm run build` local. `tsc --noEmit` + `npm run lint` NO atrapan todo — ESLint en build mode trata como error cosas que en dev son warning. Ejemplos que rompieron Vercel:
+- `Link` huérfano sin uso (commit `d11c04d`)
+- `let` que nunca se reasigna (commit `5cad5d0`)
+- Scripts importando libs `--no-save` (commit `d423591`)
+
+---
+
+## Próxima sesión alternativa — Testing y mejoras (si rollout no arranca todavía)
+
+Objetivo: **suite de tests + refinamientos**.
 
 ### Prioridades sugeridas
 
