@@ -47,18 +47,21 @@ function getImageDims(path: string): { w: number; h: number } {
 // Paleta y constantes de estilo
 // ─────────────────────────────────────────────────────────────────────
 
+// PALETA OSCURA — todos los slides sobre navy uniforme.
+// Si querés volver a fondo blanco: invertir bg/bgSoft/inkText/mutedText
+// /card/cardRing a los valores que están comentados al lado.
 const COLOR = {
-  navyDeep: '0F1F3D', // fondo de portadas
-  navyMid: '1A325C', // acento oscuro
+  navyDeep: '0F1F3D', // fondo de portadas + ahora también de contenido
+  navyMid: '1A325C', // acento oscuro / cards sobre fondo navy
   brandBlue: '1F72B8', // azul APOPS
   brandTeal: '7FCFE5', // cyan APOPS secundario
   amber: 'F59E0B', // CTA cálido
-  inkText: '14213D', // texto principal
-  mutedText: '6B7280', // texto secundario
-  bg: 'FFFFFF',
-  bgSoft: 'F8FAFC',
-  card: 'FFFFFF',
-  cardRing: 'E5E7EB',
+  inkText: 'FFFFFF', // texto principal — ANTES 14213D (oscuro)
+  mutedText: 'CBD5E1', // texto secundario — ANTES 6B7280 (gris oscuro)
+  bg: '0F1F3D', // fondo principal — ANTES FFFFFF (blanco)
+  bgSoft: '1A325C', // fondo de secciones / cards — ANTES F8FAFC
+  card: '1A325C', // fondo de cards individuales — ANTES FFFFFF
+  cardRing: '334155', // border de cards — ANTES E5E7EB (gris claro)
   success: '10B981',
   warn: 'F97316',
 }
