@@ -112,6 +112,36 @@ function addFooter(slide: any, num: number, total: number) {
   })
 }
 
+// Renderiza un emoji dentro de un círculo de color brand. Soluciona
+// el problema de emojis monocromáticos (que en PowerPoint renderizan
+// en negro/gris) perdiéndose sobre el fondo navy oscuro.
+function addEmojiCirculo(
+  slide: any,
+  args: { x: number; y: number; size?: number; emoji: string; color?: string },
+) {
+  const size = args.size ?? 0.7
+  const color = args.color ?? COLOR.brandBlue
+  slide.addShape('ellipse', {
+    x: args.x,
+    y: args.y,
+    w: size,
+    h: size,
+    fill: { color, transparency: 60 },
+    line: { color, width: 1.5 },
+  })
+  slide.addText(args.emoji, {
+    x: args.x,
+    y: args.y,
+    w: size,
+    h: size,
+    fontSize: size * 38,
+    color: 'FFFFFF',
+    align: 'center',
+    valign: 'middle',
+    fontFace: FONT.regular,
+  })
+}
+
 function addSlideHeader(
   slide: any,
   eyebrow: string,
@@ -510,18 +540,17 @@ for (let i = 0; i < problemas.length; i++) {
     line: { color: COLOR.cardRing, width: 1 },
     rectRadius: 0.1,
   })
-  s.addText(p.icon, {
+  // Icono dentro de círculo brand para que destaque sobre navy
+  addEmojiCirculo(s, {
     x: x + 0.2,
-    y: y + 0.2,
-    w: 0.7,
-    h: 0.7,
-    fontSize: 32,
-    fontFace: FONT.regular,
+    y: y + 0.25,
+    size: 0.7,
+    emoji: p.icon,
   })
   s.addText(p.titulo, {
-    x: x + 1,
+    x: x + 1.05,
     y: y + 0.25,
-    w: 2.85,
+    w: 2.8,
     h: 0.5,
     fontSize: 14,
     bold: true,
@@ -529,9 +558,9 @@ for (let i = 0; i < problemas.length; i++) {
     fontFace: FONT.regular,
   })
   s.addText(p.desc, {
-    x: x + 1,
+    x: x + 1.05,
     y: y + 0.75,
-    w: 2.85,
+    w: 2.8,
     h: 1,
     fontSize: 11,
     color: COLOR.mutedText,
@@ -553,78 +582,99 @@ addSlideHeader(
   'Cómo cambia cada flujo cuando la app está en producción.',
 )
 
-const tablaComp = [
-  ['Hoy (sin app)', 'Con APOPS Siempre'],
-  ['Mail o WhatsApp que se pierde', 'Notificación al celular con tasa de lectura medida'],
-  ['Comunicados que no se leen', 'Novedades en feed + página pública compartible'],
-  ['WhatsApp del delegado se inunda', 'Hilos 1-a-1 ordenados con historial'],
-  ['CD sin saber cuántos leyeron', 'Tasa de lectura en vivo (60-80%)'],
-  ['Delegado no ve a no-APOPS', 'Vista completa del edificio con filtros'],
-  ['Afiliación presencial con papeles', 'Wizard online + firma digital + PDF por mail'],
-  ['Compañeros invisibles', 'Página pública con noticias y formulario de afiliación'],
+// Filas comparativas con icono | antes | flecha | después — más legible
+// que tabla en navy. Cada fila vive en una mini-card semi-transparente.
+const filas = [
+  { icon: '📧', antes: 'Mail o WhatsApp que se pierde', despues: 'Notificación al celular con tasa de lectura medida' },
+  { icon: '📰', antes: 'Comunicados que no se leen', despues: 'Novedades en feed + página pública compartible' },
+  { icon: '💬', antes: 'WhatsApp del delegado se inunda', despues: 'Hilos 1-a-1 ordenados con historial' },
+  { icon: '📊', antes: 'CD sin saber cuántos leyeron', despues: 'Tasa de lectura en vivo (60-80%)' },
+  { icon: '👥', antes: 'Delegado no ve a no-APOPS', despues: 'Vista completa del edificio con filtros' },
+  { icon: '✍️', antes: 'Afiliación presencial con papeles', despues: 'Wizard online + firma digital + PDF por mail' },
+  { icon: '👁️', antes: 'Compañeros invisibles', despues: 'Página pública con noticias y formulario de afiliación' },
 ]
-for (let i = 0; i < tablaComp.length; i++) {
-  const [izq, der] = tablaComp[i]!
-  const y = 2.75 + i * 0.55
-  if (i === 0) {
-    // Header row
-    s.addShape('rect', {
-      x: 0.6,
-      y,
-      w: 6,
-      h: 0.5,
-      fill: { color: '94A3B8' },
-      line: { type: 'none' },
-    })
-    s.addShape('rect', {
-      x: 6.7,
-      y,
-      w: 6,
-      h: 0.5,
-      fill: { color: COLOR.brandBlue },
-      line: { type: 'none' },
-    })
-    s.addText(izq, {
-      x: 0.8,
-      y: y + 0.08,
-      w: 5.8,
-      h: 0.4,
-      fontSize: 13,
-      bold: true,
-      color: 'FFFFFF',
-      fontFace: FONT.regular,
-    })
-    s.addText(der, {
-      x: 6.9,
-      y: y + 0.08,
-      w: 5.8,
-      h: 0.4,
-      fontSize: 13,
-      bold: true,
-      color: 'FFFFFF',
-      fontFace: FONT.regular,
-    })
-  } else {
-    s.addText(izq, {
-      x: 0.8,
-      y,
-      w: 5.7,
-      h: 0.5,
-      fontSize: 12,
-      color: COLOR.mutedText,
-      fontFace: FONT.regular,
-    })
-    s.addText(der, {
-      x: 6.9,
-      y,
-      w: 5.7,
-      h: 0.5,
-      fontSize: 12,
-      bold: true,
-      color: COLOR.inkText,
-      fontFace: FONT.regular,
-    })
-  }
+
+// Encabezados de columna (sobre las filas)
+s.addText('HOY · SIN APP', {
+  x: 1.3,
+  y: 2.55,
+  w: 4.5,
+  h: 0.3,
+  fontSize: 11,
+  bold: true,
+  color: COLOR.mutedText,
+  fontFace: FONT.regular,
+  charSpacing: 3,
+})
+s.addText('CON APOPS SIEMPRE', {
+  x: 7.6,
+  y: 2.55,
+  w: 5,
+  h: 0.3,
+  fontSize: 11,
+  bold: true,
+  color: COLOR.brandTeal,
+  fontFace: FONT.regular,
+  charSpacing: 3,
+})
+
+for (let i = 0; i < filas.length; i++) {
+  const f = filas[i]!
+  const y = 2.95 + i * 0.6
+  // Card de fila semi-transparente
+  s.addShape('roundRect', {
+    x: 0.5,
+    y,
+    w: 12.3,
+    h: 0.52,
+    fill: { color: COLOR.navyMid, transparency: 30 },
+    line: { color: COLOR.cardRing, width: 0.5 },
+    rectRadius: 0.08,
+  })
+  // Icono en círculo
+  addEmojiCirculo(s, {
+    x: 0.65,
+    y: y + 0.06,
+    size: 0.4,
+    emoji: f.icon,
+    color: COLOR.brandBlue,
+  })
+  // Texto "antes" en gris claro
+  s.addText(f.antes, {
+    x: 1.2,
+    y: y + 0.05,
+    w: 5.3,
+    h: 0.42,
+    fontSize: 12,
+    color: COLOR.mutedText,
+    fontFace: FONT.regular,
+    valign: 'middle',
+  })
+  // Flecha grande hacia la derecha en cyan
+  s.addText('→', {
+    x: 6.6,
+    y: y + 0.05,
+    w: 0.6,
+    h: 0.42,
+    fontSize: 22,
+    bold: true,
+    color: COLOR.brandTeal,
+    fontFace: FONT.regular,
+    align: 'center',
+    valign: 'middle',
+  })
+  // Texto "después" en blanco bold
+  s.addText(f.despues, {
+    x: 7.3,
+    y: y + 0.05,
+    w: 5.3,
+    h: 0.42,
+    fontSize: 12,
+    bold: true,
+    color: 'FFFFFF',
+    fontFace: FONT.regular,
+    valign: 'middle',
+  })
 }
 addFooter(s, 4, SLIDES_TOTAL)
 
@@ -1277,13 +1327,12 @@ for (let i = 0; i < nivelesPub.length; i++) {
     fill: { color: COLOR.brandBlue },
     line: { type: 'none' },
   })
-  s.addText(n.icon, {
+  addEmojiCirculo(s, {
     x: x + 0.3,
     y: 3.2,
-    w: 1,
-    h: 0.8,
-    fontSize: 40,
-    fontFace: FONT.regular,
+    size: 0.9,
+    emoji: n.icon,
+    color: COLOR.brandTeal,
   })
   s.addText(n.nivel, {
     x: x + 0.3,
@@ -1491,13 +1540,11 @@ for (let i = 0; i < beneficios.length; i++) {
     line: { color: COLOR.cardRing, width: 1 },
     rectRadius: 0.1,
   })
-  s.addText(b.icon, {
+  addEmojiCirculo(s, {
     x: x + 0.2,
-    y: y + 0.25,
-    w: 0.7,
-    h: 0.7,
-    fontSize: 28,
-    fontFace: FONT.regular,
+    y: y + 0.3,
+    size: 0.6,
+    emoji: b.icon,
   })
   s.addText(b.label, {
     x: x + 0.95,
@@ -1645,13 +1692,12 @@ for (let i = 0; i < plataformas.length; i++) {
     line: { color: COLOR.cardRing, width: 1 },
     rectRadius: 0.1,
   })
-  s.addText(p.icon, {
+  addEmojiCirculo(s, {
     x: x + 0.3,
     y: 3,
-    w: 1,
-    h: 0.8,
-    fontSize: 36,
-    fontFace: FONT.regular,
+    size: 0.85,
+    emoji: p.icon,
+    color: COLOR.brandTeal,
   })
   s.addText(p.titulo, {
     x: x + 1.4,
