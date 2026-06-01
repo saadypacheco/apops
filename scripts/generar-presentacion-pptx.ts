@@ -12,6 +12,36 @@
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const PptxGenJS = require('pptxgenjs')
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const { readFileSync } = require('node:fs')
+
+// Lee dimensiones reales de un PNG o JPEG sin libs externas — necesario
+// para calcular w/h del slide respetando el aspect natural de cada
+// imagen y evitar deformación.
+function getImageDims(path: string): { w: number; h: number } {
+  const buf = readFileSync(path)
+  // PNG: bytes 16-23 son IHDR width + height (big endian)
+  if (buf[0] === 0x89 && buf[1] === 0x50) {
+    return { w: buf.readUInt32BE(16), h: buf.readUInt32BE(20) }
+  }
+  // JPEG: recorrer markers hasta encontrar SOF0/1/2
+  if (buf[0] === 0xff && buf[1] === 0xd8) {
+    let i = 2
+    while (i < buf.length - 8) {
+      if (buf[i] !== 0xff) break
+      const marker = buf[i + 1]
+      if (marker !== undefined && marker >= 0xc0 && marker <= 0xc2) {
+        return {
+          w: buf.readUInt16BE(i + 7),
+          h: buf.readUInt16BE(i + 5),
+        }
+      }
+      const segLen = buf.readUInt16BE(i + 2)
+      i += 2 + segLen
+    }
+  }
+  return { w: 4, h: 5 } // fallback
+}
 
 // ─────────────────────────────────────────────────────────────────────
 // Paleta y constantes de estilo
@@ -177,25 +207,44 @@ function addCapturaSlide(args: {
     fontFace: FONT.regular,
   })
 
-  // Imagen centrada. Las capturas son verticales (mobile screenshot)
-  // así que la limito a ~4.5" de ancho centrada con sombra/marco.
+  // Calculo dimensiones respetando aspect ratio real de la imagen
+  // para evitar deformación. Las capturas son de 3 tipos:
+  //   - Mobile vertical (740x1600, ratio ~0.46)
+  //   - Cuadradas (564x601 / 424x559, ratio ~0.76-0.94)
+  //   - Desktop horizontal (837x554, ratio ~1.5)
+  const dims = getImageDims(args.imagePath)
+  const aspect = dims.w / dims.h
+  const maxW = 9 // ancho máximo del área de imagen
+  const maxH = 5 // alto máximo
+  let imgW: number, imgH: number
+  if (aspect > maxW / maxH) {
+    // Imagen más ancha que el área → limita por ancho
+    imgW = maxW
+    imgH = maxW / aspect
+  } else {
+    // Imagen más alta → limita por alto
+    imgH = maxH
+    imgW = maxH * aspect
+  }
+  const imgX = (W - imgW) / 2
+  const imgY = 1.85 + (maxH - imgH) / 2
+
   // Marco decorativo (sombra simulada con rect detrás semitransparente)
   slide.addShape('roundRect', {
-    x: (W - 4.3) / 2 + 0.05,
-    y: 1.85 + 0.05,
-    w: 4.3,
-    h: 5,
+    x: imgX + 0.05,
+    y: imgY + 0.05,
+    w: imgW,
+    h: imgH,
     fill: { color: '000000', transparency: 85 },
     line: { type: 'none' },
-    rectRadius: 0.15,
+    rectRadius: 0.1,
   })
   slide.addImage({
     path: args.imagePath,
-    x: (W - 4.3) / 2,
-    y: 1.85,
-    w: 4.3,
-    h: 5,
-    sizing: { type: 'contain', w: 4.3, h: 5 },
+    x: imgX,
+    y: imgY,
+    w: imgW,
+    h: imgH,
   })
 
   // Caption opcional al pie
@@ -1093,7 +1142,7 @@ addCapturaSlide({
   eyebrow: '05 · EN VIVO · PADRÓN',
   title: 'Distribución geográfica',
   subtitle: 'Mapa SVG de Argentina con choropleth + números por provincia + CABA destacada.',
-  imagePath: 'public/imagenes para software/dashboard-padron-mapa2.png',
+  imagePath: 'public/imagenes para software/dashboard-padron-mapa1.PNG',
   caption: 'CABA concentra 1.2k afiliados APOPS. Buenos Aires 524. Córdoba 301.',
   slideNumber: 15,
 })
