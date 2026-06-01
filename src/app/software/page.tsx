@@ -59,6 +59,15 @@ function NavTop() {
           </a>
         </div>
         <div className="flex items-center gap-2">
+          <a
+            href="/Presentacion-APOPS-Siempre.pptx"
+            download
+            className="hidden h-9 items-center gap-1.5 rounded-full border-2 border-brand-blue px-3 text-xs font-bold uppercase tracking-wider text-brand-blue transition hover:bg-brand-blue hover:text-white md:inline-flex"
+            title="Descargar propuesta (PPT)"
+          >
+            <DownloadIcon />
+            Propuesta
+          </a>
           <InstallPWAButton variant="compact" label="📱 Instalar" />
           <Link
             href="/"
@@ -1255,6 +1264,14 @@ function CTAFinal() {
           >
             Probar la demo
           </Link>
+          <a
+            href="/Presentacion-APOPS-Siempre.pptx"
+            download
+            className="inline-flex min-h-[3rem] items-center justify-center gap-2 rounded-full bg-white/10 px-6 text-sm font-bold uppercase tracking-wider text-white ring-2 ring-white/30 backdrop-blur-sm transition hover:bg-white/20"
+          >
+            <DownloadIcon />
+            Descargar propuesta
+          </a>
         </div>
       </div>
     </section>
@@ -1472,6 +1489,22 @@ function CheckIcon() {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3} className="mt-0.5 h-4 w-4 shrink-0 text-brand-blue" aria-hidden>
       <path d="M5 12l4 4L19 7" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+function DownloadIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2.5}
+      className="h-4 w-4"
+      aria-hidden
+    >
+      <path d="M12 3v12m0 0l-4-4m4 4l4-4" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2" strokeLinecap="round" />
     </svg>
   )
 }
