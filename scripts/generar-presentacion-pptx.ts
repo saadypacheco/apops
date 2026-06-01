@@ -130,7 +130,91 @@ function addSlideHeader(
   })
 }
 
-const SLIDES_TOTAL = 19
+const SLIDES_TOTAL = 27
+
+// Helper para slides de captura — fondo blanco, header arriba,
+// imagen grande centrada abajo con un breve caption
+function addCapturaSlide(args: {
+  eyebrow: string
+  title: string
+  subtitle: string
+  imagePath: string
+  caption?: string
+  slideNumber: number
+}) {
+  const slide = pres.addSlide()
+  slide.background = { color: COLOR.bgSoft }
+
+  // Header compacto (más pequeño que addSlideHeader para dejar lugar a la imagen)
+  slide.addText(args.eyebrow, {
+    x: 0.5,
+    y: 0.35,
+    w: 8,
+    h: 0.3,
+    fontSize: 11,
+    bold: true,
+    color: COLOR.brandBlue,
+    fontFace: FONT.regular,
+    charSpacing: 2,
+  })
+  slide.addText(args.title, {
+    x: 0.5,
+    y: 0.65,
+    w: 12.3,
+    h: 0.55,
+    fontSize: 24,
+    bold: true,
+    color: COLOR.inkText,
+    fontFace: FONT.light,
+  })
+  slide.addText(args.subtitle, {
+    x: 0.5,
+    y: 1.2,
+    w: 12.3,
+    h: 0.4,
+    fontSize: 13,
+    color: COLOR.mutedText,
+    fontFace: FONT.regular,
+  })
+
+  // Imagen centrada. Las capturas son verticales (mobile screenshot)
+  // así que la limito a ~4.5" de ancho centrada con sombra/marco.
+  // Marco decorativo (sombra simulada con rect detrás semitransparente)
+  slide.addShape('roundRect', {
+    x: (W - 4.3) / 2 + 0.05,
+    y: 1.85 + 0.05,
+    w: 4.3,
+    h: 5,
+    fill: { color: '000000', transparency: 85 },
+    line: { type: 'none' },
+    rectRadius: 0.15,
+  })
+  slide.addImage({
+    path: args.imagePath,
+    x: (W - 4.3) / 2,
+    y: 1.85,
+    w: 4.3,
+    h: 5,
+    sizing: { type: 'contain', w: 4.3, h: 5 },
+  })
+
+  // Caption opcional al pie
+  if (args.caption) {
+    slide.addText(args.caption, {
+      x: 1,
+      y: 6.95,
+      w: 11.3,
+      h: 0.3,
+      fontSize: 11,
+      italic: true,
+      color: COLOR.mutedText,
+      fontFace: FONT.regular,
+      align: 'center',
+    })
+  }
+
+  addFooter(slide, args.slideNumber, SLIDES_TOTAL)
+}
 
 // ─────────────────────────────────────────────────────────────────────
 // SLIDE 1 — Portada
@@ -895,8 +979,157 @@ for (let i = 0; i < bloques.length; i++) {
 }
 addFooter(s, 10, SLIDES_TOTAL)
 
+// ═════════════════════════════════════════════════════════════════════
+// SLIDES 11-17 — EL PRODUCTO EN VIVO (capturas reales)
+// ═════════════════════════════════════════════════════════════════════
+
+// ─── SLIDE 11 — Intro a la sección de capturas ───────────────────────
+s = pres.addSlide()
+s.background = { color: COLOR.navyDeep }
+s.addShape('ellipse', {
+  x: W - 5,
+  y: -2,
+  w: 7,
+  h: 7,
+  fill: { color: COLOR.brandBlue, transparency: 88 },
+  line: { type: 'none' },
+})
+s.addShape('ellipse', {
+  x: -2,
+  y: H - 4,
+  w: 5,
+  h: 5,
+  fill: { color: COLOR.brandTeal, transparency: 92 },
+  line: { type: 'none' },
+})
+s.addText('05 · EN VIVO', {
+  x: 0.7,
+  y: 1.8,
+  w: 5,
+  h: 0.4,
+  fontSize: 14,
+  bold: true,
+  color: COLOR.amber,
+  fontFace: FONT.regular,
+  charSpacing: 3,
+})
+s.addText('El producto funcionando.', {
+  x: 0.7,
+  y: 2.4,
+  w: 12,
+  h: 1.6,
+  fontSize: 56,
+  bold: true,
+  color: 'FFFFFF',
+  fontFace: FONT.light,
+})
+s.addText(
+  'Capturas reales del sistema con padrón ANSES de Julio 2016 cargado: 15.558 cotizantes, 4.631 APOPS, 529 delegados.',
+  {
+    x: 0.7,
+    y: 4.1,
+    w: 12,
+    h: 0.7,
+    fontSize: 18,
+    color: 'CBD5E1',
+    fontFace: FONT.regular,
+  },
+)
+s.addShape('rect', {
+  x: 0.7,
+  y: 5,
+  w: 1.2,
+  h: 0.05,
+  fill: { color: COLOR.brandTeal },
+  line: { type: 'none' },
+})
+s.addText(
+  'No son mockups. Es lo que ve hoy un admin de la CD al loguearse.',
+  {
+    x: 0.7,
+    y: 5.15,
+    w: 12,
+    h: 0.4,
+    fontSize: 14,
+    color: COLOR.brandTeal,
+    fontFace: FONT.regular,
+    italic: true,
+  },
+)
+addFooter(s, 11, SLIDES_TOTAL)
+
+// ─── SLIDE 12 — Login del afiliado ───────────────────────────────────
+addCapturaSlide({
+  eyebrow: '05 · EN VIVO · ACCESO',
+  title: 'Login simple del afiliado',
+  subtitle: 'DNI o legajo + clave. Magic link si se olvida la contraseña. Instalable en 1 toque.',
+  imagePath: 'public/imagenes para software/login.PNG',
+  caption: 'Pantalla pública en apops.vercel.app — también visible desde computadora.',
+  slideNumber: 12,
+})
+
+// ─── SLIDE 13 — Panel admin (atajos) ─────────────────────────────────
+addCapturaSlide({
+  eyebrow: '05 · EN VIVO · PANEL ADMIN',
+  title: 'Panel de la Comisión Directiva',
+  subtitle: 'Atajos a todas las funciones administrativas con badges de pendientes.',
+  imagePath: 'public/imagenes para software/dasjboard.png',
+  caption: 'Mensajes de delegados sin leer y notificaciones aparecen con badge naranja.',
+  slideNumber: 13,
+})
+
+// ─── SLIDE 14 — Dashboard CD: Resumen ────────────────────────────────
+addCapturaSlide({
+  eyebrow: '05 · EN VIVO · DASHBOARD',
+  title: 'Dashboard CD — vista Resumen',
+  subtitle: '4 KPI cards con delta vs mes anterior. Selector de período arriba.',
+  imagePath: 'public/imagenes para software/dashboard-resumen.png',
+  caption: '15.558 cotizantes · 4.631 APOPS · 529 delegados · % adopción vs objetivo 70%.',
+  slideNumber: 14,
+})
+
+// ─── SLIDE 15 — Padrón en mapa ───────────────────────────────────────
+addCapturaSlide({
+  eyebrow: '05 · EN VIVO · PADRÓN',
+  title: 'Distribución geográfica',
+  subtitle: 'Mapa SVG de Argentina con choropleth + números por provincia + CABA destacada.',
+  imagePath: 'public/imagenes para software/dashboard-padron-mapa2.png',
+  caption: 'CABA concentra 1.2k afiliados APOPS. Buenos Aires 524. Córdoba 301.',
+  slideNumber: 15,
+})
+
+// ─── SLIDE 16 — Delegados activos ────────────────────────────────────
+addCapturaSlide({
+  eyebrow: '05 · EN VIVO · DELEGADOS',
+  title: 'Comisión Directiva — Delegados',
+  subtitle: '529 delegados activos. Mandatos que vencen en 30 días en alerta. Edificios sin delegado.',
+  imagePath: 'public/imagenes para software/dashboard-delegados.png',
+  caption: '6 mandatos por vencer este mes — listado accionable. 10 edificios APOPS sin delegado asignado.',
+  slideNumber: 16,
+})
+
+// ─── SLIDE 17 — Vista del delegado (alertas) ─────────────────────────
+addCapturaSlide({
+  eyebrow: '05 · EN VIVO · DELEGADO',
+  title: 'El delegado ve su edificio',
+  subtitle: 'Alertas automáticas de altas y bajas. Comunicación directa con la CD.',
+  imagePath: 'public/imagenes para software/DashboardalertasDelegado.jpeg',
+  caption: 'Cada delegado recibe notificación cuando hay movimientos en su edificio o consultas.',
+  slideNumber: 17,
+})
+
+// ─── SLIDE 18 — Altas y bajas con plantillas WhatsApp ────────────────
+addCapturaSlide({
+  eyebrow: '05 · EN VIVO · OPERACIÓN',
+  title: 'Altas y bajas accionables',
+  subtitle: 'Listado de movimientos con plantillas WhatsApp pre-cargadas para saludar / despedir.',
+  imagePath: 'public/imagenes para software/dashboardAltaBajas.PNG',
+  caption: 'Botón "Mensaje bienvenida" aparece solo si la persona es APOPS — para no-APOPS es invitación.',
+  slideNumber: 18,
+})
+
 // ─────────────────────────────────────────────────────────────────────
-// SLIDE 11 — Para toda ANSES (público + captación)
+// SLIDE 19 — Para toda ANSES (público + captación)
 // ─────────────────────────────────────────────────────────────────────
 
 s = pres.addSlide()
@@ -1002,7 +1235,7 @@ s.addText(
     fontFace: FONT.regular,
   },
 )
-addFooter(s, 11, SLIDES_TOTAL)
+addFooter(s, 19, SLIDES_TOTAL)
 
 // ─────────────────────────────────────────────────────────────────────
 // SLIDE 12 — Afiliación online con firma
@@ -1123,7 +1356,7 @@ s.addText(
     fontFace: FONT.regular,
   },
 )
-addFooter(s, 12, SLIDES_TOTAL)
+addFooter(s, 20, SLIDES_TOTAL)
 
 // ─────────────────────────────────────────────────────────────────────
 // SLIDE 13 — Beneficios
@@ -1181,7 +1414,7 @@ for (let i = 0; i < beneficios.length; i++) {
     fontFace: FONT.regular,
   })
 }
-addFooter(s, 13, SLIDES_TOTAL)
+addFooter(s, 21, SLIDES_TOTAL)
 
 // ─────────────────────────────────────────────────────────────────────
 // SLIDE 14 — Diferencial
@@ -1254,7 +1487,7 @@ for (let i = 0; i < dif.length; i++) {
     fontFace: FONT.regular,
   })
 }
-addFooter(s, 14, SLIDES_TOTAL)
+addFooter(s, 22, SLIDES_TOTAL)
 
 // ─────────────────────────────────────────────────────────────────────
 // SLIDE 15 — Cómo se instala
@@ -1387,7 +1620,7 @@ s.addText(
     fontFace: FONT.regular,
   },
 )
-addFooter(s, 15, SLIDES_TOTAL)
+addFooter(s, 23, SLIDES_TOTAL)
 
 // ─────────────────────────────────────────────────────────────────────
 // SLIDE 16 — Roadmap corto plazo
@@ -1469,7 +1702,7 @@ for (let i = 0; i < roadmapCorto.length; i++) {
     fontFace: FONT.regular,
   })
 }
-addFooter(s, 16, SLIDES_TOTAL)
+addFooter(s, 24, SLIDES_TOTAL)
 
 // ─────────────────────────────────────────────────────────────────────
 // SLIDE 17 — Roadmap mediano/largo
@@ -1540,7 +1773,7 @@ for (let i = 0; i < roadmapLargo.length; i++) {
     fontFace: FONT.regular,
   })
 }
-addFooter(s, 17, SLIDES_TOTAL)
+addFooter(s, 25, SLIDES_TOTAL)
 
 // ─────────────────────────────────────────────────────────────────────
 // SLIDE 18 — Cita / cierre conceptual
@@ -1610,7 +1843,7 @@ s.addText('La base ya está. El próximo paso es decidir el rollout.', {
   bold: true,
   fontFace: FONT.regular,
 })
-addFooter(s, 18, SLIDES_TOTAL)
+addFooter(s, 26, SLIDES_TOTAL)
 
 // ─────────────────────────────────────────────────────────────────────
 // SLIDE 19 — Q&A / Cierre
@@ -1702,7 +1935,7 @@ s.addText(
     fontFace: FONT.regular,
   },
 )
-addFooter(s, 19, SLIDES_TOTAL)
+addFooter(s, 27, SLIDES_TOTAL)
 
 // ─────────────────────────────────────────────────────────────────────
 // Guardar
@@ -1711,5 +1944,5 @@ addFooter(s, 19, SLIDES_TOTAL)
 const outFile = 'Presentacion-APOPS-Siempre.pptx'
 pres.writeFile({ fileName: outFile }).then((p: string) => {
   console.log(`✓ Presentación generada: ${p}`)
-  console.log(`  19 slides · Abrila con PowerPoint, Keynote o Google Slides`)
+  console.log(`  ${SLIDES_TOTAL} slides · Abrila con PowerPoint, Keynote o Google Slides`)
 })
