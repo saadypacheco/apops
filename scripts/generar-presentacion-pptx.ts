@@ -165,8 +165,11 @@ function addSlideHeader(
 
 const SLIDES_TOTAL = 27
 
-// Helper para slides de captura — fondo blanco, header arriba,
-// imagen grande centrada abajo con un breve caption
+// Helper para slides de captura — layout SPLIT:
+//   - Imagen grande a la IZQUIERDA, ocupando casi toda la altura del slide
+//     (desde y=0.5 al mismo nivel que el título de slides anteriores).
+//   - Texto a la DERECHA: eyebrow + título + subtitulo + caption,
+//     todo bien contrastado en blanco/cyan sobre el fondo navy.
 function addCapturaSlide(args: {
   eyebrow: string
   title: string
@@ -178,69 +181,38 @@ function addCapturaSlide(args: {
   const slide = pres.addSlide()
   slide.background = { color: COLOR.bgSoft }
 
-  // Header compacto (más pequeño que addSlideHeader para dejar lugar a la imagen)
-  slide.addText(args.eyebrow, {
-    x: 0.5,
-    y: 0.35,
-    w: 8,
-    h: 0.3,
-    fontSize: 11,
-    bold: true,
-    color: COLOR.brandBlue,
-    fontFace: FONT.regular,
-    charSpacing: 2,
-  })
-  slide.addText(args.title, {
-    x: 0.5,
-    y: 0.65,
-    w: 12.3,
-    h: 0.55,
-    fontSize: 24,
-    bold: true,
-    color: COLOR.inkText,
-    fontFace: FONT.light,
-  })
-  slide.addText(args.subtitle, {
-    x: 0.5,
-    y: 1.2,
-    w: 12.3,
-    h: 0.4,
-    fontSize: 13,
-    color: COLOR.mutedText,
-    fontFace: FONT.regular,
-  })
+  // ───── ÁREA IMAGEN: lado izquierdo, alto generoso ─────────────────
+  // Reservo zona de 6w × 6.5h desde x=0.4, y=0.4. La imagen se centra
+  // dentro respetando su aspect ratio nativo.
+  const areaX = 0.4
+  const areaY = 0.4
+  const areaW = 6.0
+  const areaH = 6.5
 
-  // Calculo dimensiones respetando aspect ratio real de la imagen
-  // para evitar deformación. Las capturas son de 3 tipos:
-  //   - Mobile vertical (740x1600, ratio ~0.46)
-  //   - Cuadradas (564x601 / 424x559, ratio ~0.76-0.94)
-  //   - Desktop horizontal (837x554, ratio ~1.5)
   const dims = getImageDims(args.imagePath)
   const aspect = dims.w / dims.h
-  const maxW = 9 // ancho máximo del área de imagen
-  const maxH = 5 // alto máximo
   let imgW: number, imgH: number
-  if (aspect > maxW / maxH) {
-    // Imagen más ancha que el área → limita por ancho
-    imgW = maxW
-    imgH = maxW / aspect
+  if (aspect > areaW / areaH) {
+    // Imagen más ancha que el área → ancho limita
+    imgW = areaW
+    imgH = areaW / aspect
   } else {
-    // Imagen más alta → limita por alto
-    imgH = maxH
-    imgW = maxH * aspect
+    // Imagen más alta → alto limita
+    imgH = areaH
+    imgW = areaH * aspect
   }
-  const imgX = (W - imgW) / 2
-  const imgY = 1.85 + (maxH - imgH) / 2
+  const imgX = areaX + (areaW - imgW) / 2
+  const imgY = areaY + (areaH - imgH) / 2
 
-  // Marco decorativo (sombra simulada con rect detrás semitransparente)
+  // Marco / sombra detrás
   slide.addShape('roundRect', {
-    x: imgX + 0.05,
-    y: imgY + 0.05,
+    x: imgX + 0.06,
+    y: imgY + 0.08,
     w: imgW,
     h: imgH,
-    fill: { color: '000000', transparency: 85 },
+    fill: { color: '000000', transparency: 70 },
     line: { type: 'none' },
-    rectRadius: 0.1,
+    rectRadius: 0.12,
   })
   slide.addImage({
     path: args.imagePath,
@@ -250,18 +222,88 @@ function addCapturaSlide(args: {
     h: imgH,
   })
 
-  // Caption opcional al pie
+  // ───── COLUMNA DERECHA con header + texto ──────────────────────────
+  const textX = 6.8
+  const textW = 6.2
+
+  // Eyebrow (cyan suave para que destaque sobre navy)
+  slide.addText(args.eyebrow, {
+    x: textX,
+    y: 0.6,
+    w: textW,
+    h: 0.35,
+    fontSize: 12,
+    bold: true,
+    color: COLOR.brandTeal,
+    fontFace: FONT.regular,
+    charSpacing: 3,
+  })
+
+  // Título grande en blanco
+  slide.addText(args.title, {
+    x: textX,
+    y: 1.0,
+    w: textW,
+    h: 1.5,
+    fontSize: 32,
+    bold: true,
+    color: 'FFFFFF',
+    fontFace: FONT.light,
+  })
+
+  // Acento horizontal corto bajo el título
+  slide.addShape('rect', {
+    x: textX,
+    y: 2.55,
+    w: 0.8,
+    h: 0.05,
+    fill: { color: COLOR.brandBlue },
+    line: { type: 'none' },
+  })
+
+  // Subtítulo (gris claro)
+  slide.addText(args.subtitle, {
+    x: textX,
+    y: 2.75,
+    w: textW,
+    h: 1.2,
+    fontSize: 15,
+    color: COLOR.mutedText,
+    fontFace: FONT.regular,
+    paraSpaceAfter: 6,
+  })
+
+  // Caption opcional como punto destacado al pie de la columna derecha,
+  // dentro de una pill semi-transparente para que destaque sin perderse
   if (args.caption) {
-    slide.addText(args.caption, {
-      x: 1,
-      y: 6.95,
-      w: 11.3,
+    slide.addShape('roundRect', {
+      x: textX,
+      y: 4.4,
+      w: textW,
+      h: 1.6,
+      fill: { color: COLOR.brandBlue, transparency: 80 },
+      line: { color: COLOR.brandBlue, width: 1 },
+      rectRadius: 0.12,
+    })
+    slide.addText('💡 DATO DESTACADO', {
+      x: textX + 0.25,
+      y: 4.55,
+      w: textW - 0.5,
       h: 0.3,
-      fontSize: 11,
-      italic: true,
-      color: COLOR.mutedText,
+      fontSize: 10,
+      bold: true,
+      color: COLOR.brandTeal,
       fontFace: FONT.regular,
-      align: 'center',
+      charSpacing: 3,
+    })
+    slide.addText(args.caption, {
+      x: textX + 0.25,
+      y: 4.85,
+      w: textW - 0.5,
+      h: 1.05,
+      fontSize: 13,
+      color: 'FFFFFF',
+      fontFace: FONT.regular,
     })
   }
 
