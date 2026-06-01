@@ -181,13 +181,15 @@ function addCapturaSlide(args: {
   const slide = pres.addSlide()
   slide.background = { color: COLOR.bgSoft }
 
-  // ───── ÁREA IMAGEN: lado izquierdo, alto generoso ─────────────────
-  // Reservo zona de 6w × 6.5h desde x=0.4, y=0.4. La imagen se centra
-  // dentro respetando su aspect ratio nativo.
+  // ───── ÁREA IMAGEN: lado izquierdo, alto casi completo del slide ──
+  // Reservo zona de 6.5w × 7.0h desde x=0.4, y=0.4 (ocupa casi todo el
+  // alto disponible, dejando solo el footer). La imagen se alinea ARRIBA
+  // del área para que todos los slides arranquen al mismo nivel del
+  // título (independiente del aspect ratio de la captura).
   const areaX = 0.4
   const areaY = 0.4
-  const areaW = 6.0
-  const areaH = 6.5
+  const areaW = 6.5
+  const areaH = 7.0
 
   const dims = getImageDims(args.imagePath)
   const aspect = dims.w / dims.h
@@ -201,8 +203,8 @@ function addCapturaSlide(args: {
     imgH = areaH
     imgW = areaH * aspect
   }
-  const imgX = areaX + (areaW - imgW) / 2
-  const imgY = areaY + (areaH - imgH) / 2
+  const imgX = areaX + (areaW - imgW) / 2 // centrado horizontal
+  const imgY = areaY // TOP-aligned: todas las imágenes arrancan arriba
 
   // Marco / sombra detrás
   slide.addShape('roundRect', {
