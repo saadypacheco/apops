@@ -422,28 +422,28 @@ addSlideHeader(
 const problemas = [
   {
     icon: '✉️',
-    titulo: 'Mail que no llega',
-    desc: 'Avisos masivos que se pierden en la bandeja de spam o no se leen.',
+    titulo: 'Comunicación',
+    desc: 'Avisos y mensajes con alertas a los afiliados, delegados y también a la Comisión Directiva (CD).',
   },
   {
     icon: '📊',
-    titulo: 'Sin métricas',
-    desc: 'La CD no sabe quién leyó qué, qué delegados están activos, qué interesa.',
+    titulo: 'Métricas',
+    desc: 'La Comisión Directiva (CD) va a saber quién leyó qué, qué delegados/afiliados recibieron la comunicación.',
   },
   {
     icon: '📋',
-    titulo: 'Trámites presenciales',
-    desc: 'Afiliarse requiere ir a la sede, papeles, esperas.',
+    titulo: 'Trámites online',
+    desc: 'Afiliarse desde la aplicación con firma digital, simple y con posterior aprobación. Recibo de alertas que llegaron sus anteojos.',
   },
   {
     icon: '👁️',
-    titulo: '11.000 cotizantes invisibles',
+    titulo: 'Compañeros de ANSES invisibles',
     desc: 'ANSES no-APOPS sin manera de llegarles directamente.',
   },
   {
     icon: '🗺️',
     titulo: 'Delegado sin información',
-    desc: 'No tiene cómo ver quién en su edificio es no-afiliado y podría sumarse.',
+    desc: 'Mayor herramientas para los delegados de los edificios y regionales. Mejor comunicación con los afiliados.',
   },
 ]
 for (let i = 0; i < problemas.length; i++) {
@@ -507,13 +507,13 @@ addSlideHeader(
 
 const tablaComp = [
   ['Hoy (sin app)', 'Con APOPS Siempre'],
-  ['Mail que se pierde', 'Notificación al celular con tasa de lectura medida'],
-  ['Carteles que no se leen', 'Novedades en feed + página pública compartible'],
+  ['Mail o WhatsApp que se pierde', 'Notificación al celular con tasa de lectura medida'],
+  ['Comunicados que no se leen', 'Novedades en feed + página pública compartible'],
   ['WhatsApp del delegado se inunda', 'Hilos 1-a-1 ordenados con historial'],
   ['CD sin saber cuántos leyeron', 'Tasa de lectura en vivo (60-80%)'],
   ['Delegado no ve a no-APOPS', 'Vista completa del edificio con filtros'],
   ['Afiliación presencial con papeles', 'Wizard online + firma digital + PDF por mail'],
-  ['11.000 cotizantes invisibles', 'Página pública con noticias y form de afiliación'],
+  ['Compañeros invisibles', 'Página pública con noticias y formulario de afiliación'],
 ]
 for (let i = 0; i < tablaComp.length; i++) {
   const [izq, der] = tablaComp[i]!
@@ -633,12 +633,11 @@ const cards = [
   {
     x: 6.95,
     tag: 'Para todo ANSES',
-    title: 'Cotizantes a captar',
+    title: 'Compañeros no activos',
     items: [
       'Página pública sin login con noticias del gremio',
+      'Noticias importantes para los trabajadores de ANSES',
       'Acceso al formulario de afiliación online',
-      'Compartible por WhatsApp orgánico',
-      'Identificables por el delegado en su edificio',
     ],
     color: COLOR.brandTeal,
   },
@@ -702,9 +701,9 @@ addSlideHeader(
 )
 
 const cifras = [
-  { num: '15.558', label: 'Cotizantes en padrón ANSES', sub: 'Cargado mensualmente desde Excel' },
+  { num: '11.558', label: 'Cotizantes en padrón ANSES', sub: 'Cargado mensualmente desde Excel' },
   { num: '~4.000', label: 'Afiliados APOPS hoy', sub: 'Universo de usuarios activos' },
-  { num: '11.000+', label: 'Cotizantes no-APOPS', sub: 'Oportunidad de captación' },
+  { num: '7.558+', label: 'Compañeros no afiliados o de otros gremios', sub: 'Oportunidad de captación' },
   { num: '100%', label: 'Cobertura digital posible', sub: 'Web instalable sin Play Store' },
 ]
 for (let i = 0; i < cifras.length; i++) {
@@ -955,7 +954,7 @@ const bloques = [
   {
     titulo: 'Comunicación',
     items: [
-      'Notif enviadas (afiliados / delegados)',
+      'Notificaciones enviadas (afiliados / delegados)',
       'Tasa de lectura (60% / 80%)',
       'Tiempo medio entre envío y lectura',
     ],
@@ -1194,7 +1193,7 @@ const nivelesPub = [
   {
     nivel: 'Nivel 1',
     titulo: 'Landing pública',
-    desc: 'Cualquier cotizante ANSES entra a apops.vercel.app y ve novedades, carousel y CTA "Afiliarme".',
+    desc: 'Cualquier compañero de ANSES entra a siempreapops y ve novedades, carousel y CTA "Afiliarme".',
     icon: '🌐',
   },
   {
@@ -1767,15 +1766,15 @@ addSlideHeader(
 )
 const roadmapLargo = [
   ['Delegados regionales', 'Rol con varios edificios bajo su cargo y vista por región'],
-  ['Cartilla médica', 'Búsqueda y geolocalización de prestadores'],
+  ['Farmacia médica', 'Búsqueda y geolocalización en el mapa'],
   ['Beneficios y turismo', 'Directorio de comercios adheridos + reservas en complejos'],
-  ['Solicitud de turnos', 'Reserva online para sede, asesoramiento jurídico'],
+  ['Encuestas', 'Realizar encuestas periódicas para poder hacer una lectura de lo que está pasando con los afiliados y delegados'],
   ['Autogestión adherentes', 'El titular agrega/edita familiares desde la app'],
   ['Tracking por pantalla', 'Qué le interesa más a cada perfil para mejorar contenido'],
   ['Votación interna', 'Asambleas digitales con identificación segura'],
   ['Asistente con IA', 'Chatbot para consultas frecuentes (días de pago, trámites)'],
   ['Integración APIs ANSES', 'Validación automática sin cargar Excel mensual'],
-  ['Recibos y aportes', 'Histórico financiero integrado con RRHH'],
+  ['Regalos', 'Notificaciones automáticas cuando se realiza algún tipo de regalo: día de la madre, padres, etc.'],
 ]
 for (let i = 0; i < roadmapLargo.length; i++) {
   const [titulo, desc] = roadmapLargo[i]!
