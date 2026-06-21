@@ -1,0 +1,52 @@
+# Build artifacts
+.next
+out
+dist
+
+# Dependencies (se reinstalan dentro del container)
+node_modules
+npm-debug.log
+
+# Tests
+coverage
+.nyc_output
+playwright-report
+test-results
+
+# Local environment
+.env
+.env.local
+.env.cloud
+.env.development
+
+# IDE / OS
+.vscode
+.idea
+.DS_Store
+Thumbs.db
+
+# Git
+.git
+.gitignore
+
+# Claude / agente
+.claude
+
+# Specs / docs (no necesarios en runtime)
+.specify
+docs/bitacora-sdd.md
+specs
+
+# Archivos pesados versionados pero innecesarios para el server
+Presentacion-APOPS-Siempre.pptx
+Presentacion-SiempreAPOPS_01062026-.pptx
+Propuesta-APOPS-Siempre.docx
+Propuesta-APOPS-Siempre.pptx
+
+# Logs
+*.log
+logs
+
+# Backups y exports
+data
+*.bak

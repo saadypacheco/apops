@@ -1,0 +1,60 @@
+# =============================================================================
+# APOPS Siempre · PRODUCCIÓN (VPS Hostinger + Traefik) — patrón solucionesdentales
+# -----------------------------------------------------------------------------
+# - Traefik (ya corriendo en el VPS, red externa "traefik") enruta por dominio
+#   con TLS Let's Encrypt automático. Este contenedor NO publica puertos.
+# - DB: Supabase Cloud (NEXT_PUBLIC_SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY
+#   en .env del repo).
+# - Single-service: APOPS es monolito Next 14 full-stack (no hay backend/frontend
+#   separados como en MentorComercial).
+#
+# Variables: copiar .env.prod.example → .env y completar (DOMAIN, secretos).
+# Arranque:  docker compose -f docker-compose.prod.yml --env-file .env up -d --build
+# =============================================================================
+services:
+  apops-web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL}
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+        NEXT_PUBLIC_APP_URL: https://${DOMAIN}
+        NEXT_PUBLIC_VAPID_PUBLIC_KEY: ${NEXT_PUBLIC_VAPID_PUBLIC_KEY}
+    container_name: apops-web
+    restart: unless-stopped
+    environment:
+      # Runtime-only secrets (no van al bundle del cliente).
+      # Los NEXT_PUBLIC_* tambien se pasan en runtime para que `next start`
+      # los tenga disponibles en server components / server actions.
+      - NODE_ENV=production
+      - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
+      - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+      - NEXT_PUBLIC_APP_URL=https://${DOMAIN}
+      - NEXT_PUBLIC_VAPID_PUBLIC_KEY=${NEXT_PUBLIC_VAPID_PUBLIC_KEY}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+      - VAPID_PRIVATE_KEY=${VAPID_PRIVATE_KEY}
+      - VAPID_SUBJECT=${VAPID_SUBJECT}
+      - RESEND_API_KEY=${RESEND_API_KEY}
+      - EMAIL_FROM=${EMAIL_FROM}
+    networks:
+      - traefik
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=traefik"
+      - "traefik.http.routers.apops-web.rule=Host(`${DOMAIN}`) || Host(`www.${DOMAIN}`)"
+      - "traefik.http.routers.apops-web.entrypoints=websecure"
+      - "traefik.http.routers.apops-web.tls.certresolver=letsencrypt"
+      - "traefik.http.services.apops-web.loadbalancer.server.port=3000"
+      # Redirección www → root (opcional, descomentar si querés)
+      # - "traefik.http.routers.apops-www.rule=Host(`www.${DOMAIN}`)"
+      # - "traefik.http.routers.apops-www.entrypoints=websecure"
+      # - "traefik.http.routers.apops-www.tls.certresolver=letsencrypt"
+      # - "traefik.http.routers.apops-www.middlewares=apops-www-redirect"
+      # - "traefik.http.middlewares.apops-www-redirect.redirectregex.regex=^https?://www\\.(.+)"
+      # - "traefik.http.middlewares.apops-www-redirect.redirectregex.replacement=https://$$1"
+
+networks:
+  traefik:
+    external: true
+    name: traefik
