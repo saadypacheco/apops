@@ -308,6 +308,80 @@ Identificados en charla con el user 2026-05-16:
    edificio)` o columna `region` en padrón. Ver con el cliente cómo
    vienen las regiones del Ministerio.
 
+## 📋 Pendientes al cierre 2026-06-22
+
+Lista consolidada de TODO lo que quedó pendiente al cerrar esta sesión.
+Ordenado por importancia y dependencia. La próxima sesión arranca de acá.
+
+### 🟦 Limpieza opcional (sin urgencia, sin impacto operativo)
+
+- **Borrar team Vercel completo**. Hoy está en Hobby (gratis, sin costo) con los proyectos viejos como referencia. Si se quiere cero rastros: Vercel → team Settings → General → Delete Team. **No es obligatorio** — con Hobby ya no se paga nada.
+
+### 🟨 Features con código deployado pero requieren config externa
+
+- **Resend** (email transaccional con PDF firmado al afiliarse):
+  - Código generador de PDF + envío de mail ya está deployado y corriendo en `apops.online`.
+  - Falta: crear cuenta Resend, verificar dominio `apops.online` en DNS (TXT + DKIM), generar API key, cargar `RESEND_API_KEY` + `EMAIL_FROM` en `.env` del VPS, restart container.
+  - Mientras tanto: el form `/afiliarse` guarda OK en DB; banner amber transparente al usuario.
+
+- **VAPID push** (notificaciones reales al celular):
+  - Claves VAPID generadas y cargadas en `.env` del VPS (`NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`).
+  - Falta: probar end-to-end (instalar PWA en celular real, activar push desde /perfil, mandar notif desde otra cuenta, verificar que llega).
+  - Si no llega: revisar logs del container y de service worker.
+
+### 🟧 Features nuevas pendientes de implementación
+
+- **Sistema de encuestas** (interrumpido en sesión 2026-05-28). Diseño hecho en sección K de este doc:
+  - 4 tablas relacionales: `encuestas`, `preguntas_encuesta`, `respuestas_encuesta`, `respuestas_pregunta`.
+  - Admin: crear/cerrar encuesta + ver agregados (%s por pregunta + nube de comentarios sin autor).
+  - Afiliado/delegado: banner "Tenemos una pregunta para vos" → form sí/no + comentario opcional.
+  - Audiencia configurable (afiliado / delegado / todos).
+  - Identificada en DB, agregada en UI (admin solo ve %s, no respuestas individuales).
+  - Una sola respuesta por persona por encuesta.
+
+- **Rol "Publicador de noticias"**: rol intermedio que puede gestionar `/admin/novedades` sin acceso al padrón ni afiliaciones. Requiere:
+  - Nuevo valor en CHECK constraint de `afiliados.rol` (migration).
+  - Policies RLS en `noticias` que lo permitan.
+  - Gate en `/admin/novedades` page para que admin + publicador puedan entrar pero no otros.
+  - Sumarlo al RoleSwitcher del header para demos.
+
+- **Rol "Delegado regional"**: como delegado normal pero con N edificios bajo su cargo. Hoy la asociación delegado→edificios es implícita vía `padron.representante` (texto libre). Para "regional" hace falta un mecanismo estructurado:
+  - Tabla `delegados_edificios(delegado_id, edificio)` o columna `region` en padrón.
+  - Vista en `/delegados` con stats agregadas por región.
+  - Confirmar con cliente cómo vienen las regiones del Ministerio.
+
+### 🟥 Bug pendiente de investigar
+
+- **INSERT anon en `solicitudes_afiliacion`**: el test RLS está skipped (`it.skip` + TODO). El form en producción funciona porque el server action usa service_role (bypasea RLS), pero el INSERT directo desde anon devuelve HTTP 401 + Postgres 42501 a pesar de que la policy existe correcta (verificado con RPC `debug_policies` migration 0036). Sospecha: trigger BEFORE INSERT no documentado o GUC del proyecto. Ver `pg_trigger` / `pg_event_trigger` próxima sesión.
+
+### 🟪 Testing pendiente
+
+- **Tests E2E con Playwright**: ya está instalado (`@playwright/test` en devDependencies). Falta scriptear los flujos críticos:
+  - Login afiliado → ver credencial → compartir por WhatsApp.
+  - Login admin → dashboard CD → carga padrón.
+  - Form afiliación 3 pasos → enviar → ver banner exitoso.
+  - Suite RLS ya está OK (21 tests pasando en `tests/rls/seguridad.test.ts`).
+
+- **Tracking de pantallas por perfil** (qué le interesa más a cada uno): requiere agregar audit log granular en frontend (cada visit a /credencial, /novedades, /perfil) + nueva métrica en tab Uso del dashboard. **Hacer cuando haya tráfico real** que justifique el análisis.
+
+### 🟩 Rollout al cliente real (cuando esté listo)
+
+Cuando APOPS deje de ser demo y pase a cliente productivo del gremio:
+
+📖 **Playbook completo**: [INSTALACION-NUEVO-CLIENTE.md](INSTALACION-NUEVO-CLIENTE.md).
+
+Resumen del flujo (~2-3 días con cliente colaborando):
+1. Cliente crea cuentas: GitHub org, Supabase, Resend.
+2. Cliente decide dominio + admins iniciales + lista de delegados.
+3. Setup Supabase nuevo + aplicar 38 migrations + cargar padrón real.
+4. Crear cuentas admin/delegados reales.
+5. Si se mantiene Hostinger (recomendado): clonar al VPS, configurar `.env`, deploy.
+6. Si va a otro deploy: ajustar el `.env` apuntando al nuevo Supabase.
+7. Verificar VAPID push + Resend mail funcionando.
+8. Pre-flight checklist completo.
+
+---
+
 ## 🚀 Próxima sesión — Rollout al cliente
 
 **Objetivo principal**: pasar de demo a producto operativo para el cliente real.
