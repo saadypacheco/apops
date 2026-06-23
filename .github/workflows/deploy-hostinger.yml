@@ -1,0 +1,78 @@
+# Auto-deploy a VPS Hostinger en cada push a main.
+#
+# Qué hace: SSH al VPS, git pull, rebuild + restart del container Docker.
+# Tiempo total por deploy: ~2-4 min (depende de cuánto cachea Docker).
+#
+# Setup necesario en GitHub (una sola vez):
+#   Settings → Secrets and variables → Actions → New repository secret
+#
+#   - VPS_HOST       = 76.13.234.191
+#   - VPS_USER       = root
+#   - VPS_SSH_KEY    = clave privada SSH (el contenido del archivo id_ed25519
+#                      que generes específicamente para deploy, NO uses tu
+#                      clave personal).
+#
+# Cómo generar la SSH key específica de deploy:
+#
+#   1. En tu compu local:
+#        ssh-keygen -t ed25519 -C "github-actions-apops" -f ~/.ssh/apops_deploy
+#      (no le pongas passphrase — los GitHub Actions necesitan que sea automático)
+#
+#   2. Subir la clave PÚBLICA al VPS:
+#        ssh-copy-id -i ~/.ssh/apops_deploy.pub root@76.13.234.191
+#      (o pegar el contenido de ~/.ssh/apops_deploy.pub al final de
+#      /root/.ssh/authorized_keys en el VPS)
+#
+#   3. Probar que entra sin pedir password:
+#        ssh -i ~/.ssh/apops_deploy root@76.13.234.191
+#
+#   4. Copiar el contenido de la clave PRIVADA (~/.ssh/apops_deploy)
+#      ENTERO (incluyendo las líneas BEGIN/END) y pegarlo en GitHub
+#      como secret VPS_SSH_KEY.
+#
+# Si querés deshabilitar el auto-deploy temporalmente: comentá el "on:"
+# de abajo o renombrá este archivo a deploy-hostinger.yml.disabled.
+
+name: Deploy a Hostinger VPS
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:  # Permite disparar manual desde Actions tab
+
+concurrency:
+  group: deploy-hostinger
+  cancel-in-progress: false   # No cancelar un deploy en curso — los pisamos en serie
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script_stop: true   # Si un comando falla, abortar
+          timeout: 600s       # 10 min — el build puede tardar la primera vez
+          command_timeout: 600s
+          script: |
+            set -e
+            echo "▸ APOPS deploy iniciado: $(date)"
+            cd /docker/apops
+
+            echo "▸ Pull de cambios..."
+            git fetch origin main
+            git reset --hard origin/main
+
+            echo "▸ Rebuild + restart del container..."
+            docker compose -f docker-compose.prod.yml --env-file .env up -d --build
+
+            echo "▸ Limpiando imágenes Docker viejas (>72h)..."
+            docker image prune -af --filter "until=72h" || true
+
+            echo "▸ Estado del container:"
+            docker ps --filter "name=apops-web" --format "table {{.Names}}\t{{.Status}}\t{{.RunningFor}}"
+
+            echo "✓ Deploy completado: $(date)"

@@ -1,19 +1,39 @@
 # Retomar trabajo — APOPS Siempre
 
-> Doc de handoff entre sesiones. Última actualización: 2026-05-29 (handoff pre-rollout cliente).
-> Branch activa: `main`. Trabajo en producción en `https://apops.vercel.app`.
+> Doc de handoff entre sesiones. Última actualización: 2026-06-22 (migración Vercel → Hostinger).
+> Branch activa: `main`. Trabajo en producción en `https://apops.online`.
 >
 > **🚨 PRÓXIMA SESIÓN: arrancar rollout al cliente real.** Leer
 > [INSTALACION-NUEVO-CLIENTE.md](INSTALACION-NUEVO-CLIENTE.md) primero —
-> tiene el playbook completo (servidor nuevo + Supabase nuevo + datos
-> reales + checklist pre go-live).
+> tiene el playbook completo. Para el deploy en VPS Hostinger:
+> [DEPLOY-HOSTINGER.md](DEPLOY-HOSTINGER.md).
 
 ## Estado al cerrar la sesión
 
-**Live en cloud**: https://apops.vercel.app — deploy automático desde `main` vía Vercel Pro.
+**Live**: https://apops.online — deployado en VPS Hostinger (auto-deploy desde `main` vía GitHub Action).
+**VPS**: `srv1064770.hstgr.cloud` (76.13.234.191) · KVM 2 · Ubuntu · Traefik + Docker Compose · compartido con MentorComercial, SolucionesDentales, BuscaDonde, Amanda, Odonto.
+**Path en VPS**: `/docker/apops/`.
 **Repo**: https://github.com/saadypacheco/apops
-**Supabase Cloud**: project `pozbdplbichrhojjeqiv` (apops-desa, plan free, region South America).
+**Supabase Cloud**: project `pozbdplbichrhojjeqiv` (en org `orqua-projects`, plan Pro, region South America sa-east-1).
 **Stack**: Next.js 14 App Router + Supabase + TypeScript + Tailwind + PWA. Mobile-first con AppShell `max-w-md` por default; el dashboard CD usa `wide=true` para `max-w-7xl` en desktop con sidebar colapsable.
+
+### Migración Vercel → Hostinger (2026-06-22)
+
+Antes: deploy en Vercel Pro (USD 20/mes) + Supabase Pro fantasma en org Vercel-managed (USD 25/mes). Total: USD 45/mes.
+
+Ahora:
+- **Deploy en VPS Hostinger propio** (USD 0 incremental — comparte VPS con otros 4 proyectos).
+- **Vercel team `saadypacheco-4143s-projects` downgradeado a Hobby** (gratis). Pago cortado, refund USD 4.52.
+- **Org Supabase Vercel-managed** quedó vacía (se borró el proyecto `apops` fantasma) → bajó automático a Free.
+- **Ahorro: USD 45/mes = USD 540/año**.
+
+Infraestructura nueva:
+- `Dockerfile` multi-stage (Node 20 alpine + libc6-compat para sharp).
+- `docker-compose.prod.yml` single-service con labels Traefik (Host, Let's Encrypt, websecure).
+- `.env.prod.example` template con DOMAIN, Supabase, VAPID, Resend.
+- `.dockerignore` excluye .next, node_modules, tests, .env.*, archivos pesados.
+- `.github/workflows/deploy-hostinger.yml` auto-deploy via SSH cada push a `main`.
+- `DEPLOY-HOSTINGER.md` playbook completo.
 
 ### Cuentas demo (sin cambios desde 2026-05-10)
 

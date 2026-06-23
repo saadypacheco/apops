@@ -140,32 +140,49 @@ docker compose -f docker-compose.prod.yml --env-file .env up -d --build
 
 El `up -d --build` reconstruye solo si hay cambios (Docker cachea).
 
-### Opcional — GitHub Action que deploya automático
+### Auto-deploy con GitHub Action (ya configurado)
 
-Si querés que cada push a main deploye sin SSH manual, crear
-`.github/workflows/deploy-hostinger.yml`:
+El workflow `.github/workflows/deploy-hostinger.yml` ya está listo
+en el repo. Cada push a `main` dispara automáticamente:
 
-```yaml
-name: Deploy a Hostinger VPS
-on:
-  push:
-    branches: [main]
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: appleboy/ssh-action@v1
-        with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
-          key: ${{ secrets.VPS_SSH_KEY }}
-          script: |
-            cd /opt/proyectos/apops
-            git pull origin main
-            docker compose -f docker-compose.prod.yml --env-file .env up -d --build
-```
+1. SSH al VPS con la clave guardada en GitHub Secrets.
+2. `git fetch + reset --hard origin/main` en `/docker/apops/`.
+3. `docker compose ... up -d --build` (rebuild + restart).
+4. Limpieza de imágenes Docker viejas (>72h).
 
-Hay que cargar los 3 secrets en GitHub: Settings → Secrets and variables → Actions.
+**Setup necesario en GitHub (una sola vez):**
+
+1. Generar SSH key dedicada en tu compu:
+   ```bash
+   ssh-keygen -t ed25519 -C "github-actions-apops" -f ~/.ssh/apops_deploy
+   # Enter sin passphrase (los Actions necesitan acceso automático)
+   ```
+
+2. Subir la clave pública al VPS:
+   ```bash
+   ssh-copy-id -i ~/.ssh/apops_deploy.pub root@76.13.234.191
+   ```
+
+3. Probar:
+   ```bash
+   ssh -i ~/.ssh/apops_deploy root@76.13.234.191
+   # Si entra sin pedir password, OK
+   ```
+
+4. En GitHub → repo `saadypacheco/apops` → **Settings → Secrets
+   and variables → Actions → New repository secret**, crear los 3:
+
+   | Nombre | Valor |
+   |---|---|
+   | `VPS_HOST` | `76.13.234.191` |
+   | `VPS_USER` | `root` |
+   | `VPS_SSH_KEY` | Contenido completo de `~/.ssh/apops_deploy` (la PRIVADA, incluyendo `-----BEGIN OPENSSH PRIVATE KEY-----` y `-----END OPENSSH PRIVATE KEY-----`) |
+
+5. Hacer cualquier push a `main` para probar. Andá a la pestaña
+   **Actions** del repo y mirá el log en vivo.
+
+**Disparar manualmente** (sin push): pestaña Actions → "Deploy a
+Hostinger VPS" → "Run workflow" → Run.
 
 ---
 
