@@ -154,6 +154,29 @@ export default async function AdminPage() {
           </Link>
 
           <Link
+            href="/admin/beneficios"
+            className="flex items-center justify-between rounded-xl bg-white p-4 shadow-card transition hover:shadow-cardHover"
+          >
+            <div className="flex items-center gap-3">
+              <span
+                aria-hidden
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand-blue/10 text-xl"
+              >
+                🎁
+              </span>
+              <div className="flex flex-col leading-tight">
+                <span className="text-base font-semibold text-brand-ink">
+                  Gestionar beneficios
+                </span>
+                <span className="text-xs text-brand-muted">
+                  Subsidios, salud, turismo, capacitaciones
+                </span>
+              </div>
+            </div>
+            <span aria-hidden className="text-brand-blue">→</span>
+          </Link>
+
+          <Link
             href="/admin/mensajes"
             className="flex items-center justify-between rounded-xl bg-white p-4 shadow-card transition hover:shadow-cardHover"
           >

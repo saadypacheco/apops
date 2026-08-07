@@ -12,7 +12,10 @@ import sharp from 'sharp'
 import { mkdirSync } from 'node:fs'
 import { resolve } from 'node:path'
 
-const LOGO_PATH = resolve(process.cwd(), 'public/logo-apops.png')
+// Versión reversa del logo: el fondo del icono es brand-deep, así que va
+// la pieza clara (texto blanco + sol celeste). Con la variante navy el
+// logo quedaría invisible sobre el fondo.
+const LOGO_PATH = resolve(process.cwd(), 'public/logo-apops-stacked-white.png')
 const OUT_DIR = resolve(process.cwd(), 'public/icons')
 const BG = '#0F2A47' // brand-deep, mismo que theme_color del manifest
 

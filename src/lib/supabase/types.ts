@@ -160,6 +160,86 @@ export type Database = {
         }
         Relationships: []
       }
+      beneficios: {
+        Row: {
+          categoria: string
+          created_at: string
+          destaque: string | null
+          detalle: string | null
+          icono: string | null
+          id: string
+          imagen_url: string | null
+          link_externo: string | null
+          orden: number
+          proximamente: boolean
+          publicado: boolean
+          resumen: string
+          titulo: string
+          updated_at: string
+        }
+        Insert: {
+          categoria?: string
+          created_at?: string
+          destaque?: string | null
+          detalle?: string | null
+          icono?: string | null
+          id?: string
+          imagen_url?: string | null
+          link_externo?: string | null
+          orden?: number
+          proximamente?: boolean
+          publicado?: boolean
+          resumen: string
+          titulo: string
+          updated_at?: string
+        }
+        Update: {
+          categoria?: string
+          created_at?: string
+          destaque?: string | null
+          detalle?: string | null
+          icono?: string | null
+          id?: string
+          imagen_url?: string | null
+          link_externo?: string | null
+          orden?: number
+          proximamente?: boolean
+          publicado?: boolean
+          resumen?: string
+          titulo?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      edificios_whatsapp: {
+        Row: {
+          cargado_por: string | null
+          edificio: string
+          link: string
+          updated_at: string
+        }
+        Insert: {
+          cargado_por?: string | null
+          edificio: string
+          link: string
+          updated_at?: string
+        }
+        Update: {
+          cargado_por?: string | null
+          edificio?: string
+          link?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "edificios_whatsapp_cargado_por_fkey"
+            columns: ["cargado_por"]
+            isOneToOne: false
+            referencedRelation: "afiliados"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       hilos_notificacion: {
         Row: {
           asunto: string
@@ -935,7 +1015,17 @@ export type Database = {
       }
     }
     Functions: {
-      [_ in never]: never
+      debug_policies: {
+        Args: { tname: string }
+        Returns: {
+          cmd: string
+          permissive: string
+          policyname: unknown
+          qual: string
+          roles: unknown[]
+          with_check: string
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never

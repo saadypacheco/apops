@@ -32,6 +32,7 @@ export default async function NovedadesPage() {
     .from('noticias')
     .select('id, titulo, resumen, publicada_at, autor, destacada')
     .eq('publicada', true)
+    .eq('categoria', 'novedad')
     .order('publicada_at', { ascending: false })
     .limit(50)) as { data: NoticiaRow[] | null }
 

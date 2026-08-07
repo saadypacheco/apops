@@ -1,5 +1,4 @@
 import type { Metadata } from 'next'
-import Link from 'next/link'
 import { headers } from 'next/headers'
 import { requireRole } from '@/lib/auth/role'
 import { AppShell } from '@/components/app/AppShell'
@@ -25,25 +24,15 @@ export default async function CredencialPage() {
   const baseUrl = getBaseUrl()
 
   return (
-    <AppShell nombre={session.nombre} rol={session.rol} current="home">
+    <AppShell nombre={session.nombre} rol={session.rol} current="carnet">
       <div className="flex flex-col gap-5">
-        <header className="flex items-end justify-between gap-3">
-          <div>
-            <h1 className="text-2xl font-semibold text-brand-ink">
-              Mi credencial
-            </h1>
-            <p className="text-sm text-brand-muted">
-              {credenciales.length === 1
-                ? 'Tu credencial digital'
-                : `Vos y ${credenciales.length - 1} adherente${credenciales.length - 1 > 1 ? 's' : ''}`}
-            </p>
-          </div>
-          <Link
-            href="/feed"
-            className="text-sm font-medium text-brand-blue hover:underline"
-          >
-            ← Volver
-          </Link>
+        <header>
+          <h1 className="text-2xl font-semibold text-brand-ink">Mi carnet</h1>
+          <p className="text-sm text-brand-muted">
+            {credenciales.length === 1
+              ? 'Tu credencial digital'
+              : `Vos y ${credenciales.length - 1} adherente${credenciales.length - 1 > 1 ? 's' : ''}`}
+          </p>
         </header>
 
         <CredencialCarousel

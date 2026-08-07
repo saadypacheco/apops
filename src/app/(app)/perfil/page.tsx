@@ -4,6 +4,14 @@ import { requireRole } from '@/lib/auth/role'
 import { LogoutButton } from '@/components/auth/LogoutButton'
 import { AppShell } from '@/components/app/AppShell'
 import { EnablePushButton } from '@/components/notif/EnablePushButton'
+import {
+  WhatsappGrupoForm,
+  type EdificioLink,
+} from '@/components/delegados/WhatsappGrupoForm'
+import {
+  getEdificiosDelDelegado,
+  getLinksDeEdificios,
+} from '@/lib/delegados/whatsapp'
 
 export const metadata: Metadata = {
   title: 'Mi perfil',
@@ -36,6 +44,16 @@ export default async function PerfilPage({
   const session = await requireRole('afiliado')
 
   const flashClaveOk = searchParams?.clave === 'ok'
+
+  let edificiosConLink: EdificioLink[] = []
+  if (session.rol === 'delegado') {
+    const edificios = await getEdificiosDelDelegado(session.nombre)
+    const links = await getLinksDeEdificios(edificios)
+    edificiosConLink = edificios.map((e) => ({
+      edificio: e,
+      link: links.get(e) ?? null,
+    }))
+  }
 
   return (
     <AppShell nombre={session.nombre} rol={session.rol} current="perfil">
@@ -85,6 +103,12 @@ export default async function PerfilPage({
             <span aria-hidden className="text-brand-blue">→</span>
           </Link>
         </section>
+
+        {session.rol === 'delegado' && (
+          <section>
+            <WhatsappGrupoForm edificios={edificiosConLink} />
+          </section>
+        )}
 
         <section>
           <EnablePushButton />

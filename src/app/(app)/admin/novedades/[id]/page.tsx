@@ -21,7 +21,9 @@ export default async function EditarNoticiaPage({
   const admin = createAdminClient()
   const { data: noticia } = (await admin
     .from('noticias')
-    .select('id, titulo, resumen, contenido, autor, destacada, publicada')
+    .select(
+      'id, titulo, resumen, contenido, autor, destacada, publicada',
+    )
     .eq('id', params.id)
     .maybeSingle()) as {
     data: {

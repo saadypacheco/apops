@@ -1,3 +1,4 @@
+import Image from 'next/image'
 import type { Credencial } from '@/lib/credencial/queries'
 
 // Card visual de la credencial. Estilo "tarjeta de crédito": fondo gradient
@@ -32,20 +33,28 @@ export function CredencialCard({ cred }: { cred: Credencial }) {
       />
 
       <div className="relative flex flex-col gap-5">
-        {/* Header */}
-        <header className="flex items-start justify-between gap-3">
-          <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/70">
-              APOPS · Credencial
-            </p>
-            <p className="mt-0.5 text-xs font-bold uppercase tracking-wider text-white">
+        {/* Header — logo institucional arriba, tipo de credencial debajo */}
+        <header className="flex flex-col gap-3">
+          <Image
+            // Variante sin descriptor: a este tamaño el texto
+            // "Asociación del Personal…" es una mancha ilegible.
+            src="/logo-apops-white-corto.png"
+            alt="APOPS — Asociación del Personal de los Organismos de Previsión Social"
+            width={1000}
+            height={222}
+            priority
+            // self-start: sin esto el flex column lo estira a todo el
+            // ancho de la card y, con la altura fija, sale deformado.
+            className="h-8 w-auto self-start"
+          />
+          <div className="flex items-baseline justify-between gap-3">
+            <p className="text-xs font-bold uppercase tracking-wider text-white">
               {tipoLabel}
             </p>
             {subtitulo && (
               <p className="text-[11px] text-white/80">{subtitulo}</p>
             )}
           </div>
-          <SunMark className="h-10 w-10 shrink-0" />
         </header>
 
         {/* Datos */}
@@ -87,31 +96,5 @@ export function CredencialCard({ cred }: { cred: Credencial }) {
         </footer>
       </div>
     </article>
-  )
-}
-
-// Mini logo APOPS (mismo SVG del header de la landing, más chico)
-function SunMark({ className }: { className?: string }) {
-  const rays = Array.from({ length: 12 })
-  return (
-    <svg
-      viewBox="0 0 100 100"
-      fill="#7FCFE5"
-      aria-hidden
-      className={className}
-    >
-      {rays.map((_, i) => (
-        <rect
-          key={i}
-          x="46.5"
-          y="6"
-          width="7"
-          height="22"
-          rx="1.5"
-          transform={`rotate(${(i * 360) / 12} 50 50)`}
-        />
-      ))}
-      <circle cx="50" cy="50" r="9" />
-    </svg>
   )
 }

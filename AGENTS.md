@@ -20,7 +20,9 @@ desordenada por WhatsApp con un flujo estructurado, simple y trazable.
 **Lo que NO es:**
 - No es una web informativa.
 - No es un chat tipo WhatsApp.
-- No es una app de servicios (turismo, préstamos, beneficios decorativos).
+- No es una plataforma transaccional (no se reservan hoteles ni se tramitan
+  préstamos desde acá). Sí muestra el **catálogo de beneficios** del gremio
+  como directorio informativo, con link al trámite en apops.org.ar.
 
 **Misión:** que el afiliado tenga al gremio presente todos los días, con
 respuestas con respaldo oficial. Que el delegado deje de improvisar y trabaje
@@ -160,7 +162,7 @@ explícita.
 | Fuera de scope | Estado |
 |---|---|
 | Préstamos / créditos | Permanente — no se construye |
-| Turismo / reservas / beneficios | Permanente — no se construye |
+| Reservas / transacciones de turismo | Permanente — no se construye. El catálogo de beneficios (incluido turismo) SÍ existe desde 2026-08-07: es un directorio informativo con link externo, no un motor de reservas. |
 | Chat libre / chat grupal | Permanente — el modelo es ticket, no chat |
 | Funcionalidades decorativas | Permanente — toda feature debe justificar valor operativo |
 | Asistencia IA al delegado | Diferido — se evaluará post-MVP |

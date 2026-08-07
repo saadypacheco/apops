@@ -235,6 +235,24 @@ async function main() {
   if (del.error) console.error('  Error borrando:', del.error.message)
   else console.log('  ✓ batch demo borrado')
 
+  // Borrar también las mismas personas cargadas por OTROS batches (típico:
+  // el seed de la migration 0023, que usa otra convención de legajo para
+  // el mismo titular). Sin esto chocarían contra el índice único
+  // uq_adherente_por_titular de la migration 0039 y el script fallaría.
+  console.log('🧹 Borrando esas mismas personas de otros batches...')
+  let colisiones = 0
+  for (const a of adherentes) {
+    const { error: e, count } = await admin
+      .from('padron_adherentes')
+      .delete({ count: 'exact' })
+      .eq('titular_dni', a.titular_dni)
+      .eq('nombre', a.nombre)
+      .eq('vinculo', a.vinculo)
+    if (e) console.error(`  Error con ${a.nombre}:`, e.message)
+    else colisiones += count ?? 0
+  }
+  console.log(`  ✓ ${colisiones} filas previas removidas`)
+
   // Insertar nuevos
   console.log('\n🌱 Insertando adherentes demo...')
   const batch = adherentes.map((a) => ({

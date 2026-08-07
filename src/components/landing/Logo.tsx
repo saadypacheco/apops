@@ -1,52 +1,40 @@
 import Image from 'next/image'
 
-// Sol/girasol APOPS — SVG inline cyan claro. Aproximación del logo oficial.
-function SunMark({ className }: { className?: string }) {
-  const rays = Array.from({ length: 12 })
-  return (
-    <svg
-      viewBox="0 0 100 100"
-      fill="currentColor"
-      aria-hidden
-      className={className}
-    >
-      {rays.map((_, i) => (
-        <rect
-          key={i}
-          x="46.5"
-          y="6"
-          width="7"
-          height="22"
-          rx="1.5"
-          transform={`rotate(${(i * 360) / 12} 50 50)`}
-        />
-      ))}
-      <circle cx="50" cy="50" r="9" />
-    </svg>
-  )
-}
-
-// Logo APOPS oficial. La imagen es rectangular y trae el descriptor
-// "Asociación del Personal de los Organismos de Previsión Social" abajo del
-// nombre. El png viene con fondo navy oscuro propio.
+// Logo institucional APOPS. Los assets salen del manual de marca
+// (public/APOPS_logos/) procesados por scripts/preparar-logos.ts:
+//
+//   /logo-apops.png          horizontal + descriptor, texto navy.
+//   /logo-apops-white.png    misma pieza en versión reversa (texto blanco,
+//                            sol celeste), para fondos azules/oscuros.
+//   /logo-apops-stacked.png  sol arriba + APOPS + descriptor abajo.
+//
+// Los tres tienen fondo transparente, así que apoyan sobre cualquier color
+// sin recuadro ni mix-blend-mode.
 //
 // Modos:
-//   - <Logo /> default 280x140, para páginas internas con fondo claro/card.
-//   - <Logo as="banner" /> ocupa el ancho del contenedor padre.
-//   - <Logo as="onBlue" /> aplica mix-blend-mode: screen para que el navy
-//     del png se funda con un fondo azul medio (caso landing). Solo los
-//     elementos blancos/cyan del logo permanecen visibles.
+//   - <Logo />                 horizontal navy, para fondos claros.
+//   - <Logo as="onWhite" />    igual, pensado para navs sobre blanco.
+//   - <Logo as="onBlue" />     versión clara, para el azul de marca.
+//   - <Logo as="stacked" />    lockup vertical, para heroes y login.
+//   - <Logo as="banner" />     lockup vertical al ancho del contenedor.
 
 type LogoProps = {
   width?: number
   height?: number
-  as?: 'inline' | 'banner' | 'onBlue' | 'onWhite'
+  as?: 'inline' | 'banner' | 'onBlue' | 'onWhite' | 'stacked'
   priority?: boolean
 }
 
+const ALT =
+  'APOPS — Asociación del Personal de los Organismos de Previsión Social'
+
+// Relaciones de aspecto reales de los assets generados.
+const HORIZONTAL_RATIO = 1200 / 310
+const STACKED_RATIO = 800 / 828
+
 export function Logo({
-  width = 280,
-  height = 140,
+  width,
+  height,
   as = 'inline',
   priority = false,
 }: LogoProps) {
@@ -54,78 +42,54 @@ export function Logo({
     return (
       <div className="relative w-full">
         <Image
-          src="/logo-apops.png"
-          alt="APOPS — Asociación del Personal de los Organismos de Previsión Social"
-          width={1200}
-          height={600}
+          src="/logo-apops-stacked.png"
+          alt={ALT}
+          width={800}
+          height={828}
           priority={priority}
-          unoptimized
           className="h-auto w-full object-contain"
         />
       </div>
     )
   }
 
-  if (as === 'onWhite') {
-    // Variante para fondos blancos (nav top, footer claro). Mismo SVG que
-    // onBlue pero con texto en brand-deep y rayos del sol en brand-blue.
+  if (as === 'stacked') {
+    const w = width ?? 240
     return (
-      <div
-        className="flex items-center gap-2"
-        role="img"
-        aria-label="APOPS — Asociación del Personal de los Organismos de Previsión Social"
-      >
-        <SunMark className="h-9 w-9 shrink-0 text-brand-blue" />
-        <div className="flex flex-col leading-none">
-          <span className="text-xl font-extrabold tracking-wide text-brand-deep">
-            APOPS
-          </span>
-          <span className="mt-0.5 text-[7px] font-semibold uppercase leading-tight tracking-[0.08em] text-brand-muted">
-            Asociación del Personal
-            <br />
-            de Organismos de Previsión Social
-          </span>
-        </div>
-      </div>
+      <Image
+        src="/logo-apops-stacked.png"
+        alt={ALT}
+        width={800}
+        height={828}
+        priority={priority}
+        className="h-auto"
+        style={{ width: w, maxWidth: '100%' }}
+      />
     )
   }
 
-  if (as === 'onBlue') {
-    // Aproximación SVG del logo APOPS oficial. Reemplaza al PNG (que viene
-    // con fondo navy y no se funde bien con el azul medio del header).
-    // El "girasol" son 12 rayos rectangulares cyan más un círculo central.
-    // APOPS y descriptor son texto HTML blanco.
-    return (
-      <div
-        className="flex items-center gap-2.5"
-        role="img"
-        aria-label="APOPS — Asociación del Personal de los Organismos de Previsión Social"
-      >
-        <SunMark className="h-12 w-12 shrink-0 text-[#7FCFE5]" />
-        <div className="flex flex-col leading-none">
-          <span className="text-[2rem] font-extrabold tracking-wide text-white">
-            APOPS
-          </span>
-          <span className="mt-1 text-[8px] font-semibold uppercase leading-tight tracking-[0.08em] text-white/90">
-            Asociación del Personal
-            <br />
-            de Organismos de Previsión Social
-          </span>
-        </div>
-      </div>
-    )
-  }
+  const src = as === 'onBlue' ? '/logo-apops-white.png' : '/logo-apops.png'
+  const w = width ?? 220
 
   return (
     <Image
-      src="/logo-apops.png"
-      alt="APOPS — Asociación del Personal de los Organismos de Previsión Social"
-      width={width}
-      height={height}
+      src={src}
+      alt={ALT}
+      width={1200}
+      height={310}
       priority={priority}
-      unoptimized
-      className="h-auto w-auto"
-      style={{ maxWidth: width, height: 'auto' }}
+      className="h-auto"
+      style={{
+        width: w,
+        maxWidth: '100%',
+        height: height ?? 'auto',
+      }}
     />
   )
+}
+
+/** Ratios expuestos por si alguna pantalla necesita reservar espacio. */
+export const LOGO_RATIOS = {
+  horizontal: HORIZONTAL_RATIO,
+  stacked: STACKED_RATIO,
 }

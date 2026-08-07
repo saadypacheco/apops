@@ -16,6 +16,10 @@
 .env.production
 .env.production.local
 .env.test.local
+# Backups de .env — los patrones de arriba NO los cubren (.env.*.local no
+# matchea .env.local.bak-dev) y traen credenciales reales.
+.env*.bak*
+.env.*.bak
 
 # Claves Web Push VAPID (las generamos con npx web-push generate-vapid-keys)
 # Nunca deben estar en git. Solo en variables de entorno de Vercel y .env.local.
