@@ -308,6 +308,50 @@ Identificados en charla con el user 2026-05-16:
    edificio)` o columna `region` en padrón. Ver con el cliente cómo
    vienen las regiones del Ministerio.
 
+## 🔴 Pendientes abiertos al 2026-08-07 — infraestructura
+
+Bloqueos detectados al intentar deployar el rediseño del afiliado. Ninguno
+es de código: la app compila y buildea limpio.
+
+### Auto-deploy roto — clave SSH rechazada por el VPS
+
+El workflow `deploy-hostinger.yml` falla en el handshake:
+`ssh: handshake failed: unable to authenticate, attempted methods [none publickey]`.
+
+- Funcionó bien el **2026-06-23** (dos deploys exitosos). Dejó de andar en
+  algún momento entre esa fecha y el 2026-08-07.
+- El servidor **responde** (apops.online sirve 200), o sea que está vivo y
+  el `VPS_HOST` es correcto. Lo que rechaza es la clave.
+- Los 3 secrets existen en GitHub (`VPS_HOST`, `VPS_USER`, `VPS_SSH_KEY`),
+  cargados el 2026-06-23.
+- **Hipótesis**: el `~/.ssh/authorized_keys` del VPS perdió la pública
+  (reinstalación, limpieza, o rotación de Hostinger).
+- **Cómo arreglarlo**: entrar al VPS por consola de Hostinger, verificar
+  `authorized_keys`. Si falta, generar par nuevo, pública al VPS y privada
+  al secret `VPS_SSH_KEY`. Después re-disparar con `gh workflow run
+  deploy-hostinger.yml`.
+- **Workaround mientras tanto**: deploy manual por SSH con los mismos
+  comandos del workflow (`cd /docker/apops && git fetch origin main &&
+  git reset --hard origin/main && docker compose -f docker-compose.prod.yml
+  --env-file .env up -d --build`).
+
+### CI en rojo desde junio — tests RLS sin credenciales
+
+`ci.yml` falla en el step de tests. **No es una regresión**: pasa desde el
+2026-06-23 y no bloquea el deploy (son workflows independientes).
+
+- De 98 tests: **75 pasan, 23 se saltean, 1 suite no arranca**.
+- La suite es `tests/rls/seguridad.test.ts`, que hace `throw` en su
+  `beforeAll` cuando faltan `NEXT_PUBLIC_SUPABASE_URL`,
+  `NEXT_PUBLIC_SUPABASE_ANON_KEY` o `SUPABASE_SERVICE_ROLE_KEY` — que en
+  GitHub Actions no están cargadas.
+- **Opción A (preferida)**: que la suite se skipee sola si faltan las
+  variables, en vez de tirar error. El CI queda verde y los tests siguen
+  corriendo en local, que es donde hay credenciales.
+- **Opción B**: cargar los secrets de Supabase en el repo. Da más
+  cobertura pero pone la `service_role` key en GitHub Actions.
+- Decisión del usuario el 2026-08-07: **anotarlo y resolverlo después**.
+
 ## 📋 Pendientes al cierre 2026-06-22
 
 Lista consolidada de TODO lo que quedó pendiente al cerrar esta sesión.
