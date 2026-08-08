@@ -1,26 +1,38 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import type { PersonaEdificio } from '@/lib/delegados/panel-queries'
+import type {
+  Oportunidad,
+  PersonaEdificio,
+} from '@/lib/delegados/panel-queries'
+import { LABEL_MOTIVO } from '@/lib/delegados/panel-queries'
 
-// Listado de gente del edificio partido en Afiliados / Sin afiliar / En
-// otro gremio, con buscador.
+// Gente del edificio para el delegado, partida en cuatro solapas:
+// Oportunidades (a quién conviene acercarse), Afiliados, Sin afiliar y
+// En otro gremio.
 //
 // El botón "Contactar" abre WhatsApp SIN destinatario: el padrón de ANSES
 // no trae teléfono ni email, así que el delegado elige el contacto desde
 // su agenda. Mismo criterio que el FAB de staff.
 
-type Grupo = 'afiliados' | 'sinAfiliar' | 'otrosGremios'
+type Grupo = 'oportunidades' | 'afiliados' | 'sinAfiliar' | 'otrosGremios'
 
 const LABEL: Record<Grupo, string> = {
+  oportunidades: 'Oportunidades',
   afiliados: 'Afiliados',
   sinAfiliar: 'Sin afiliar',
   otrosGremios: 'En otro gremio',
 }
 
+const COLOR_GREMIO: Record<string, string> = {
+  ATE: 'bg-red-100 text-red-800',
+  UPCN: 'bg-indigo-100 text-indigo-800',
+  SEC: 'bg-purple-100 text-purple-800',
+  SECASFPI: 'bg-slate-200 text-slate-800',
+}
+
 function iniciales(nombre: string): string {
-  const limpio = nombre.replace(',', ' ')
-  const partes = limpio.split(/\s+/).filter(Boolean)
+  const partes = nombre.replace(',', ' ').split(/\s+/).filter(Boolean)
   return ((partes[0]?.[0] ?? '') + (partes[1]?.[0] ?? '')).toUpperCase()
 }
 
@@ -31,35 +43,50 @@ function primerNombre(nombre: string): string {
 }
 
 export function PersonasEdificioTabs({
+  oportunidades,
   afiliados,
   sinAfiliar,
   otrosGremios,
   nombreDelegado,
 }: {
+  oportunidades: Oportunidad[]
   afiliados: PersonaEdificio[]
   sinAfiliar: PersonaEdificio[]
   otrosGremios: PersonaEdificio[]
   nombreDelegado: string
 }) {
-  const [grupo, setGrupo] = useState<Grupo>('afiliados')
+  const [grupo, setGrupo] = useState<Grupo>('oportunidades')
   const [q, setQ] = useState('')
+  const [gremioFiltro, setGremioFiltro] = useState<string | null>(null)
 
-  const listas: Record<Grupo, PersonaEdificio[]> = useMemo(
-    () => ({ afiliados, sinAfiliar, otrosGremios }),
-    [afiliados, sinAfiliar, otrosGremios],
+  const listas = useMemo(
+    () => ({ oportunidades, afiliados, sinAfiliar, otrosGremios }),
+    [oportunidades, afiliados, sinAfiliar, otrosGremios],
   )
+
+  // Gremios presentes, para el filtro secundario de "En otro gremio".
+  const gremios = useMemo(() => {
+    const s = new Set<string>()
+    for (const p of otrosGremios) if (p.gremio) s.add(p.gremio)
+    return Array.from(s).sort()
+  }, [otrosGremios])
 
   const visibles = useMemo(() => {
     const termino = q.trim().toLowerCase()
-    const lista = listas[grupo]
+    let lista: PersonaEdificio[] = listas[grupo]
+
+    if (grupo === 'otrosGremios' && gremioFiltro) {
+      lista = lista.filter((p) => p.gremio === gremioFiltro)
+    }
     if (!termino) return lista
+
     return lista.filter(
       (p) =>
         p.nombre.toLowerCase().includes(termino) ||
         p.dni.includes(termino) ||
         (p.legajo ?? '').toLowerCase().includes(termino),
     )
-  }, [listas, grupo, q])
+  }, [listas, grupo, q, gremioFiltro])
 
   return (
     <div className="flex flex-col gap-3">
@@ -79,24 +106,58 @@ export function PersonasEdificioTabs({
             type="button"
             role="tab"
             aria-selected={grupo === g}
-            onClick={() => setGrupo(g)}
+            onClick={() => {
+              setGrupo(g)
+              setGremioFiltro(null)
+            }}
             className={
               'rounded-full px-3 py-1.5 text-sm font-semibold transition ' +
               (grupo === g
                 ? 'bg-brand-blue text-white'
-                : 'bg-white text-brand-muted shadow-card hover:text-brand-ink')
+                : g === 'oportunidades' && listas.oportunidades.length > 0
+                  ? 'bg-brand-lime/25 text-brand-deep shadow-card'
+                  : 'bg-white text-brand-muted shadow-card hover:text-brand-ink')
             }
           >
+            {g === 'oportunidades' && '⭐ '}
             {LABEL[g]} ({listas[g].length})
           </button>
         ))}
       </div>
 
+      {grupo === 'oportunidades' && (
+        <p className="rounded-lg bg-brand-blue/5 p-3 text-xs text-brand-muted">
+          Personas del edificio a las que conviene acercarse, comparando el
+          padrón de este mes contra el anterior. Primero las que dejaron su
+          gremio y quedaron sin representación.
+        </p>
+      )}
+
+      {grupo === 'otrosGremios' && gremios.length > 1 && (
+        <div className="flex flex-wrap gap-2">
+          <FiltroGremio
+            label="Todos"
+            activo={gremioFiltro === null}
+            onClick={() => setGremioFiltro(null)}
+          />
+          {gremios.map((g) => (
+            <FiltroGremio
+              key={g}
+              label={`${g} (${otrosGremios.filter((p) => p.gremio === g).length})`}
+              activo={gremioFiltro === g}
+              onClick={() => setGremioFiltro(g)}
+            />
+          ))}
+        </div>
+      )}
+
       {visibles.length === 0 ? (
         <p className="rounded-xl border border-dashed border-neutral-300 bg-white p-6 text-center text-sm text-brand-muted">
           {q.trim()
             ? 'Nadie coincide con la búsqueda.'
-            : 'No hay personas en este grupo.'}
+            : grupo === 'oportunidades'
+              ? 'No hay movimientos nuevos este mes. Cuando alguien deje su gremio o entre al edificio, va a aparecer acá.'
+              : 'No hay personas en este grupo.'}
         </p>
       ) : (
         <ul className="flex flex-col gap-2">
@@ -120,6 +181,19 @@ export function PersonasEdificioTabs({
                   DNI {p.dni}
                   {p.legajo ? ` · L-${p.legajo}` : ''}
                 </p>
+                <div className="mt-1 flex flex-wrap items-center gap-1">
+                  {p.gremio && (
+                    <span
+                      className={
+                        'rounded-full px-2 py-0.5 text-[10px] font-bold ' +
+                        (COLOR_GREMIO[p.gremio] ?? 'bg-neutral-200 text-neutral-800')
+                      }
+                    >
+                      {p.gremio}
+                    </span>
+                  )}
+                  {'motivo' in p && <MotivoBadge oportunidad={p as Oportunidad} />}
+                </div>
               </div>
 
               {p.esApops ? (
@@ -127,10 +201,7 @@ export function PersonasEdificioTabs({
                   Afiliado
                 </span>
               ) : (
-                <ContactarBtn
-                  persona={p}
-                  nombreDelegado={nombreDelegado}
-                />
+                <ContactarBtn persona={p} nombreDelegado={nombreDelegado} />
               )}
             </li>
           ))}
@@ -147,6 +218,51 @@ export function PersonasEdificioTabs({
   )
 }
 
+function MotivoBadge({ oportunidad }: { oportunidad: Oportunidad }) {
+  const { motivo, gremioAnterior } = oportunidad
+  const tono =
+    motivo === 'dejo_gremio'
+      ? 'bg-brand-lime/25 text-brand-deep'
+      : motivo === 'ingreso_nuevo'
+        ? 'bg-cyan-100 text-cyan-900'
+        : motivo === 'cambio_gremio'
+          ? 'bg-amber-100 text-amber-900'
+          : 'bg-neutral-200 text-neutral-700'
+
+  return (
+    <span className={'rounded-full px-2 py-0.5 text-[10px] font-bold ' + tono}>
+      {LABEL_MOTIVO[motivo]}
+      {gremioAnterior && motivo !== 'sin_gremio' && ` · venía de ${gremioAnterior}`}
+    </span>
+  )
+}
+
+function FiltroGremio({
+  label,
+  activo,
+  onClick,
+}: {
+  label: string
+  activo: boolean
+  onClick: () => void
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={activo}
+      className={
+        'rounded-full px-2.5 py-1 text-xs font-semibold transition ' +
+        (activo
+          ? 'bg-brand-deep text-white'
+          : 'bg-white text-brand-muted shadow-card hover:text-brand-ink')
+      }
+    >
+      {label}
+    </button>
+  )
+}
+
 function ContactarBtn({
   persona,
   nombreDelegado,
@@ -155,12 +271,26 @@ function ContactarBtn({
   nombreDelegado: string
 }) {
   const yo = primerNombre(nombreDelegado)
+  const dejoGremio =
+    'motivo' in persona &&
+    (persona as Oportunidad).motivo === 'dejo_gremio'
+  const esNuevo =
+    'motivo' in persona &&
+    (persona as Oportunidad).motivo === 'ingreso_nuevo'
+
+  // El mensaje cambia según por qué lo estamos contactando: no es lo mismo
+  // alguien que acaba de dejar su gremio que alguien que recién entró.
+  const cierre = dejoGremio
+    ? 'Vi que ya no estás afiliado/a a tu gremio anterior. ¿Querés que te cuente qué ofrece APOPS?'
+    : esNuevo
+      ? '¡Bienvenido/a al edificio! ¿Querés que te cuente qué ofrece APOPS?'
+      : persona.gremio
+        ? '¿Tenés unos minutos para que te cuente qué ofrece APOPS?'
+        : 'Quería contarte cómo afiliarte a APOPS y qué beneficios tenés.'
+
   const mensaje =
     `Hola ${primerNombre(persona.nombre)}, soy ${yo}, delegado/a de APOPS en ` +
-    `${persona.edificio ?? 'tu edificio'}. ` +
-    (persona.gremio
-      ? '¿Tenés unos minutos para que te cuente qué ofrece APOPS?'
-      : 'Quería contarte cómo afiliarte a APOPS y qué beneficios tenés.')
+    `${persona.edificio ?? 'tu edificio'}. ${cierre}`
 
   return (
     <a

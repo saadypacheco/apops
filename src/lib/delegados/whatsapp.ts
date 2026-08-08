@@ -1,4 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/admin'
+import { fetchAllRows } from '@/lib/supabase/paginate'
 import type { AfiliadoSession } from '@/lib/auth/role'
 
 // Link al grupo de WhatsApp del edificio. Un edificio = un grupo,
@@ -35,21 +36,27 @@ export async function getEdificioDelAfiliado(
 export async function getEdificiosDelDelegado(
   nombreDelegado: string,
 ): Promise<string[]> {
-  const admin = createAdminClient()
-  const { data } = (await admin
-    .from('padron_cotizantes_actual')
-    .select('representante, lugar_trabajo_padron, lugar_trabajo_rrhh')
-    .not('representante', 'is', null)) as {
-    data: Array<{
-      representante: string | null
-      lugar_trabajo_padron: string | null
-      lugar_trabajo_rrhh: string | null
-    }> | null
+  type Row = {
+    representante: string | null
+    lugar_trabajo_padron: string | null
+    lugar_trabajo_rrhh: string | null
   }
+
+  // Paginado: hoy hay ~800 filas con representante, pero está a un padrón
+  // de cruzar las 1000 que PostgREST corta en silencio.
+  const admin = createAdminClient()
+  const data = await fetchAllRows<Row>(async (from, to) => {
+    const res = await admin
+      .from('padron_cotizantes_actual')
+      .select('representante, lugar_trabajo_padron, lugar_trabajo_rrhh')
+      .not('representante', 'is', null)
+      .range(from, to)
+    return { data: res.data as Row[] | null, error: res.error }
+  })
 
   const target = normalize(nombreDelegado)
   const edificios = new Set<string>()
-  for (const r of data ?? []) {
+  for (const r of data) {
     if (!r.representante || normalize(r.representante) !== target) continue
     const edif = r.lugar_trabajo_padron ?? r.lugar_trabajo_rrhh
     if (edif) edificios.add(edif)

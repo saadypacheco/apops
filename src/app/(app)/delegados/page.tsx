@@ -4,6 +4,7 @@ import { requireRole } from '@/lib/auth/role'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { AppShell } from '@/components/app/AppShell'
 import {
+  getOportunidadesAfiliacion,
   getResumenDelDia,
   getStatsEdificio,
 } from '@/lib/delegados/panel-queries'
@@ -18,11 +19,17 @@ export const metadata: Metadata = {
 export default async function DelegadosPage() {
   const session = await requireRole('delegado')
 
-  const [resumen, stats, miInfo] = await Promise.all([
+  const [resumen, stats, miInfo, oportunidades] = await Promise.all([
     getResumenDelDia(session),
     getStatsEdificio(session.nombre),
     getInfoMandato(session.dni, session.legajo),
+    getOportunidadesAfiliacion(session.nombre),
   ])
+
+  // Las más calientes: dejaron su gremio o entraron al edificio este mes.
+  const calientes = oportunidades.filter(
+    (o) => o.motivo === 'dejo_gremio' || o.motivo === 'ingreso_nuevo',
+  )
 
   const primerNombre = session.nombre.split(',').pop()?.trim().split(/\s+/)[0]
 
@@ -81,6 +88,26 @@ export default async function DelegadosPage() {
             />
           </div>
         </section>
+
+        {calientes.length > 0 && (
+          <Link
+            href="/delegados/afiliados"
+            className="flex items-center gap-3 rounded-xl bg-brand-lime/15 p-4 shadow-card ring-1 ring-brand-lime/40 transition hover:shadow-cardHover"
+          >
+            <span aria-hidden className="text-2xl">⭐</span>
+            <div className="min-w-0 flex-1">
+              <p className="text-base font-semibold text-brand-deep">
+                {calientes.length === 1
+                  ? '1 oportunidad de afiliación'
+                  : `${calientes.length} oportunidades de afiliación`}
+              </p>
+              <p className="text-xs text-brand-muted">
+                Gente que dejó su gremio o entró al edificio este mes
+              </p>
+            </div>
+            <span aria-hidden className="text-brand-deep">→</span>
+          </Link>
+        )}
 
         <section className="flex flex-col gap-3 rounded-xl bg-white p-4 shadow-card">
           <header className="flex items-center gap-2">

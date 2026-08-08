@@ -6,30 +6,9 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '@/lib/supabase/types'
-
-// PostgREST tiene cap default de 1000 filas por request en Supabase Cloud,
-// y el .range() de supabase-js no lo supera. Para snapshots de 15k+ filas
-// paginamos en chunks. Cuando un chunk vuelve con < CHUNK filas, terminamos.
-const CHUNK = 1000
-
-type ChunkQuery<Row> = (
-  from: number,
-  to: number,
-) => PromiseLike<{ data: Row[] | null; error: { message: string } | null }>
-
-async function fetchAllRows<Row>(query: ChunkQuery<Row>): Promise<Row[]> {
-  const out: Row[] = []
-  let from = 0
-  while (true) {
-    const { data, error } = await query(from, from + CHUNK - 1)
-    if (error) throw new Error(`fetchAllRows: ${error.message}`)
-    if (!data || data.length === 0) break
-    out.push(...data)
-    if (data.length < CHUNK) break
-    from += CHUNK
-  }
-  return out
-}
+// El helper de paginación vive en lib/supabase/paginate — lo comparten el
+// dashboard de la CD y el panel del delegado.
+import { fetchAllRows } from '@/lib/supabase/paginate'
 
 const MES_LABELS = [
   'enero',

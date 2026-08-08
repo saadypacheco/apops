@@ -1,4 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/admin'
+import { fetchAllRows } from '@/lib/supabase/paginate'
 
 // Cotizantes que representa un delegado. El cruce se hace por nombre
 // normalizado (lower + trim) entre `afiliados.nombre` del delegado y la
@@ -68,14 +69,20 @@ export async function getCotizantesRepresentados(
     categoria: number | null
     vence_mandato_30dias: boolean | null
   }
-  const { data: rows } = (await admin
-    .from('padron_cotizantes_actual')
-    .select(
-      'id, dni, nombre, legajo, afiliado_apops, cotiza_papel, afiliado_ate, afiliado_sec, afiliado_upcn, afiliado_secasfpi, representante, lugar_trabajo_padron, lugar_trabajo_rrhh, provincia, regional, tipo_planta, categoria, vence_mandato_30dias',
-    )
-    .not('representante', 'is', null)) as { data: Row[] | null }
+  // Paginado: PostgREST corta en 1000 filas sin avisar (ver
+  // lib/supabase/paginate).
+  const rows = await fetchAllRows<Row>(async (from, to) => {
+    const res = await admin
+      .from('padron_cotizantes_actual')
+      .select(
+        'id, dni, nombre, legajo, afiliado_apops, cotiza_papel, afiliado_ate, afiliado_sec, afiliado_upcn, afiliado_secasfpi, representante, lugar_trabajo_padron, lugar_trabajo_rrhh, provincia, regional, tipo_planta, categoria, vence_mandato_30dias',
+      )
+      .not('representante', 'is', null)
+      .range(from, to)
+    return { data: res.data as Row[] | null, error: res.error }
+  })
 
-  const matched = (rows ?? []).filter(
+  const matched = rows.filter(
     (r) => r.representante && normalize(r.representante) === target,
   )
 
@@ -160,13 +167,17 @@ export async function getCotizantesDeLosEdificios(
     categoria: number | null
     vence_mandato_30dias: boolean | null
   }
-  const { data: rows } = (await admin
-    .from('padron_cotizantes_actual')
-    .select(
-      'id, dni, nombre, legajo, afiliado_apops, cotiza_papel, afiliado_ate, afiliado_sec, afiliado_upcn, afiliado_secasfpi, representante, lugar_trabajo_padron, lugar_trabajo_rrhh, provincia, regional, tipo_planta, categoria, vence_mandato_30dias',
-    )) as { data: Row[] | null }
-
-  const all = rows ?? []
+  // Paginado: son 15k+ filas y PostgREST corta en 1000 (ver
+  // lib/supabase/paginate). Sin esto el edificio salía incompleto.
+  const all = await fetchAllRows<Row>(async (from, to) => {
+    const res = await admin
+      .from('padron_cotizantes_actual')
+      .select(
+        'id, dni, nombre, legajo, afiliado_apops, cotiza_papel, afiliado_ate, afiliado_sec, afiliado_upcn, afiliado_secasfpi, representante, lugar_trabajo_padron, lugar_trabajo_rrhh, provincia, regional, tipo_planta, categoria, vence_mandato_30dias',
+      )
+      .range(from, to)
+    return { data: res.data as Row[] | null, error: res.error }
+  })
 
   // 2. Edificios donde figuro como representante (union de
   //    lugar_trabajo_padron + lugar_trabajo_rrhh).

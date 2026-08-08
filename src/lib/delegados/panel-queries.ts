@@ -1,5 +1,6 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import type { AfiliadoSession } from '@/lib/auth/role'
+import { fetchAllRows } from '@/lib/supabase/paginate'
 import { getEdificiosDelDelegado } from './whatsapp'
 
 // Queries del panel del delegado (Inicio / Mi edificio / Afiliados /
@@ -70,13 +71,19 @@ async function filasDeMisEdificios(
   const edificios = await getEdificiosDelDelegado(nombreDelegado)
   if (edificios.length === 0) return { filas: [], edificios: [] }
 
+  // Paginado: el padrón supera las 15k filas y PostgREST corta en 1000
+  // sin avisar. Sin esto los totales del delegado salen mal por lo bajo.
   const admin = createAdminClient()
-  const { data } = (await admin
-    .from('padron_cotizantes_actual')
-    .select(COLS)) as { data: PadronRow[] | null }
+  const data = await fetchAllRows<PadronRow>(async (from, to) => {
+    const res = await admin
+      .from('padron_cotizantes_actual')
+      .select(COLS)
+      .range(from, to)
+    return { data: res.data as PadronRow[] | null, error: res.error }
+  })
 
   const set = new Set(edificios.map((e) => e.trim().toLowerCase()))
-  const filas = (data ?? []).filter((r) => {
+  const filas = data.filter((r) => {
     const e = edificioDe(r)
     return !!e && set.has(e.trim().toLowerCase())
   })
@@ -190,22 +197,26 @@ export async function getEvolucionEdificio(
   const set = new Set(edificios.map((e) => e.trim().toLowerCase()))
   const puntos: PuntoEvolucion[] = []
 
-  for (const s of snapshots ?? []) {
-    const { data } = (await admin
-      .from('padron_cotizantes')
-      .select(
-        'afiliado_apops, cotiza_papel, lugar_trabajo_padron, lugar_trabajo_rrhh',
-      )
-      .eq('padron_snapshot_id', s.id)) as {
-      data: Array<{
-        afiliado_apops: boolean
-        cotiza_papel: boolean
-        lugar_trabajo_padron: string | null
-        lugar_trabajo_rrhh: string | null
-      }> | null
-    }
+  type SnapRow = {
+    afiliado_apops: boolean
+    cotiza_papel: boolean
+    lugar_trabajo_padron: string | null
+    lugar_trabajo_rrhh: string | null
+  }
 
-    const afiliados = (data ?? []).filter((r) => {
+  for (const s of snapshots ?? []) {
+    const data = await fetchAllRows<SnapRow>(async (from, to) => {
+      const res = await admin
+        .from('padron_cotizantes')
+        .select(
+          'afiliado_apops, cotiza_papel, lugar_trabajo_padron, lugar_trabajo_rrhh',
+        )
+        .eq('padron_snapshot_id', s.id)
+        .range(from, to)
+      return { data: res.data as SnapRow[] | null, error: res.error }
+    })
+
+    const afiliados = data.filter((r) => {
       const e = edificioDe(r)
       if (!e || !set.has(e.trim().toLowerCase())) return false
       return r.afiliado_apops || r.cotiza_papel
@@ -218,6 +229,169 @@ export async function getEvolucionEdificio(
   }
 
   return puntos
+}
+
+// =====================================================================
+// Oportunidades de afiliación
+// =====================================================================
+
+export type MotivoOportunidad =
+  | 'dejo_gremio' // estaba en otro gremio y se dio de baja
+  | 'ingreso_nuevo' // apareció en el padrón este mes, sin gremio
+  | 'cambio_gremio' // se pasó de un gremio a otro (no a APOPS)
+  | 'sin_gremio' // sin gremio desde antes
+
+export const LABEL_MOTIVO: Record<MotivoOportunidad, string> = {
+  dejo_gremio: 'Dejó su gremio',
+  ingreso_nuevo: 'Ingresó al edificio',
+  cambio_gremio: 'Cambió de gremio',
+  sin_gremio: 'Sin gremio',
+}
+
+/** Qué tan caliente es el contacto. Ordena la lista. */
+const PRIORIDAD: Record<MotivoOportunidad, number> = {
+  dejo_gremio: 0,
+  ingreso_nuevo: 1,
+  cambio_gremio: 2,
+  sin_gremio: 3,
+}
+
+export type Oportunidad = PersonaEdificio & {
+  motivo: MotivoOportunidad
+  /** Gremio del que viene, cuando aplica. */
+  gremioAnterior: string | null
+  fechaIngreso: string | null
+}
+
+type FilaComparable = {
+  legajo: string | null
+  dni: string
+  nombre: string
+  afiliado_apops: boolean
+  cotiza_papel: boolean
+  afiliado_ate: boolean
+  afiliado_upcn: boolean
+  afiliado_sec: boolean
+  afiliado_secasfpi: boolean
+  fecha_ingreso: string | null
+  lugar_trabajo_padron: string | null
+  lugar_trabajo_rrhh: string | null
+}
+
+const COLS_COMPARABLES =
+  'legajo, dni, nombre, afiliado_apops, cotiza_papel, afiliado_ate, afiliado_upcn, afiliado_sec, afiliado_secasfpi, fecha_ingreso, lugar_trabajo_padron, lugar_trabajo_rrhh'
+
+function gremioDe(r: FilaComparable): string | null {
+  if (r.afiliado_apops || r.cotiza_papel) return 'APOPS'
+  if (r.afiliado_ate) return 'ATE'
+  if (r.afiliado_upcn) return 'UPCN'
+  if (r.afiliado_sec) return 'SEC'
+  if (r.afiliado_secasfpi) return 'SECASFPI'
+  return null
+}
+
+/** Clave estable de una persona entre snapshots. */
+function claveDe(r: { legajo: string | null; dni: string }): string {
+  return r.legajo ?? r.dni
+}
+
+/**
+ * Gente del edificio a la que conviene acercarse, comparando el padrón
+ * actual contra el del mes anterior.
+ *
+ * La señal más fuerte es "dejó su gremio": alguien que se dio de baja de
+ * ATE/UPCN/etc y quedó sin representación. Después los ingresos nuevos,
+ * que todavía no eligieron gremio.
+ */
+export async function getOportunidadesAfiliacion(
+  nombreDelegado: string,
+): Promise<Oportunidad[]> {
+  const edificios = await getEdificiosDelDelegado(nombreDelegado)
+  if (edificios.length === 0) return []
+
+  const admin = createAdminClient()
+  const { data: snaps } = (await admin
+    .from('padron_snapshots')
+    .select('id')
+    .order('periodo_year', { ascending: false })
+    .order('periodo_month', { ascending: false })
+    .limit(2)) as { data: Array<{ id: string }> | null }
+
+  const actual = snaps?.[0]
+  if (!actual) return []
+  const anterior = snaps?.[1] ?? null
+
+  const set = new Set(edificios.map((e) => e.trim().toLowerCase()))
+  const traer = async (snapshotId: string) => {
+    const filas = await fetchAllRows<FilaComparable>(async (from, to) => {
+      const res = await admin
+        .from('padron_cotizantes')
+        .select(COLS_COMPARABLES)
+        .eq('padron_snapshot_id', snapshotId)
+        .range(from, to)
+      return { data: res.data as FilaComparable[] | null, error: res.error }
+    })
+    return filas.filter((r) => {
+      const e = edificioDe(r)
+      return !!e && set.has(e.trim().toLowerCase())
+    })
+  }
+
+  const [filasActual, filasAnterior] = await Promise.all([
+    traer(actual.id),
+    anterior ? traer(anterior.id) : Promise.resolve([]),
+  ])
+
+  const previo = new Map(filasAnterior.map((r) => [claveDe(r), r]))
+  const oportunidades: Oportunidad[] = []
+
+  for (const r of filasActual) {
+    const gremioActual = gremioDe(r)
+    // Los de APOPS no son oportunidad: ya están.
+    if (gremioActual === 'APOPS') continue
+
+    const antes = previo.get(claveDe(r))
+    const gremioAnterior = antes ? gremioDe(antes) : null
+
+    let motivo: MotivoOportunidad
+    if (!antes && anterior) {
+      // No estaba el mes pasado: entró al edificio.
+      motivo = 'ingreso_nuevo'
+    } else if (gremioAnterior && !gremioActual) {
+      motivo = 'dejo_gremio'
+    } else if (
+      gremioAnterior &&
+      gremioActual &&
+      gremioAnterior !== gremioActual
+    ) {
+      motivo = 'cambio_gremio'
+    } else if (!gremioActual) {
+      motivo = 'sin_gremio'
+    } else {
+      // Sigue en el mismo gremio que antes: no hay novedad.
+      continue
+    }
+
+    oportunidades.push({
+      dni: r.dni,
+      nombre: r.nombre,
+      legajo: r.legajo,
+      edificio: edificioDe(r),
+      gremio: gremioActual,
+      esApops: false,
+      motivo,
+      gremioAnterior:
+        gremioAnterior && gremioAnterior !== gremioActual
+          ? gremioAnterior
+          : null,
+      fechaIngreso: r.fecha_ingreso,
+    })
+  }
+
+  return oportunidades.sort((a, b) => {
+    const p = PRIORIDAD[a.motivo] - PRIORIDAD[b.motivo]
+    return p !== 0 ? p : a.nombre.localeCompare(b.nombre, 'es')
+  })
 }
 
 // =====================================================================

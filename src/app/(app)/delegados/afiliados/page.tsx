@@ -2,7 +2,10 @@ import type { Metadata } from 'next'
 import { requireRole } from '@/lib/auth/role'
 import { AppShell } from '@/components/app/AppShell'
 import { PersonasEdificioTabs } from '@/components/delegados/PersonasEdificioTabs'
-import { getPersonasDelEdificio } from '@/lib/delegados/panel-queries'
+import {
+  getOportunidadesAfiliacion,
+  getPersonasDelEdificio,
+} from '@/lib/delegados/panel-queries'
 
 export const metadata: Metadata = {
   title: 'Afiliados',
@@ -10,9 +13,11 @@ export const metadata: Metadata = {
 
 export default async function AfiliadosDelegadoPage() {
   const session = await requireRole('delegado')
-  const { afiliados, sinAfiliar, otrosGremios } = await getPersonasDelEdificio(
-    session.nombre,
-  )
+  const [{ afiliados, sinAfiliar, otrosGremios }, oportunidades] =
+    await Promise.all([
+      getPersonasDelEdificio(session.nombre),
+      getOportunidadesAfiliacion(session.nombre),
+    ])
 
   const total = afiliados.length + sinAfiliar.length + otrosGremios.length
 
@@ -38,6 +43,7 @@ export default async function AfiliadosDelegadoPage() {
           </div>
         ) : (
           <PersonasEdificioTabs
+            oportunidades={oportunidades}
             afiliados={afiliados}
             sinAfiliar={sinAfiliar}
             otrosGremios={otrosGremios}
