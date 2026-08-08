@@ -2,6 +2,8 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { getCurrentAfiliado } from '@/lib/auth/role'
 
 type NoticiaRow = {
   id: string
@@ -12,6 +14,32 @@ type NoticiaRow = {
   autor: string | null
   destacada: boolean
   publicada: boolean
+}
+
+/**
+ * Comunicado exclusivo para delegados. Devuelve null si el visitante no es
+ * delegado ni admin, para que la página termine en 404 y no revele que la
+ * noticia existe.
+ */
+async function getExclusivaSiCorresponde(
+  id: string,
+): Promise<NoticiaRow | null> {
+  const session = await getCurrentAfiliado()
+  if (!session || (session.rol !== 'delegado' && session.rol !== 'admin')) {
+    return null
+  }
+
+  const { data } = (await createAdminClient()
+    .from('noticias')
+    .select(
+      'id, titulo, resumen, contenido, publicada_at, autor, destacada, publicada, audiencia',
+    )
+    .eq('id', id)
+    .eq('publicada', true)
+    .eq('audiencia', 'delegados')
+    .maybeSingle()) as { data: NoticiaRow | null }
+
+  return data
 }
 
 function formatLongDate(iso: string): string {
@@ -46,8 +74,10 @@ export default async function NoticiaPublicaPage({
 }: {
   params: { id: string }
 }) {
+  // Client anon: la policy de RLS (0041) ya esconde las de audiencia
+  // 'delegados', así que esta consulta solo devuelve las públicas.
   const supabase = createClient()
-  const { data: noticia } = (await supabase
+  const { data: publica } = (await supabase
     .from('noticias')
     .select(
       'id, titulo, resumen, contenido, publicada_at, autor, destacada, publicada',
@@ -55,6 +85,11 @@ export default async function NoticiaPublicaPage({
     .eq('id', params.id)
     .eq('publicada', true)
     .maybeSingle()) as { data: NoticiaRow | null }
+
+  // Si no es pública puede ser una exclusiva de delegados. En ese caso la
+  // buscamos con admin client, pero solo se la mostramos a delegados y
+  // admins — para cualquier otro es un 404, igual que si no existiera.
+  const noticia = publica ?? (await getExclusivaSiCorresponde(params.id))
 
   if (!noticia) notFound()
 

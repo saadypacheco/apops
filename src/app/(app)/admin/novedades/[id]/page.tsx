@@ -22,7 +22,7 @@ export default async function EditarNoticiaPage({
   const { data: noticia } = (await admin
     .from('noticias')
     .select(
-      'id, titulo, resumen, contenido, autor, destacada, publicada',
+      'id, titulo, resumen, contenido, autor, destacada, publicada, audiencia, tema',
     )
     .eq('id', params.id)
     .maybeSingle()) as {
@@ -34,6 +34,8 @@ export default async function EditarNoticiaPage({
       autor: string | null
       destacada: boolean
       publicada: boolean
+      audiencia: string
+      tema: string
     } | null
   }
 

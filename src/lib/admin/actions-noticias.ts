@@ -27,6 +27,8 @@ function parseFormBody(formData: FormData) {
     autor: (formData.get('autor')?.toString() ?? '').trim(),
     destacada: formData.get('destacada') === 'on',
     publicada: formData.get('publicada') === 'on',
+    audiencia: (formData.get('audiencia')?.toString() ?? 'todos').trim(),
+    tema: (formData.get('tema')?.toString() ?? 'general').trim(),
   }
 }
 
@@ -65,6 +67,8 @@ export async function crearNoticia(
       autor: parsed.data.autor || null,
       destacada: parsed.data.destacada ?? false,
       publicada: parsed.data.publicada ?? true,
+      audiencia: parsed.data.audiencia ?? 'todos',
+      tema: parsed.data.tema ?? 'general',
       publicada_at: new Date().toISOString(),
     })
     .select('id')
@@ -124,6 +128,8 @@ export async function editarNoticia(
       autor: parsed.data.autor || null,
       destacada: parsed.data.destacada ?? false,
       publicada: parsed.data.publicada ?? true,
+      audiencia: parsed.data.audiencia ?? 'todos',
+      tema: parsed.data.tema ?? 'general',
       updated_at: new Date().toISOString(),
     })
     .eq('id', id)

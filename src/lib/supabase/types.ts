@@ -377,6 +377,7 @@ export type Database = {
       }
       noticias: {
         Row: {
+          audiencia: string
           autor: string | null
           contenido: string | null
           created_at: string
@@ -386,10 +387,12 @@ export type Database = {
           publicada: boolean
           publicada_at: string
           resumen: string
+          tema: string
           titulo: string
           updated_at: string
         }
         Insert: {
+          audiencia?: string
           autor?: string | null
           contenido?: string | null
           created_at?: string
@@ -399,10 +402,12 @@ export type Database = {
           publicada?: boolean
           publicada_at?: string
           resumen: string
+          tema?: string
           titulo: string
           updated_at?: string
         }
         Update: {
+          audiencia?: string
           autor?: string | null
           contenido?: string | null
           created_at?: string
@@ -412,6 +417,7 @@ export type Database = {
           publicada?: boolean
           publicada_at?: string
           resumen?: string
+          tema?: string
           titulo?: string
           updated_at?: string
         }

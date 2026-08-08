@@ -33,10 +33,13 @@ export default async function FeedPage() {
       .select('estado')
       .eq('id', session.afiliadoId)
       .maybeSingle(),
+    // audiencia: este bloque usa admin client, que bypassea RLS. Sin este
+    // filtro el afiliado vería los comunicados exclusivos de delegados.
     admin
       .from('noticias')
       .select('id, titulo, resumen')
       .eq('publicada', true)
+      .eq('audiencia', 'todos')
       .order('publicada_at', { ascending: false })
       .limit(1),
     getBeneficioDestacado(),

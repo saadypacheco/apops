@@ -21,6 +21,8 @@ type NoticiaInicial = {
   autor: string | null
   destacada: boolean
   publicada: boolean
+  audiencia: string
+  tema: string
 }
 
 type Props = {
@@ -106,6 +108,50 @@ export function NoticiaForm({ noticia, defaultAutor }: Props) {
         maxLength={100}
         error={state.fieldErrors?.autor}
       />
+
+      <div className="grid grid-cols-2 gap-3">
+        <div className="flex flex-col gap-1.5">
+          <label
+            htmlFor="audiencia"
+            className="text-xs font-semibold uppercase tracking-wider text-brand-muted"
+          >
+            Quién la ve
+          </label>
+          <select
+            id="audiencia"
+            name="audiencia"
+            defaultValue={noticia?.audiencia ?? 'todos'}
+            className="rounded-lg border border-neutral-300 px-3 py-2 text-base text-brand-ink focus:outline-none focus:ring-2 focus:ring-brand-blue"
+          >
+            <option value="todos">Todos los afiliados</option>
+            <option value="delegados">Solo delegados</option>
+          </select>
+        </div>
+
+        <div className="flex flex-col gap-1.5">
+          <label
+            htmlFor="tema"
+            className="text-xs font-semibold uppercase tracking-wider text-brand-muted"
+          >
+            Tema
+          </label>
+          <select
+            id="tema"
+            name="tema"
+            defaultValue={noticia?.tema ?? 'general'}
+            className="rounded-lg border border-neutral-300 px-3 py-2 text-base text-brand-ink focus:outline-none focus:ring-2 focus:ring-brand-blue"
+          >
+            <option value="general">General</option>
+            <option value="paritaria">Paritarias</option>
+            <option value="material">Material</option>
+            <option value="campana">Campañas</option>
+          </select>
+        </div>
+      </div>
+      <p className="-mt-2 text-xs text-brand-muted">
+        &ldquo;Solo delegados&rdquo; no aparece en Novedades ni en la landing:
+        se ve únicamente en el panel del delegado.
+      </p>
 
       <div className="flex flex-col gap-2">
         <CheckboxField

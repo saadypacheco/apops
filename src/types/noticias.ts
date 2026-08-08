@@ -28,6 +28,9 @@ export const noticiaFormSchema = z.object({
     .or(z.literal('')),
   destacada: z.coerce.boolean().optional(),
   publicada: z.coerce.boolean().optional(),
+  // Migration 0041: quién la ve y cómo se agrupa en el panel del delegado.
+  audiencia: z.enum(['todos', 'delegados']).optional(),
+  tema: z.enum(['general', 'paritaria', 'material', 'campana']).optional(),
 })
 
 export type NoticiaForm = z.infer<typeof noticiaFormSchema>

@@ -23,6 +23,10 @@ type Props = {
     | 'delegados'
     | 'carnet'
     | 'beneficios'
+    | 'edificio'
+    | 'afiliados'
+    | 'comunicados'
+    | 'mas'
   /** Si true, el contenido se expande hasta max-w-7xl en desktop.
    *  Mobile sigue siendo max-w-md. Para páginas tipo dashboard con sidebar. */
   wide?: boolean
@@ -135,6 +139,63 @@ export function AppShell({ children, nombre, rol, current, wide }: Props) {
                   </svg>
                 }
                 active={current === 'perfil'}
+              />
+            </>
+          ) : rol === 'delegado' ? (
+            <>
+              <NavItem
+                href="/delegados/edificio"
+                label="Mi edificio"
+                icon={
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-6 w-6">
+                    <rect x="4" y="3" width="16" height="18" rx="1.5" />
+                    <path d="M9 7h2M13 7h2M9 11h2M13 11h2M9 15h2M13 15h2" strokeLinecap="round" />
+                  </svg>
+                }
+                active={current === 'edificio'}
+              />
+              <NavItem
+                href="/delegados/afiliados"
+                label="Afiliados"
+                icon={
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-6 w-6">
+                    <circle cx="9" cy="8" r="3.5" />
+                    <path d="M2.5 20c0-3.3 3-6 6.5-6s6.5 2.7 6.5 6" strokeLinecap="round" />
+                    <path d="M16 5.5a3.5 3.5 0 010 6M18 20c0-2.4-.9-4.2-2.3-5.4" strokeLinecap="round" />
+                  </svg>
+                }
+                active={current === 'afiliados'}
+              />
+              <NavItem
+                href="/delegados/comunicados"
+                label="Comunicados"
+                icon={
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-6 w-6">
+                    <path d="M11 5L6 9H3v6h3l5 4V5z" strokeLinecap="round" strokeLinejoin="round" />
+                    <path d="M15.54 8.46a5 5 0 010 7.07" strokeLinecap="round" />
+                    <path d="M19.07 4.93a10 10 0 010 14.14" strokeLinecap="round" />
+                  </svg>
+                }
+                active={current === 'comunicados'}
+              />
+              <NavItem
+                href="/delegados/mas"
+                label="Más"
+                icon={
+                  <span className="relative inline-flex">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-6 w-6">
+                      <circle cx="5" cy="12" r="1.6" fill="currentColor" stroke="none" />
+                      <circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none" />
+                      <circle cx="19" cy="12" r="1.6" fill="currentColor" stroke="none" />
+                    </svg>
+                    <NavBadgeNotif />
+                  </span>
+                }
+                active={
+                  current === 'mas' ||
+                  current === 'notificaciones' ||
+                  current === 'perfil'
+                }
               />
             </>
           ) : (
