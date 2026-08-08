@@ -1,12 +1,133 @@
 # Retomar trabajo — APOPS Siempre
 
-> Doc de handoff entre sesiones. Última actualización: 2026-06-22 (migración Vercel → Hostinger).
+> Doc de handoff entre sesiones. Última actualización: 2026-08-08
+> (rediseño afiliado + delegado, catálogo de beneficios, logos institucionales).
 > Branch activa: `main`. Trabajo en producción en `https://apops.online`.
 >
-> **🚨 PRÓXIMA SESIÓN: arrancar rollout al cliente real.** Leer
-> [INSTALACION-NUEVO-CLIENTE.md](INSTALACION-NUEVO-CLIENTE.md) primero —
-> tiene el playbook completo. Para el deploy en VPS Hostinger:
-> [DEPLOY-HOSTINGER.md](DEPLOY-HOSTINGER.md).
+> **🚨 LO PRIMERO AL RETOMAR**: el auto-deploy está roto (clave SSH
+> rechazada por el VPS) y hay commits pusheados que pueden no estar
+> deployados. Ver "Pendientes abiertos" más abajo.
+
+## 🆕 Sesión 2026-08-07/08 — rediseño de afiliado y delegado
+
+Sesión larga de producto: se rediseñó la navegación de los dos roles
+principales a partir de mockups del cliente.
+
+### Afiliado — 5 tabs (commit `9b9714b`)
+
+Pasa de "mini-admin" a consumidor de servicios:
+**Inicio · Carnet · Beneficios · Consultas · Perfil**.
+
+- **Inicio** dejó de ser el carrusel de credencial y es un dashboard:
+  estado del carnet, último comunicado, beneficio destacado, alerta de
+  mensajes sin leer y 3 accesos rápidos.
+- **Carnet** tiene tab propio (`/credencial`).
+- **Beneficios** (`/beneficios`) es el hub de servicios — ver abajo.
+- **Consultas** es el sistema de hilos de siempre, renombrado.
+
+### Catálogo de beneficios (migration 0040)
+
+- Tabla `beneficios` con categoría, monto destacado, orden y link externo.
+  ABM completo en `/admin/beneficios` — el gremio lo maneja solo.
+- Sembrados los 11 beneficios vigentes de apops.org.ar
+  (`scripts/seed-beneficios.ts`, idempotente). **Cobertura en farmacias
+  (35%)** encabeza el listado; el link va al mapa del sitio.
+- **Capacitaciones es una categoría del catálogo, no un tab.** Decisión
+  del 2026-08-07: la barra inferior aguanta 5 ítems cómodos en mobile.
+- Esto **cambia** lo que decía AGENTS.md ("beneficios: no se construye").
+  El documento ya se actualizó: se construye el *directorio informativo*,
+  no un motor de reservas ni pagos.
+
+### Delegado — 5 tabs (commits `c59cac9`, `59ec3fe`)
+
+`/delegados` era una sola página larga; ahora es
+**Inicio · Mi edificio · Afiliados · Comunicados · Más**.
+
+- **Inicio**: resumen del día (alertas / consultas / comunicados), estado
+  del edificio, banner de oportunidades.
+- **Mi edificio**: stats, variación mensual con gráfico sobre snapshots,
+  desglose por gremio, eventos del mes y altas/bajas.
+- **Afiliados**: solapas Oportunidades / Afiliados / Sin afiliar / En otro
+  gremio, con buscador y filtro por gremio. Cada persona muestra a qué
+  gremio pertenece, con color.
+- **Comunicados**: solapas por tema, con contenido exclusivo de delegados.
+- **Más**: alertas, consultas pendientes y mensajes a la CD.
+
+### Oportunidades de afiliación (`59ec3fe`)
+
+Compara el padrón del mes contra el anterior y prioriza a quién acercarse:
+`dejó su gremio` > `ingresó al edificio` > `cambió de gremio` > `sin gremio`.
+El mensaje de WhatsApp del botón "Contactar" cambia según el motivo.
+
+⚠️ **La señal "dejó su gremio" hoy da 0**. No es un bug: los snapshots
+cargados (4/2016 a 7/2016) son de meses casi idénticos. Se va a encender
+cuando se carguen padrones mensuales reales y consecutivos. Mientras
+tanto la solapa se llena con los "sin gremio", que es útil pero no es una
+novedad del mes. **Tenerlo en cuenta al demostrarlo al cliente.**
+
+### Comunicados exclusivos (migration 0041)
+
+`noticias` gana `audiencia` ('todos' | 'delegados') y `tema` ('general' |
+'paritaria' | 'material' | 'campana'). El admin los elige al publicar.
+
+🔐 **Tres accesos revisados por seguridad** — el contenido exclusivo
+cambió las reglas:
+- La policy `noticias_public_read` dejaba leer TODA noticia publicada a
+  anon y authenticated. El primer comunicado "solo delegados" se habría
+  filtrado por la API pública. Ahora solo expone `audiencia='todos'`.
+- `/feed` lee con admin client, que **bypassea RLS** — ahí la policy no
+  protegía nada. Lleva filtro explícito.
+- `/noticias/[id]` busca las exclusivas con admin client pero valida rol:
+  a un afiliado le da 404 sin revelar que existen.
+
+**Regla para el futuro**: cualquier lectura de `noticias` con
+`createAdminClient()` tiene que filtrar `audiencia` a mano.
+
+### Fix — cap de 1000 filas de PostgREST
+
+El padrón tiene **15.559 filas** y Supabase Cloud corta en 1000 sin
+avisar. Cuatro consultas del delegado pedían sin paginar. No llegó a
+producir números mal por casualidad (las filas del edificio caían en las
+primeras 1000), pero con otro edificio habría subcontado en silencio.
+
+`fetchAllRows` salió de `admin/dashboard-queries` a
+**`lib/supabase/paginate.ts`**. Usarlo en cualquier consulta al padrón.
+
+### Adherentes duplicados (migration 0039)
+
+La credencial mostraba al mismo adherente hasta 3 veces. No era la query
+(no tiene joins): eran filas duplicadas por seeds no idempotentes que
+usaban convenciones de legajo distintas para el mismo titular. Se
+deduplicó y se agregó índice único `(titular_dni, lower(nombre), vinculo)`.
+
+### Logos institucionales
+
+Se reemplazaron los SVG dibujados a mano por los assets del manual de
+marca (`public/APOPS_logos/`). `scripts/preparar-logos.ts` genera 6
+variantes quitando el fondo navy plano de las piezas reversa. Íconos PWA
+regenerados con la variante clara.
+
+### Datos demo tocados
+
+- `scripts/vincular-afiliado-demo.ts` (nuevo): mete a Méndez Carolina en
+  el padrón como cotizante de DEFENSA 363, representada por García Lucía.
+  Sin esto no tenía delegado ni edificio y veía "0 contactos".
+- Ojo: Carolina es **a la vez** representante de CORDOBA 720 (360
+  personas). Si entrás con ella y el selector de rol en Delegado, ves ese
+  edificio, no DEFENSA 363.
+
+### Pendiente que necesita al cliente
+
+**Sectores** (Administración, Sistemas, Trámites…): el mockup del
+delegado los pedía, pero **el padrón de ANSES no trae esa columna** —
+`unidad_organica_historica` viene vacío (0/110),
+`lugar_trabajo_relevamiento` casi vacío (2/110) y `lugar_trabajo_rrhh`
+repite el nombre del edificio. Decisión: pedirlo al Ministerio. La
+pantalla "Mi edificio" lo explica en vez de mostrar un hueco.
+
+**Contactar sin teléfono**: el padrón tampoco trae teléfono ni email, así
+que "Contactar" abre WhatsApp sin destinatario y el delegado elige de su
+agenda.
 
 ## Estado al cerrar la sesión
 
@@ -308,10 +429,30 @@ Identificados en charla con el user 2026-05-16:
    edificio)` o columna `region` en padrón. Ver con el cliente cómo
    vienen las regiones del Ministerio.
 
-## 🔴 Pendientes abiertos al 2026-08-07 — infraestructura
+## 🔴 Pendientes abiertos al 2026-08-08 — infraestructura
 
-Bloqueos detectados al intentar deployar el rediseño del afiliado. Ninguno
-es de código: la app compila y buildea limpio.
+Ninguno es de código: la app compila y buildea limpio.
+
+### ⚠️ Verificar qué commit está deployado
+
+El auto-deploy está roto, así que producción sube **a mano**. Al cierre
+del 2026-08-08 el último commit pusheado es `59ec3fe` (oportunidades de
+afiliación + fix de paginación). El deploy manual de `c59cac9` (panel del
+delegado) sí se hizo y se verificó en `apops.online`; **el de `59ec3fe`
+quedó sin confirmar**.
+
+Antes de tocar nada, comparar en el VPS:
+```bash
+cd /docker/apops && git log --oneline -1
+```
+Si no coincide con el `main` de GitHub, correr el deploy manual (abajo).
+
+### Migraciones: ya están aplicadas en producción
+
+Las 0037 a 0041 se aplicaron con `npx supabase db push` contra el
+Supabase de producción durante la sesión. **No hay que correrlas.** El
+código deployado puede estar atrasado respecto del esquema, no al revés
+— y las columnas que se eliminaron nunca las usó código viejo.
 
 ### Auto-deploy roto — clave SSH rechazada por el VPS
 
@@ -559,6 +700,16 @@ El protocolo de bootstrap está en [CLAUDE.md](CLAUDE.md). Cuando digas "retomá
 - 🐛 **TS strict + PushManager.subscribe**: el tipo `BufferSource` es estricto con `ArrayBuffer` puro (no `SharedArrayBuffer`). Cast explícito `Uint8Array.buffer as ArrayBuffer` resuelve.
 - 🔑 **Vista PostgREST inferida con todas las columnas nullable**: aunque la tabla base sea NOT NULL. Cast explicit con type narrowing en server actions críticas.
 
+### Sumadas el 2026-08-08
+
+- 🔁 **El cap de 1000 volvió a morder** (segunda vez, ver arriba). Cuatro queries nuevas del delegado nacieron sin paginar. Por eso `fetchAllRows` dejó de ser privado de `dashboard-queries` y vive en **`lib/supabase/paginate.ts`**: si una consulta toca `padron_cotizantes*`, usarlo siempre. Lo peligroso es que no falla — devuelve menos filas y los totales salen bajos.
+- 🔐 **RLS no protege lo que se lee con `createAdminClient()`**. El service_role bypassea las policies por diseño. Al agregar `noticias.audiencia`, la policy quedó bien pero `/feed` seguía filtrando de más porque usa admin client. **Al agregar cualquier columna de visibilidad, auditar TODOS los lectores, no solo la policy.**
+- 🌱 **"Idempotente" por `source_batch` no alcanza**. El seed de adherentes borraba y reinsertaba su propio lote, pero chocaba con las mismas personas cargadas por otro lote (una migración vieja, con otra convención de legajo) y las duplicaba. Si dos fuentes pueden cargar la misma entidad, el candado va en la base: índice único sobre las columnas que la identifican.
+- 🎨 **Imagen dentro de un flex column se estira**: `align-items: stretch` le da todo el ancho y, con la altura fija, la deforma. `self-start` lo resuelve. Pasó con el logo del carnet.
+- 📐 **El descriptor del logo es ilegible por debajo de ~60px de alto**. Para piezas chicas (credencial, nav) usar la variante sin descriptor. Hay 6 variantes generadas por `scripts/preparar-logos.ts`.
+- 🧪 **Verificar los datos ANTES de construir la pantalla**. El mockup del delegado pedía desglose por sector; el padrón no trae esa columna (0/110 filas). Media hora de chequeo evitó construir una vista vacía.
+- ⚠️ **Confirmar con qué cuenta está mirando el usuario antes de declarar un bug**. Se reportó que los números del edificio estaban mal por el cap de 1000; en realidad eran correctos — el usuario miraba CORDOBA 720 (Carolina con role-switch) y la verificación se había hecho sobre DEFENSA 363 (García Lucía).
+
 ## Commits clave de esta sesión
 
 ```
@@ -605,7 +756,23 @@ b655718 test: fase 1A — borra suite v1 + 64 tests unitarios
 ## Para el agente de la próxima sesión — checklist
 
 1. Bootstrap automático (CLAUDE.md): leer RESUME, `git pull`, `tsc --noEmit`, reportar.
-2. Si el user pendiente lo hizo (VAPID en Vercel), validar push real end-to-end.
-3. Si no, arrancar con suite de tests (Fase 1B) — server actions críticas + parser xlsx + helpers puros del dashboard.
-4. Tests RLS son los más importantes para producción real con datos sensibles.
-5. Si hay feedback del cliente posterior a esta sesión, ESO tiene prioridad sobre los tests.
+2. **Chequear qué commit corre en el VPS** (`cd /docker/apops && git log --oneline -1`)
+   contra el `main` de GitHub. El auto-deploy está roto y el último push
+   (`59ec3fe`) puede no estar arriba.
+3. **Destrabar el auto-deploy**: el VPS rechaza la clave SSH del Action.
+   Ver la sección de pendientes de infraestructura.
+4. **CI en rojo desde junio** — el usuario pidió el 2026-08-07 anotarlo y
+   resolverlo después. La suite RLS tira error si faltan credenciales de
+   Supabase; lo razonable es que se skipee sola.
+5. Si hay feedback del cliente sobre el rediseño de afiliado/delegado,
+   ESO tiene prioridad sobre lo demás.
+
+### Notas para demostrarle al cliente
+
+- La solapa **Oportunidades** del delegado necesita padrones mensuales
+  reales y consecutivos para que la señal "dejó su gremio" se encienda.
+  Con los snapshots actuales da 0.
+- El **desglose por sector** está bloqueado esperando que el Ministerio
+  incluya esa columna en el Excel.
+- **Resend** (mail con el PDF de afiliación) y **VAPID push** siguen sin
+  validar end-to-end.
